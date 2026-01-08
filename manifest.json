@@ -1,0 +1,23 @@
+{
+    "name": "Expense Tracker",
+    "short_name": "Expenses",
+    "description": "Track your expenses with a clean, modern interface",
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#ffffff",
+    "orientation": "portrait",
+    "categories": ["finance", "productivity"],
+    "icons": [
+        {
+            "src": "marta-artwork.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "marta-artwork.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
