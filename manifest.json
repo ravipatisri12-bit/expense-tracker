@@ -10,12 +10,12 @@
     "categories": ["finance", "productivity"],
     "icons": [
         {
-            "src": "marta-artwork.png",
+            "src": "icon_128.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "marta-artwork.png",
+            "src": "icon_128.png",
             "sizes": "512x512",
             "type": "image/png"
         }
