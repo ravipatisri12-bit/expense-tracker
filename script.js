@@ -430,7 +430,8 @@ class ExpenseTracker {
             // Load settings from Firebase
             const settingsDoc = await db.collection('users')
                 .doc(currentUser.uid)
-                .doc('settings')
+                .collection('settings')
+                .doc('data')
                 .get();
             
             if (settingsDoc.exists) {
@@ -488,7 +489,8 @@ class ExpenseTracker {
         try {
             await db.collection('users')
                 .doc(currentUser.uid)
-                .doc('settings')
+                .collection('settings')
+                .doc('data')
                 .set(this.settings);
         } catch (error) {
             console.error('Error saving settings to Firebase:', error);
