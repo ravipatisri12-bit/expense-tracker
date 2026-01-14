@@ -1,3 +1,76 @@
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyDH_RMji5JG-IEP3uu-hapu7H7JKsR_SUA",
+    authDomain: "personal-expense-tracker-7aa9c.firebaseapp.com",
+    projectId: "personal-expense-tracker-7aa9c",
+    storageBucket: "personal-expense-tracker-7aa9c.firebasestorage.app",
+    messagingSenderId: "893806575358",
+    appId: "1:893806575358:web:fdd0b3d75a57122be4efaf"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Current user
+let currentUser = null;
+
+// Authentication Functions
+function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            console.log('User signed in:', result.user);
+            expenseTracker.showNotification('Successfully signed in!', 'success');
+        })
+        .catch((error) => {
+            console.error('Sign in error:', error);
+            expenseTracker.showNotification('Sign in failed. Please try again.', 'error');
+        });
+}
+
+function signOut() {
+    auth.signOut()
+        .then(() => {
+            console.log('User signed out');
+            expenseTracker.showNotification('Successfully signed out!', 'success');
+        })
+        .catch((error) => {
+            console.error('Sign out error:', error);
+        });
+}
+
+function updateAuthUI(user) {
+    const signInBtn = document.getElementById('sign-in-btn');
+    const userInfo = document.getElementById('user-info');
+    const userAvatar = document.getElementById('user-avatar');
+    
+    if (user) {
+        // User is signed in
+        signInBtn.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+        userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
+        currentUser = user;
+        
+        // Load user's data
+        expenseTracker.loadUserData();
+    } else {
+        // User is signed out
+        signInBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+        currentUser = null;
+        
+        // Clear data and show local data only
+        expenseTracker.loadLocalData();
+    }
+}
+
+// Auth state observer
+auth.onAuthStateChanged((user) => {
+    updateAuthUI(user);
+});
+
 // Expense Tracker Application
 class ExpenseTracker {
     constructor() {
@@ -70,7 +143,7 @@ class ExpenseTracker {
     }
 
     // Add Expense
-    addExpense() {
+    async addExpense() {
         const amount = parseFloat(document.getElementById('amount').value);
         const description = document.getElementById('description').value;
         const category = document.getElementById('category').value;
@@ -86,8 +159,17 @@ class ExpenseTracker {
             timestamp: Date.now()
         };
 
+        // Add to local array
         this.expenses.push(expense);
+        
+        // Save to localStorage (always for offline support)
         this.saveExpenses();
+        
+        // Save to Firebase if user is signed in
+        if (currentUser) {
+            await this.saveExpenseToFirebase(expense);
+        }
+
         this.updateDashboard();
         this.renderTransactions();
         this.clearForm();
@@ -100,10 +182,19 @@ class ExpenseTracker {
     }
 
     // Delete Expense
-    deleteExpense(expenseId) {
+    async deleteExpense(expenseId) {
         if (confirm('Are you sure you want to delete this transaction?')) {
-            this.expenses = this.expenses.filter(expense => expense.id !== expenseId);
+            // Remove from local array
+            this.expenses = this.expenses.filter(expense => expense.id != expenseId);
+            
+            // Save to localStorage
             this.saveExpenses();
+            
+            // Delete from Firebase if user is signed in
+            if (currentUser) {
+                await this.deleteExpenseFromFirebase(expenseId);
+            }
+
             this.updateDashboard();
             this.renderTransactions();
             this.showNotification('Transaction deleted successfully!', 'success');
@@ -307,9 +398,157 @@ class ExpenseTracker {
             }
         });
 
+        // Save to localStorage (always)
         localStorage.setItem('settings', JSON.stringify(this.settings));
+        
+        // Save to Firebase if user is signed in
+        if (currentUser) {
+            this.saveSettingsToFirebase();
+        }
+        
         this.updateDashboard();
         this.showNotification('Settings saved successfully!', 'success');
+    }
+
+    // Firebase Data Methods
+    async loadUserData() {
+        if (!currentUser) return;
+
+        try {
+            // Load expenses from Firebase
+            const expensesSnapshot = await db.collection('users')
+                .doc(currentUser.uid)
+                .collection('expenses')
+                .orderBy('timestamp', 'desc')
+                .get();
+            
+            this.expenses = expensesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // Load settings from Firebase
+            const settingsDoc = await db.collection('users')
+                .doc(currentUser.uid)
+                .doc('settings')
+                .get();
+            
+            if (settingsDoc.exists) {
+                this.settings = { ...this.getDefaultSettings(), ...settingsDoc.data() };
+            }
+
+            // Update UI
+            this.loadSettings();
+            this.updateDashboard();
+            this.renderTransactions();
+            
+            // Set up real-time listener
+            this.setupRealtimeListeners();
+            
+            // Check for local data to migrate
+            const localExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
+            if (localExpenses.length > 0) {
+                this.migrateLocalDataToFirebase(localExpenses);
+            }
+
+        } catch (error) {
+            console.error('Error loading user data:', error);
+            this.showNotification('Failed to load data from cloud', 'error');
+            this.loadLocalData();
+        }
+    }
+
+    loadLocalData() {
+        // Load from localStorage when not signed in
+        this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        this.settings = JSON.parse(localStorage.getItem('settings')) || this.getDefaultSettings();
+        
+        this.loadSettings();
+        this.updateDashboard();
+        this.renderTransactions();
+    }
+
+    async saveExpenseToFirebase(expense) {
+        if (!currentUser) return;
+
+        try {
+            await db.collection('users')
+                .doc(currentUser.uid)
+                .collection('expenses')
+                .doc(expense.id.toString())
+                .set(expense);
+        } catch (error) {
+            console.error('Error saving expense to Firebase:', error);
+        }
+    }
+
+    async saveSettingsToFirebase() {
+        if (!currentUser) return;
+
+        try {
+            await db.collection('users')
+                .doc(currentUser.uid)
+                .doc('settings')
+                .set(this.settings);
+        } catch (error) {
+            console.error('Error saving settings to Firebase:', error);
+        }
+    }
+
+    async deleteExpenseFromFirebase(expenseId) {
+        if (!currentUser) return;
+
+        try {
+            await db.collection('users')
+                .doc(currentUser.uid)
+                .collection('expenses')
+                .doc(expenseId.toString())
+                .delete();
+        } catch (error) {
+            console.error('Error deleting expense from Firebase:', error);
+        }
+    }
+
+    setupRealtimeListeners() {
+        if (!currentUser) return;
+
+        // Listen for real-time expense updates
+        this.expensesListener = db.collection('users')
+            .doc(currentUser.uid)
+            .collection('expenses')
+            .orderBy('timestamp', 'desc')
+            .onSnapshot((snapshot) => {
+                this.expenses = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                this.updateDashboard();
+                this.renderTransactions();
+            }, (error) => {
+                console.error('Realtime listener error:', error);
+            });
+    }
+
+    async migrateLocalDataToFirebase(localExpenses) {
+        if (!currentUser) return;
+
+        try {
+            this.showNotification('Migrating your data to cloud...', 'success');
+            
+            // Migrate expenses
+            for (const expense of localExpenses) {
+                await this.saveExpenseToFirebase(expense);
+            }
+
+            // Clear localStorage after successful migration
+            localStorage.removeItem('expenses');
+            this.showNotification('Data successfully migrated to cloud!', 'success');
+            
+        } catch (error) {
+            console.error('Error migrating data:', error);
+            this.showNotification('Failed to migrate some data', 'error');
+        }
     }
 
     // Export CSV
