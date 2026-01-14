@@ -880,3 +880,4 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+// Force GitHub Pages update - Tue Jan 13 16:38:56 PST 2026
