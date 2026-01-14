@@ -203,6 +203,9 @@ class ExpenseTracker {
         // Update daily spending view
         this.updateDailySpending('week');
 
+        // Update weekly spending view
+        this.updateWeeklySpending('recent');
+
         // Update recent transactions
         this.updateRecentTransactions();
     }
@@ -979,6 +982,180 @@ class ExpenseTracker {
     }
 
     // ====================================================================
+    // WEEKLY SPENDING FUNCTIONALITY
+    // ====================================================================
+
+    updateWeeklySpending(period = 'recent') {
+        const container = document.getElementById('weekly-spending-content');
+        const averageElement = document.getElementById('weekly-average');
+        
+        if (!container || !averageElement) return;
+
+        // Update button states
+        const recentBtn = document.getElementById('recent-weeks-btn');
+        const monthlyBtn = document.getElementById('monthly-weeks-btn');
+        
+        if (recentBtn && monthlyBtn) {
+            if (period === 'recent') {
+                recentBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
+                monthlyBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
+            } else {
+                recentBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
+                monthlyBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
+            }
+        }
+
+        const weeklyData = this.getWeeklySpendingData(period);
+        
+        if (weeklyData.weeks.length === 0) {
+            container.innerHTML = '<div class="text-gray-500 text-center py-8">No weekly data available</div>';
+            averageElement.textContent = '$0.00';
+            return;
+        }
+
+        // Calculate average
+        const totalAmount = weeklyData.weeks.reduce((sum, week) => sum + week.amount, 0);
+        const average = weeklyData.weeks.length > 0 ? totalAmount / weeklyData.weeks.length : 0;
+        averageElement.textContent = formatCurrency(average);
+
+        // Render weekly spending items
+        container.innerHTML = weeklyData.weeks.map(week => {
+            const percentage = weeklyData.maxAmount > 0 ? (week.amount / weeklyData.maxAmount) * 100 : 0;
+            
+            return `
+                <div class="flex items-center justify-between py-3 px-2 hover:bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="text-sm font-medium text-gray-900 w-32">${week.weekName}</div>
+                        <div class="flex-1">
+                            <div class="text-xs text-gray-500 mb-1">${week.transactionCount} transaction${week.transactionCount !== 1 ? 's' : ''}</div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-gray-900">${formatCurrency(week.amount)}</div>
+                        ${week.isCurrentWeek ? '<div class="text-xs text-green-600">Current</div>' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getWeeklySpendingData(period) {
+        const today = new Date();
+        const weeks = [];
+
+        if (period === 'recent') {
+            // Get last 4 weeks including current week
+            for (let i = 3; i >= 0; i--) {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - (today.getDay()) - (i * 7));
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                
+                weeks.push(this.getWeekSpendingData(weekStart, weekEnd));
+            }
+        } else {
+            // Get all weeks in current month
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            // Start from the first day of the month
+            let weekStart = new Date(currentYear, currentMonth, 1);
+            
+            // Adjust to start from Sunday
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            while (weekStart.getMonth() <= currentMonth || weekStart.getDate() === 1) {
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                
+                // Only include weeks that have days in current month
+                if (weekStart.getMonth() === currentMonth || weekEnd.getMonth() === currentMonth) {
+                    weeks.push(this.getWeekSpendingData(weekStart, weekEnd));
+                }
+                
+                // Move to next week
+                weekStart.setDate(weekStart.getDate() + 7);
+                
+                // Break if we've moved beyond current month
+                if (weekStart.getMonth() > currentMonth && weekStart.getFullYear() >= currentYear) {
+                    break;
+                }
+            }
+        }
+
+        // Find max amount for percentage calculation
+        const maxAmount = Math.max(...weeks.map(week => week.amount), 0);
+
+        return { weeks, maxAmount };
+    }
+
+    getWeekSpendingData(weekStart, weekEnd) {
+        const weekStartString = weekStart.toISOString().split('T')[0];
+        const weekEndString = weekEnd.toISOString().split('T')[0];
+        
+        // Filter expenses for this week
+        const weekExpenses = this.expenses.filter(expense => {
+            const expenseDate = new Date(expense.date).toISOString().split('T')[0];
+            return expenseDate >= weekStartString && expenseDate <= weekEndString;
+        });
+
+        const amount = weekExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        
+        return {
+            weekStart: weekStartString,
+            weekEnd: weekEndString,
+            weekName: this.formatWeekName(weekStart, weekEnd),
+            amount: amount,
+            transactionCount: weekExpenses.length,
+            isCurrentWeek: this.isCurrentWeek(weekStart, weekEnd),
+            expenses: weekExpenses
+        };
+    }
+
+    formatWeekName(weekStart, weekEnd) {
+        const today = new Date();
+        
+        // Check if this is current week
+        if (this.isCurrentWeek(weekStart, weekEnd)) {
+            return 'This Week';
+        }
+        
+        // Check if this is last week
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        
+        if (weekStart.getTime() === lastWeekStart.getTime()) {
+            return 'Last Week';
+        }
+        
+        // Format as date range
+        const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+        const startDay = weekStart.getDate();
+        const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
+        const endDay = weekEnd.getDate();
+        
+        if (startMonth === endMonth) {
+            return `${startMonth} ${startDay}-${endDay}`;
+        } else {
+            return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+        }
+    }
+
+    isCurrentWeek(weekStart, weekEnd) {
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        const weekStartString = weekStart.toISOString().split('T')[0];
+        const weekEndString = weekEnd.toISOString().split('T')[0];
+        
+        return todayString >= weekStartString && todayString <= weekEndString;
+    }
+
+    // ====================================================================
     // DYNAMIC CATEGORY MANAGEMENT
     // ====================================================================
 
@@ -1236,6 +1413,10 @@ function deleteCategory(categoryName) {
 
 function updateDailyView(period) {
     expenseTracker.updateDailySpending(period);
+}
+
+function updateWeeklyView(period) {
+    expenseTracker.updateWeeklySpending(period);
 }
 
 // ====================================================================
