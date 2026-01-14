@@ -23,6 +23,8 @@ class ExpenseTracker {
             rent: 0,
             utilities: 0,
             insurance: 0,
+            privacyMode: false,
+            categories: ['Food', 'Transportation', 'Entertainment', 'Coffee', 'Shopping', 'Bills', 'Other'],
             goals: {
                 Food: 300,
                 Transportation: 200,
@@ -42,10 +44,13 @@ class ExpenseTracker {
     init() {
         this.setupEventListeners();
         this.renderCategoryGoalsSettings();
+        this.renderExistingCategories();
+        this.updateCategoryDropdown();
         this.loadSettings();
         this.updateDashboard();
         this.renderTransactions();
         this.initializeHistoryPage();
+        this.initializeDateField();
         this.showPage('dashboard');
     }
 
@@ -94,15 +99,19 @@ class ExpenseTracker {
         const amount = parseFloat(document.getElementById('amount').value);
         const description = document.getElementById('description').value;
         const category = document.getElementById('category').value;
+        const selectedDate = document.getElementById('expense-date').value;
 
-        if (!amount || !description || !category) return;
+        if (!amount || !description || !category || !selectedDate) return;
 
+        // Create date from selected date, preserving the original date but adding current time
+        const expenseDate = new Date(selectedDate + 'T00:00:00');
+        
         const expense = {
             id: Date.now(),
             amount: amount,
             description: description,
             category: category,
-            date: new Date().toISOString(),
+            date: expenseDate.toISOString(),
             timestamp: Date.now()
         };
 
@@ -149,6 +158,8 @@ class ExpenseTracker {
 
     clearForm() {
         document.getElementById('expense-form').reset();
+        // Reset date to today
+        this.initializeDateField();
     }
 
     // ====================================================================
@@ -324,6 +335,10 @@ class ExpenseTracker {
         document.getElementById('setting-utilities').value = this.settings.utilities;
         document.getElementById('setting-insurance').value = this.settings.insurance;
         document.getElementById('setting-income').value = this.settings.income;
+        
+        // Load privacy toggle
+        document.getElementById('privacy-toggle').checked = this.settings.privacyMode;
+        this.applyPrivacyMode();
         
         // Load category goals
         Object.keys(this.settings.goals).forEach(category => {
@@ -750,6 +765,280 @@ class ExpenseTracker {
             `).join('')}
         `;
     }
+
+    // ====================================================================
+    // PRIVACY MODE FUNCTIONALITY
+    // ====================================================================
+
+    togglePrivacyMode() {
+        this.settings.privacyMode = document.getElementById('privacy-toggle').checked;
+        this.applyPrivacyMode();
+        
+        // Save settings immediately
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        if (currentUser) {
+            this.saveSettingsToFirebase();
+        }
+        
+        showNotification(
+            this.settings.privacyMode ? 'Privacy mode enabled' : 'Privacy mode disabled', 
+            'success'
+        );
+    }
+
+    applyPrivacyMode() {
+        const privacyText = '••••••';
+        const isPrivate = this.settings.privacyMode;
+        
+        // Elements to hide/show based on privacy mode
+        const sensitiveElements = [
+            'total-income',
+            'total-savings',
+            'history-income', 
+            'history-savings'
+        ];
+        
+        sensitiveElements.forEach(elementId => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                if (isPrivate && !element.textContent.includes('••••••')) {
+                    element.setAttribute('data-original', element.textContent);
+                    element.textContent = privacyText;
+                } else if (!isPrivate && element.hasAttribute('data-original')) {
+                    element.textContent = element.getAttribute('data-original');
+                    element.removeAttribute('data-original');
+                }
+            }
+        });
+    }
+
+    // ====================================================================
+    // DATE FIELD INITIALIZATION
+    // ====================================================================
+
+    initializeDateField() {
+        const dateInput = document.getElementById('expense-date');
+        if (dateInput) {
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+    }
+
+    // ====================================================================
+    // DYNAMIC CATEGORY MANAGEMENT
+    // ====================================================================
+
+    renderExistingCategories() {
+        const container = document.getElementById('existing-categories');
+        if (!container) return;
+        
+        // Ensure categories array exists
+        if (!this.settings.categories) {
+            this.settings.categories = Object.keys(this.settings.goals);
+        }
+        
+        container.innerHTML = this.settings.categories.map(category => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                        <span class="text-primary-600 font-medium text-xs">${category.charAt(0)}</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">${category}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="editCategory('${category}')" 
+                            class="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </button>
+                    <button onclick="deleteCategory('${category}')" 
+                            class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    updateCategoryDropdown() {
+        const categorySelect = document.getElementById('category');
+        if (!categorySelect) return;
+        
+        // Clear existing options except the default one
+        categorySelect.innerHTML = '<option value="">Select a category</option>';
+        
+        // Add dynamic categories
+        this.settings.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    addCategory() {
+        const newCategoryInput = document.getElementById('new-category-name');
+        const categoryName = newCategoryInput.value.trim();
+        
+        if (!categoryName) {
+            showNotification('Please enter a category name', 'error');
+            return;
+        }
+        
+        // Check if category already exists (case-insensitive)
+        const existingCategory = this.settings.categories.find(cat => 
+            cat.toLowerCase() === categoryName.toLowerCase()
+        );
+        
+        if (existingCategory) {
+            showNotification('Category already exists!', 'error');
+            return;
+        }
+        
+        // Add to categories array
+        this.settings.categories.push(categoryName);
+        
+        // Add to goals with default value
+        this.settings.goals[categoryName] = 100;
+        
+        // Save settings
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        if (currentUser) {
+            this.saveSettingsToFirebase();
+        }
+        
+        // Update UI
+        this.renderExistingCategories();
+        this.renderCategoryGoalsSettings();
+        this.updateCategoryDropdown();
+        this.updateDashboard(); // Refresh dashboard to show new category
+        
+        // Clear input
+        newCategoryInput.value = '';
+        
+        showNotification(`Category "${categoryName}" added successfully!`, 'success');
+    }
+
+    editCategory(oldCategoryName) {
+        const newName = prompt('Enter new category name:', oldCategoryName);
+        
+        if (!newName || newName.trim() === '') {
+            return;
+        }
+        
+        const newCategoryName = newName.trim();
+        
+        // Check if new name already exists (case-insensitive)
+        const existingCategory = this.settings.categories.find(cat => 
+            cat.toLowerCase() === newCategoryName.toLowerCase() && cat !== oldCategoryName
+        );
+        
+        if (existingCategory) {
+            showNotification('Category name already exists!', 'error');
+            return;
+        }
+        
+        // Update categories array
+        const categoryIndex = this.settings.categories.indexOf(oldCategoryName);
+        if (categoryIndex !== -1) {
+            this.settings.categories[categoryIndex] = newCategoryName;
+        }
+        
+        // Update goals object
+        if (this.settings.goals[oldCategoryName] !== undefined) {
+            this.settings.goals[newCategoryName] = this.settings.goals[oldCategoryName];
+            delete this.settings.goals[oldCategoryName];
+        }
+        
+        // Update existing expenses with the new category name
+        this.expenses.forEach(expense => {
+            if (expense.category === oldCategoryName) {
+                expense.category = newCategoryName;
+            }
+        });
+        
+        // Save data
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        localStorage.setItem('expenses', JSON.stringify(this.expenses));
+        
+        if (currentUser) {
+            this.saveSettingsToFirebase();
+            // Update all expenses in Firebase
+            this.expenses.forEach(expense => {
+                if (expense.category === newCategoryName) {
+                    this.saveExpenseToFirebase(expense);
+                }
+            });
+        }
+        
+        // Update UI
+        this.renderExistingCategories();
+        this.renderCategoryGoalsSettings();
+        this.updateCategoryDropdown();
+        this.updateDashboard();
+        this.renderTransactions();
+        
+        showNotification(`Category renamed to "${newCategoryName}"!`, 'success');
+    }
+
+    deleteCategory(categoryName) {
+        // Check if there are expenses using this category
+        const expensesUsingCategory = this.expenses.filter(expense => expense.category === categoryName);
+        
+        let confirmMessage = `Are you sure you want to delete the "${categoryName}" category?`;
+        if (expensesUsingCategory.length > 0) {
+            confirmMessage += `\n\nThis will affect ${expensesUsingCategory.length} existing expense(s). They will be moved to "Other" category.`;
+        }
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        // Remove from categories array
+        this.settings.categories = this.settings.categories.filter(cat => cat !== categoryName);
+        
+        // Remove from goals
+        delete this.settings.goals[categoryName];
+        
+        // Move existing expenses to "Other" category
+        this.expenses.forEach(expense => {
+            if (expense.category === categoryName) {
+                expense.category = 'Other';
+            }
+        });
+        
+        // Ensure "Other" exists in categories and goals
+        if (!this.settings.categories.includes('Other')) {
+            this.settings.categories.push('Other');
+            this.settings.goals['Other'] = 100;
+        }
+        
+        // Save data
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        localStorage.setItem('expenses', JSON.stringify(this.expenses));
+        
+        if (currentUser) {
+            this.saveSettingsToFirebase();
+            // Update affected expenses in Firebase
+            expensesUsingCategory.forEach(expense => {
+                expense.category = 'Other';
+                this.saveExpenseToFirebase(expense);
+            });
+        }
+        
+        // Update UI
+        this.renderExistingCategories();
+        this.renderCategoryGoalsSettings();
+        this.updateCategoryDropdown();
+        this.updateDashboard();
+        this.renderTransactions();
+        
+        showNotification(`Category "${categoryName}" deleted successfully!`, 'success');
+    }
 }
 
 // ====================================================================
@@ -774,6 +1063,22 @@ function saveSettings() {
 
 function updateHistoryView() {
     expenseTracker.updateHistoryView();
+}
+
+function togglePrivacyMode() {
+    expenseTracker.togglePrivacyMode();
+}
+
+function addCategory() {
+    expenseTracker.addCategory();
+}
+
+function editCategory(categoryName) {
+    expenseTracker.editCategory(categoryName);
+}
+
+function deleteCategory(categoryName) {
+    expenseTracker.deleteCategory(categoryName);
 }
 
 // ====================================================================

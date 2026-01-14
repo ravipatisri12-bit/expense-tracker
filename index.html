@@ -254,6 +254,12 @@
                         </select>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <input type="date" id="expense-date" required
+                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    </div>
+
                     <div class="flex space-x-4">
                         <button type="submit" class="flex-1 bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 font-medium">
                             Add Expense
@@ -431,6 +437,23 @@
         <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-8">Settings</h2>
 
+            <!-- Privacy Settings -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Privacy Settings</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Hide Sensitive Information</label>
+                            <p class="text-xs text-gray-500">Hide income, savings, and total amounts for privacy</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="privacy-toggle" class="sr-only peer" onchange="togglePrivacyMode()">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Fixed Expenses Settings -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Fixed Expenses</h3>
@@ -471,6 +494,29 @@
                         <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                         <input type="number" id="setting-income" step="0.01" placeholder="0.00"
                                class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Management Settings -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Category Management</h3>
+                <div class="space-y-4">
+                    <!-- Add New Category -->
+                    <div class="flex space-x-2">
+                        <input type="text" id="new-category-name" placeholder="Enter category name" 
+                               class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <button onclick="addCategory()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+                            Add Category
+                        </button>
+                    </div>
+                    
+                    <!-- Existing Categories -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Existing Categories</label>
+                        <div id="existing-categories" class="space-y-2">
+                            <!-- Dynamic content -->
+                        </div>
                     </div>
                 </div>
             </div>
