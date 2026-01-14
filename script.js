@@ -404,34 +404,126 @@ class ExpenseTracker {
             return;
         }
 
-        container.innerHTML = sortedExpenses.map(expense => `
-            <div class="flex items-center justify-between p-4 hover:bg-gray-50">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span class="text-primary-600 font-medium text-sm">${expense.category.charAt(0)}</span>
+        // Group transactions by date
+        const groupedByDate = this.groupTransactionsByDate(sortedExpenses);
+        
+        // Render grouped transactions
+        container.innerHTML = groupedByDate.map(dateGroup => {
+            const transactionsHtml = dateGroup.transactions.map(expense => `
+                <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-l-2 border-transparent hover:border-l-primary-200">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span class="text-primary-600 font-medium text-sm">${expense.category.charAt(0)}</span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">${expense.description}</p>
+                            <p class="text-sm text-gray-500">${expense.category}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="font-medium text-gray-900">${expense.description}</p>
-                        <p class="text-sm text-gray-500">${expense.category} • ${formatDate(expense.date)}</p>
+                    <div class="flex items-center space-x-3">
+                        <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
+                        <button onclick="expenseTracker.editExpense(${expense.id})" 
+                                class="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="expenseTracker.deleteExpense(${expense.id})" 
+                                class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
-                    <button onclick="expenseTracker.editExpense(${expense.id})" 
-                            class="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                    </button>
-                    <button onclick="expenseTracker.deleteExpense(${expense.id})" 
-                            class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
+            `).join('');
+
+            return `
+                <div class="mb-6">
+                    <!-- Date Header -->
+                    <div class="sticky top-16 bg-gray-100 px-4 py-3 border-b border-gray-200 z-10">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-semibold text-gray-900 text-sm">${dateGroup.dateLabel}</h3>
+                                <p class="text-xs text-gray-500">${dateGroup.transactions.length} transaction${dateGroup.transactions.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-red-600">-${formatCurrency(dateGroup.totalAmount)}</p>
+                                <p class="text-xs text-gray-500">Total for day</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Transactions for this date -->
+                    <div class="divide-y divide-gray-100">
+                        ${transactionsHtml}
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+    }
+
+    groupTransactionsByDate(expenses) {
+        const groups = {};
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        expenses.forEach(expense => {
+            const expenseDate = new Date(expense.date);
+            const dateString = this.getLocalDateString(expenseDate);
+            
+            if (!groups[dateString]) {
+                groups[dateString] = {
+                    date: dateString,
+                    dateObj: expenseDate,
+                    transactions: [],
+                    totalAmount: 0
+                };
+            }
+            
+            groups[dateString].transactions.push(expense);
+            groups[dateString].totalAmount += expense.amount;
+        });
+
+        // Convert to array and sort by date (newest first)
+        return Object.values(groups)
+            .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime())
+            .map(group => {
+                // Create user-friendly date labels
+                const todayString = this.getLocalDateString(today);
+                const yesterdayString = this.getLocalDateString(yesterday);
+                
+                let dateLabel;
+                if (group.date === todayString) {
+                    dateLabel = 'Today';
+                } else if (group.date === yesterdayString) {
+                    dateLabel = 'Yesterday';
+                } else {
+                    // Check if it's this week
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    
+                    if (group.dateObj > weekAgo) {
+                        dateLabel = group.dateObj.toLocaleDateString('en-US', { 
+                            weekday: 'long',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    } else {
+                        dateLabel = group.dateObj.toLocaleDateString('en-US', { 
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+                    }
+                }
+
+                return {
+                    ...group,
+                    dateLabel
+                };
+            });
     }
 
     // ====================================================================
