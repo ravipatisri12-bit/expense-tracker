@@ -195,6 +195,11 @@ class ExpenseTracker {
         const categorySelect = document.getElementById('edit-category');
         if (!categorySelect) return;
         
+        // Ensure categories array exists
+        if (!this.settings.categories) {
+            this.settings.categories = Object.keys(this.settings.goals);
+        }
+        
         // Clear existing options except the default one
         categorySelect.innerHTML = '<option value="">Select a category</option>';
         
