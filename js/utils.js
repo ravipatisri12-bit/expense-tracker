@@ -20,9 +20,14 @@ function getTotalBudget(goals = {}) {
  * @returns {string} Formatted currency string
  */
 function formatCurrency(amount, currency = 'USD', locale = 'en-US') {
+    // Check if the amount is a whole number
+    const isWholeNumber = Number.isInteger(amount);
+    
     return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: currency
+        currency: currency,
+        minimumFractionDigits: isWholeNumber ? 0 : 2,
+        maximumFractionDigits: 2
     }).format(amount);
 }
 
