@@ -336,7 +336,14 @@ class ExpenseTracker {
         const container = document.getElementById('variable-expenses-list');
         container.innerHTML = '';
 
-        Object.keys(this.settings.goals).forEach(category => {
+        // Sort categories by spending amount (highest to lowest)
+        const sortedCategories = Object.keys(this.settings.goals).sort((a, b) => {
+            const spentA = expensesByCategory[a] || 0;
+            const spentB = expensesByCategory[b] || 0;
+            return spentB - spentA; // Sort descending
+        });
+
+        sortedCategories.forEach(category => {
             const spent = expensesByCategory[category] || 0;
             const goal = this.settings.goals[category];
             const percentage = goal > 0 ? Math.min((spent / goal) * 100, 100) : 0;
