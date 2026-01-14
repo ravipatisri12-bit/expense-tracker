@@ -736,12 +736,136 @@ class GlassExpenseTracker {
             activeNav.classList.add('active');
         }
 
-        // Simple page simulation
-        if (page === 'add') {
+        // Show appropriate page
+        this.showPage(page);
+    }
+
+    showPage(pageId) {
+        // Hide all pages
+        document.querySelectorAll('.page-content').forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        // Special handling for add page
+        if (pageId === 'add') {
             this.showQuickAdd();
-        } else {
-            this.showToast(`Navigated to ${page.charAt(0).toUpperCase() + page.slice(1)}`);
+            return;
         }
+        
+        // Show selected page
+        const targetPage = document.getElementById(`${pageId}-page`);
+        if (targetPage) {
+            targetPage.classList.add('active');
+            this.currentPage = pageId;
+            
+            // Update page-specific content
+            if (pageId === 'overview') {
+                this.updateOverviewPage();
+            }
+        }
+    }
+
+    updateOverviewPage() {
+        // Update dynamic content for Overview page
+        this.updateOverviewSummary();
+        this.updateCategoryBreakdown();
+        this.updateOverviewStats();
+        this.updateMonthlyChart();
+    }
+
+    updateOverviewSummary() {
+        // Calculate summary values (mock data for prototype)
+        const income = 5200;
+        const expenses = 3847;
+        const savings = income - expenses;
+        const budgetLeft = 753;
+
+        // Update mini cards
+        const incomeCard = document.querySelector('.mini-card.income .mini-card-amount');
+        const expensesCard = document.querySelector('.mini-card.expenses .mini-card-amount');
+        const savingsCard = document.querySelector('.mini-card.savings .mini-card-amount');
+        const budgetCard = document.querySelector('.mini-card.budget .mini-card-amount');
+
+        if (incomeCard) this.animateNumber(incomeCard, 0, income, 800, '$');
+        if (expensesCard) this.animateNumber(expensesCard, 0, expenses, 800, '$');
+        if (savingsCard) this.animateNumber(savingsCard, 0, savings, 800, '$');
+        if (budgetCard) this.animateNumber(budgetCard, 0, budgetLeft, 800, '$');
+    }
+
+    updateCategoryBreakdown() {
+        // Update category progress bars with animation
+        const categories = [
+            { name: 'Food & Dining', spent: 417, budget: 500, percentage: 83 },
+            { name: 'Transportation', spent: 195, budget: 300, percentage: 65 },
+            { name: 'Shopping', spent: 135, budget: 300, percentage: 45 },
+            { name: 'Entertainment', spent: 108, budget: 150, percentage: 72 },
+            { name: 'Coffee & Drinks', spent: 67, budget: 75, percentage: 90 }
+        ];
+
+        categories.forEach((category, index) => {
+            const categoryElement = document.querySelectorAll('.category-item')[index];
+            if (categoryElement) {
+                const progressFill = categoryElement.querySelector('.progress-fill');
+                const spentAmount = categoryElement.querySelector('.spent-amount');
+                
+                // Animate progress bar
+                setTimeout(() => {
+                    if (progressFill) {
+                        progressFill.style.width = `${category.percentage}%`;
+                    }
+                    if (spentAmount) {
+                        this.animateNumber(spentAmount, 0, category.spent, 600, '$');
+                    }
+                }, index * 200);
+            }
+        });
+    }
+
+    updateOverviewStats() {
+        // Update daily average and weekly trend
+        const dailyAverage = 42.50;
+        const weeklyAmount = 284;
+
+        const dailyElement = document.querySelector('.daily-average-card .stat-amount');
+        const weeklyElement = document.querySelector('.weekly-trend-card .stat-amount');
+
+        if (dailyElement) {
+            setTimeout(() => {
+                this.animateNumber(dailyElement, 0, dailyAverage, 600, '$');
+            }, 400);
+        }
+
+        if (weeklyElement) {
+            setTimeout(() => {
+                this.animateNumber(weeklyElement, 0, weeklyAmount, 600, '$');
+            }, 600);
+        }
+    }
+
+    updateMonthlyChart() {
+        // Animate monthly chart bars
+        const monthData = [
+            { month: 'Nov', amount: 3245, height: 75 },
+            { month: 'Dec', amount: 3891, height: 90 },
+            { month: 'Jan', amount: 3847, height: 85 }
+        ];
+
+        monthData.forEach((month, index) => {
+            const monthBar = document.querySelectorAll('.month-bar')[index];
+            if (monthBar) {
+                const expenseBar = monthBar.querySelector('.expense-bar');
+                const monthAmount = monthBar.querySelector('.month-amount');
+                
+                setTimeout(() => {
+                    if (expenseBar) {
+                        expenseBar.style.height = `${month.height}%`;
+                    }
+                    if (monthAmount) {
+                        this.animateNumber(monthAmount, 0, month.amount, 800, '$');
+                    }
+                }, index * 300);
+            }
+        });
     }
 
     loadExpenses() {
@@ -776,6 +900,13 @@ class GlassExpenseTracker {
             budget: 2000,
             currency: 'USD'
         };
+    }
+}
+
+// Global function for HTML onclick events
+function showPage(pageId) {
+    if (window.glassTracker) {
+        window.glassTracker.showPage(pageId);
     }
 }
 
