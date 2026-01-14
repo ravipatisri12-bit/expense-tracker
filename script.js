@@ -60,6 +60,12 @@ class ExpenseTracker {
             e.preventDefault();
             this.addExpense();
         });
+
+        // Edit form submission
+        document.getElementById('edit-expense-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveEditedExpense();
+        });
     }
 
     // ====================================================================
@@ -154,6 +160,106 @@ class ExpenseTracker {
             this.renderTransactions();
             showNotification('Transaction deleted successfully!', 'success');
         }
+    }
+
+    // ====================================================================
+    // EXPENSE EDITING FUNCTIONALITY
+    // ====================================================================
+
+    editExpense(expenseId) {
+        // Find the expense to edit
+        const expense = this.expenses.find(e => e.id == expenseId);
+        if (!expense) {
+            showNotification('Transaction not found!', 'error');
+            return;
+        }
+
+        // Populate edit form
+        document.getElementById('edit-expense-id').value = expense.id;
+        document.getElementById('edit-amount').value = expense.amount;
+        document.getElementById('edit-description').value = expense.description;
+        document.getElementById('edit-category').value = expense.category;
+        
+        // Format date for input field (convert from ISO to YYYY-MM-DD)
+        const expenseDate = new Date(expense.date);
+        document.getElementById('edit-date').value = this.getLocalDateString(expenseDate);
+
+        // Populate category dropdown for edit form
+        this.populateEditCategoryDropdown();
+
+        // Show modal
+        document.getElementById('edit-expense-modal').classList.remove('hidden');
+    }
+
+    populateEditCategoryDropdown() {
+        const categorySelect = document.getElementById('edit-category');
+        if (!categorySelect) return;
+        
+        // Clear existing options except the default one
+        categorySelect.innerHTML = '<option value="">Select a category</option>';
+        
+        // Add dynamic categories
+        this.settings.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    async saveEditedExpense() {
+        const expenseId = parseInt(document.getElementById('edit-expense-id').value);
+        const amount = parseFloat(document.getElementById('edit-amount').value);
+        const description = document.getElementById('edit-description').value;
+        const category = document.getElementById('edit-category').value;
+        const selectedDate = document.getElementById('edit-date').value;
+
+        if (!amount || !description || !category || !selectedDate) {
+            showNotification('Please fill in all fields', 'error');
+            return;
+        }
+
+        // Find the expense in the array
+        const expenseIndex = this.expenses.findIndex(e => e.id === expenseId);
+        if (expenseIndex === -1) {
+            showNotification('Transaction not found!', 'error');
+            return;
+        }
+
+        // Create updated expense object
+        const expenseDate = new Date(selectedDate + 'T00:00:00');
+        const updatedExpense = {
+            ...this.expenses[expenseIndex], // Keep original id and timestamp
+            amount: amount,
+            description: description,
+            category: category,
+            date: expenseDate.toISOString()
+        };
+
+        // Update in local array
+        this.expenses[expenseIndex] = updatedExpense;
+        
+        // Save to localStorage
+        this.saveExpenses();
+        
+        // Save to Firebase if user is signed in
+        if (currentUser) {
+            await this.saveExpenseToFirebase(updatedExpense);
+        }
+
+        // Close modal
+        this.closeEditModal();
+
+        // Update UI
+        this.updateDashboard();
+        this.renderTransactions();
+        
+        showNotification('Transaction updated successfully!', 'success');
+    }
+
+    closeEditModal() {
+        document.getElementById('edit-expense-modal').classList.add('hidden');
+        document.getElementById('edit-expense-form').reset();
     }
 
     clearForm() {
@@ -306,6 +412,12 @@ class ExpenseTracker {
                 </div>
                 <div class="flex items-center space-x-3">
                     <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
+                    <button onclick="expenseTracker.editExpense(${expense.id})" 
+                            class="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </button>
                     <button onclick="expenseTracker.deleteExpense(${expense.id})" 
                             class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1427,6 +1539,10 @@ function updateDailyView(period) {
 
 function updateWeeklyView(period) {
     expenseTracker.updateWeeklySpending(period);
+}
+
+function closeEditModal() {
+    expenseTracker.closeEditModal();
 }
 
 // ====================================================================
