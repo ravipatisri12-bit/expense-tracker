@@ -200,6 +200,9 @@ class ExpenseTracker {
         this.updateVariableExpenses(monthlyExpenses);
         document.getElementById('total-variable').textContent = formatCurrency(totalVariableExpenses);
 
+        // Update daily spending view
+        this.updateDailySpending('week');
+
         // Update recent transactions
         this.updateRecentTransactions();
     }
@@ -826,6 +829,156 @@ class ExpenseTracker {
     }
 
     // ====================================================================
+    // DAILY SPENDING FUNCTIONALITY
+    // ====================================================================
+
+    updateDailySpending(period = 'week') {
+        const container = document.getElementById('daily-spending-content');
+        const averageElement = document.getElementById('daily-average');
+        
+        if (!container || !averageElement) return;
+
+        // Update button states
+        const weekBtn = document.getElementById('week-btn');
+        const monthBtn = document.getElementById('month-btn');
+        
+        if (weekBtn && monthBtn) {
+            if (period === 'week') {
+                weekBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
+                monthBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
+            } else {
+                weekBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
+                monthBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
+            }
+        }
+
+        const dailyData = this.getDailySpendingData(period);
+        
+        if (dailyData.days.length === 0) {
+            container.innerHTML = '<div class="text-gray-500 text-center py-8">No expenses found for this period</div>';
+            averageElement.textContent = '$0.00';
+            return;
+        }
+
+        // Calculate average
+        const totalAmount = dailyData.days.reduce((sum, day) => sum + day.amount, 0);
+        const average = dailyData.days.length > 0 ? totalAmount / dailyData.days.length : 0;
+        averageElement.textContent = formatCurrency(average);
+
+        // Update title
+        const titleElement = container.previousElementSibling.querySelector('h3');
+        if (titleElement) {
+            titleElement.textContent = `Daily Spending (${period === 'week' ? 'This Week' : 'This Month'})`;
+        }
+
+        // Render daily spending items
+        container.innerHTML = dailyData.days.map(day => {
+            const percentage = dailyData.maxAmount > 0 ? (day.amount / dailyData.maxAmount) * 100 : 0;
+            
+            return `
+                <div class="flex items-center justify-between py-3 px-2 hover:bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="text-sm font-medium text-gray-900 w-20">${day.dayName}</div>
+                        <div class="flex-1">
+                            <div class="text-xs text-gray-500 mb-1">${day.transactionCount} transaction${day.transactionCount !== 1 ? 's' : ''}</div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-gray-900">${formatCurrency(day.amount)}</div>
+                        ${day.isToday ? '<div class="text-xs text-primary-600">Today</div>' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getDailySpendingData(period) {
+        const today = new Date();
+        const days = [];
+        let startDate, endDate;
+
+        if (period === 'week') {
+            // Get current week (Sunday to Saturday)
+            const dayOfWeek = today.getDay();
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - dayOfWeek);
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            
+            // Generate 7 days for the week
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                days.push(this.getDaySpendingData(date));
+            }
+        } else {
+            // Get current month
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            // Generate all days in the current month
+            const daysInMonth = endDate.getDate();
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(today.getFullYear(), today.getMonth(), i);
+                days.push(this.getDaySpendingData(date));
+            }
+        }
+
+        // Find max amount for percentage calculation
+        const maxAmount = Math.max(...days.map(day => day.amount), 0);
+
+        return { days, maxAmount };
+    }
+
+    getDaySpendingData(date) {
+        const dateString = date.toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Filter expenses for this specific date
+        const dayExpenses = this.expenses.filter(expense => {
+            const expenseDate = new Date(expense.date).toISOString().split('T')[0];
+            return expenseDate === dateString;
+        });
+
+        const amount = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        
+        return {
+            date: dateString,
+            dayName: this.formatDayName(date),
+            amount: amount,
+            transactionCount: dayExpenses.length,
+            isToday: dateString === today,
+            expenses: dayExpenses
+        };
+    }
+
+    formatDayName(date) {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        
+        const dateString = date.toISOString().split('T')[0];
+        const todayString = today.toISOString().split('T')[0];
+        const yesterdayString = yesterday.toISOString().split('T')[0];
+        
+        if (dateString === todayString) {
+            return 'Today';
+        } else if (dateString === yesterdayString) {
+            return 'Yesterday';
+        } else {
+            // Return day name and date for current week, or just date for month view
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+    }
+
+    // ====================================================================
     // DYNAMIC CATEGORY MANAGEMENT
     // ====================================================================
 
@@ -1079,6 +1232,10 @@ function editCategory(categoryName) {
 
 function deleteCategory(categoryName) {
     expenseTracker.deleteCategory(categoryName);
+}
+
+function updateDailyView(period) {
+    expenseTracker.updateDailySpending(period);
 }
 
 // ====================================================================

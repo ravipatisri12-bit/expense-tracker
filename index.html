@@ -160,6 +160,28 @@
                 </div>
             </div>
 
+            <!-- Daily Spending Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Daily Spending (This Week)</h3>
+                    <div class="flex space-x-2">
+                        <button onclick="updateDailyView('week')" id="week-btn" class="px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium">
+                            This Week
+                        </button>
+                        <button onclick="updateDailyView('month')" id="month-btn" class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+                            This Month
+                        </button>
+                    </div>
+                </div>
+                <div id="daily-spending-content" class="space-y-3">
+                    <!-- Dynamic daily spending content -->
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm text-gray-600">
+                    <span>Average per day</span>
+                    <span id="daily-average" class="font-medium">$0.00</span>
+                </div>
+            </div>
+
             <!-- Fixed Expenses & Variable Expenses -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Fixed Expenses -->
