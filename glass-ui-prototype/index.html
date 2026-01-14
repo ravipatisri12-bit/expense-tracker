@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass UI Expense Tracker - Flighty Inspired</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Glass UI Background -->
+    <div class="app-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span class="time">9:41</span>
+            </div>
+            <div class="status-right">
+                <div class="battery"></div>
+                <div class="signal"></div>
+                <div class="wifi"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <h1 class="greeting">Good evening, Sreekar</h1>
+                <div class="date">Monday, January 13</div>
+            </header>
+
+            <!-- Primary Spending Gauge Card -->
+            <div class="glass-card primary-card">
+                <div class="card-header">
+                    <h2>Variable Spending</h2>
+                    <div class="period-indicator">This Month</div>
+                </div>
+                
+                <div class="spending-gauge-container">
+                    <div class="spending-gauge">
+                        <svg class="gauge-svg" viewBox="0 0 200 200">
+                            <circle 
+                                cx="100" 
+                                cy="100" 
+                                r="85" 
+                                class="gauge-bg"
+                                fill="none" 
+                                stroke="rgba(255,255,255,0.1)" 
+                                stroke-width="8"
+                            />
+                            <circle 
+                                cx="100" 
+                                cy="100" 
+                                r="85" 
+                                class="gauge-progress"
+                                fill="none" 
+                                stroke="url(#gaugeGradient)" 
+                                stroke-width="8"
+                                stroke-linecap="round"
+                                pathLength="100"
+                                style="stroke-dasharray: 62 38; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: 50% 50%;"
+                            />
+                            <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#007AFF;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#34C759;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        
+                        <div class="gauge-center">
+                            <div class="amount-spent">$1,247</div>
+                            <div class="amount-total">of $2,000</div>
+                            <div class="percentage">62%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gauge-status">
+                    <div class="status-indicator good">
+                        <div class="indicator-dot"></div>
+                        <span>On track for month</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Add Button -->
+            <button class="glass-button quick-add-btn">
+                <div class="button-icon">+</div>
+                <span>Quick Add Expense</span>
+            </button>
+
+            <!-- This Week Summary -->
+            <div class="glass-card secondary-card">
+                <div class="card-header">
+                    <h3>This Week</h3>
+                    <div class="trend-indicator positive">↗ 12%</div>
+                </div>
+                <div class="week-amount">$284</div>
+                <div class="week-comparison">vs $253 last week</div>
+            </div>
+
+            <!-- Single-Line Transaction List -->
+            <div class="glass-card transactions-card">
+                <div class="card-header">
+                    <h3>Recent</h3>
+                    <button class="view-all-btn">View All</button>
+                </div>
+                
+                <div class="transaction-list">
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category coffee">☕</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Starbucks</div>
+                                <div class="transaction-time">2 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$5.50</div>
+                    </div>
+
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category food">🍽️</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Lunch at Chipotle</div>
+                                <div class="transaction-time">4 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$12.00</div>
+                    </div>
+
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category transport">🚗</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Uber ride</div>
+                                <div class="transaction-time">6 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$8.50</div>
+                    </div>
+
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category shopping">🛒</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Whole Foods</div>
+                                <div class="transaction-time">Yesterday</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$67.23</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item active">
+                <div class="nav-icon">🏠</div>
+                <div class="nav-label">Home</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">Insights</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">➕</div>
+                <div class="nav-label">Add</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">⚙️</div>
+                <div class="nav-label">Settings</div>
+            </div>
+        </nav>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

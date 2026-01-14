@@ -825,8 +825,8 @@ class ExpenseTracker {
     initializeDateField() {
         const dateInput = document.getElementById('expense-date');
         if (dateInput) {
-            // Set today's date as default
-            const today = new Date().toISOString().split('T')[0];
+            // Set today's date as default using local timezone
+            const today = this.getLocalDateString(new Date());
             dateInput.value = today;
         }
     }
@@ -937,12 +937,13 @@ class ExpenseTracker {
     }
 
     getDaySpendingData(date) {
-        const dateString = date.toISOString().split('T')[0];
-        const today = new Date().toISOString().split('T')[0];
+        // Use local date strings to avoid timezone issues
+        const dateString = this.getLocalDateString(date);
+        const today = this.getLocalDateString(new Date());
         
         // Filter expenses for this specific date
         const dayExpenses = this.expenses.filter(expense => {
-            const expenseDate = new Date(expense.date).toISOString().split('T')[0];
+            const expenseDate = this.getLocalDateString(new Date(expense.date));
             return expenseDate === dateString;
         });
 
@@ -958,14 +959,23 @@ class ExpenseTracker {
         };
     }
 
+    // Helper function to get consistent local date strings (avoiding timezone issues)
+    getLocalDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     formatDayName(date) {
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         
-        const dateString = date.toISOString().split('T')[0];
-        const todayString = today.toISOString().split('T')[0];
-        const yesterdayString = yesterday.toISOString().split('T')[0];
+        // Use local date strings to avoid timezone issues
+        const dateString = this.getLocalDateString(date);
+        const todayString = this.getLocalDateString(today);
+        const yesterdayString = this.getLocalDateString(yesterday);
         
         if (dateString === todayString) {
             return 'Today';
