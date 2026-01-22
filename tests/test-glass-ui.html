@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass UI Component Test</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        /* Test-specific styles */
+        .test-section {
+            margin-bottom: 40px;
+        }
+        .test-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .component-demo {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="app-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <div class="main-content">
+            <h1 class="text-title" style="margin: 20px 0;">Glass UI Component Test</h1>
+
+            <!-- Test 1: Design Tokens -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">1. Design Tokens (CSS Custom Properties)</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                    <div style="padding: 12px; background: var(--glass-bg); border-radius: 8px;">
+                        <div class="text-caption text-secondary">Primary Text</div>
+                        <div class="text-body" style="color: var(--text-primary);">Sample</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--glass-bg); border-radius: 8px;">
+                        <div class="text-caption text-secondary">Secondary Text</div>
+                        <div class="text-body" style="color: var(--text-secondary);">Sample</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--glass-bg); border-radius: 8px;">
+                        <div class="text-caption text-secondary">Tertiary Text</div>
+                        <div class="text-body" style="color: var(--text-tertiary);">Sample</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--status-good); border-radius: 8px;">
+                        <div class="text-caption">Good Status</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--status-warning); border-radius: 8px;">
+                        <div class="text-caption">Warning</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--status-danger); border-radius: 8px;">
+                        <div class="text-caption">Danger</div>
+                    </div>
+                    <div style="padding: 12px; background: var(--status-primary); border-radius: 8px;">
+                        <div class="text-caption">Primary</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 2: Glass Card Component -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">2. Glass Card Component</h2>
+                <div class="component-demo">
+                    <div class="glass-card" style="max-width: 300px;">
+                        <h3 class="text-heading">Standard Glass Card</h3>
+                        <p class="text-body text-secondary">This card should have:</p>
+                        <ul class="text-body text-secondary" style="margin-left: 20px; margin-top: 8px;">
+                            <li>Background: rgba(255,255,255,0.05)</li>
+                            <li>Backdrop blur: 20px</li>
+                            <li>Border: 1px rgba(255,255,255,0.1)</li>
+                            <li>Border-radius: 20px</li>
+                            <li>Padding: 24px</li>
+                            <li>Top highlight gradient</li>
+                            <li>Hover: translateY(-2px)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 3: Navigation Bar -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">3. Navigation Bar (Fixed at Bottom)</h2>
+                <p class="text-body text-secondary">Scroll to bottom to see the navigation bar with 44px touch targets</p>
+            </div>
+
+            <!-- Test 4: Form Components -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">4. Form Components</h2>
+                
+                <div class="component-demo">
+                    <label class="form-label">Glass Input</label>
+                    <input type="text" class="glass-input" placeholder="Enter text here...">
+                </div>
+
+                <div class="component-demo">
+                    <label class="form-label">Glass Select</label>
+                    <select class="glass-select">
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                        <option>Option 3</option>
+                    </select>
+                </div>
+
+                <div class="component-demo">
+                    <label class="form-label">Buttons</label>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="glass-button">Glass Button</button>
+                        <button class="glass-button-primary">Primary Button</button>
+                        <button class="glass-button-danger">Danger Button</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 5: Spending Gauge -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">5. Spending Gauge Component</h2>
+                <div class="spending-gauge-container">
+                    <div class="spending-gauge">
+                        <svg class="gauge-svg" viewBox="0 0 100 100">
+                            <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#007AFF;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#34C759;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <circle class="gauge-background" cx="50" cy="50" r="40" />
+                            <circle class="gauge-progress" cx="50" cy="50" r="40" 
+                                    stroke-dasharray="188.4 251.2" />
+                        </svg>
+                        <div class="gauge-center">
+                            <div class="amount-spent">$750</div>
+                            <div class="amount-total">of $1,000</div>
+                            <div class="percentage">75%</div>
+                        </div>
+                    </div>
+                    <div class="gauge-status">
+                        <div class="status-indicator warning">
+                            <span class="indicator-dot"></span>
+                            <span>Approaching limit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 6: Transaction List -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">6. Transaction List</h2>
+                <div class="transaction-list">
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category food">🍔</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Lunch at Restaurant</div>
+                                <div class="transaction-time">2 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$25.50</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category coffee">☕</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Morning Coffee</div>
+                                <div class="transaction-time">5 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$5.75</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-category transport">🚗</div>
+                            <div class="transaction-details">
+                                <div class="transaction-description">Uber Ride</div>
+                                <div class="transaction-time">Yesterday</div>
+                            </div>
+                        </div>
+                        <div class="transaction-amount">-$18.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 7: Typography Scale -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">7. Typography Scale</h2>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="text-hero">Hero Text (36px)</div>
+                    <div class="text-title">Title Text (32px)</div>
+                    <div class="text-heading">Heading Text (22px)</div>
+                    <div class="text-body">Body Text (17px)</div>
+                    <div class="text-caption">Caption Text (14px)</div>
+                    <div class="text-small">Small Text (12px)</div>
+                </div>
+            </div>
+
+            <!-- Test 8: Summary Cards -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">8. Summary Cards Grid</h2>
+                <div class="summary-grid">
+                    <div class="glass-card mini-card income">
+                        <div class="mini-card-icon">💰</div>
+                        <div class="mini-card-content">
+                            <div class="mini-card-label">Income</div>
+                            <div class="mini-card-amount">$5,000</div>
+                        </div>
+                    </div>
+                    <div class="glass-card mini-card expenses">
+                        <div class="mini-card-icon">💸</div>
+                        <div class="mini-card-content">
+                            <div class="mini-card-label">Expenses</div>
+                            <div class="mini-card-amount">$3,250</div>
+                        </div>
+                    </div>
+                    <div class="glass-card mini-card savings">
+                        <div class="mini-card-icon">🏦</div>
+                        <div class="mini-card-content">
+                            <div class="mini-card-label">Savings</div>
+                            <div class="mini-card-amount">$1,750</div>
+                        </div>
+                    </div>
+                    <div class="glass-card mini-card budget">
+                        <div class="mini-card-icon">📊</div>
+                        <div class="mini-card-content">
+                            <div class="mini-card-label">Budget Left</div>
+                            <div class="mini-card-amount">$750</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 9: Toggle Switch -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">9. Toggle Switch</h2>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div>
+                        <div class="text-caption text-secondary" style="margin-bottom: 8px;">Inactive</div>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div>
+                        <div class="text-caption text-secondary" style="margin-bottom: 8px;">Active</div>
+                        <div class="toggle-switch active"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test 10: Responsive Test Info -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">10. Responsive Breakpoints</h2>
+                <p class="text-body text-secondary">Test at different viewport widths:</p>
+                <ul class="text-body text-secondary" style="margin-left: 20px; margin-top: 8px;">
+                    <li>< 375px: Reduced padding, smaller gauge (180px)</li>
+                    <li>375px: Default optimized view</li>
+                    <li>≥ 768px: Max-width 400px, centered</li>
+                </ul>
+            </div>
+
+            <!-- Test 11: Accessibility Features -->
+            <div class="test-section glass-card">
+                <h2 class="test-header">11. Accessibility Features</h2>
+                <p class="text-body text-secondary">Test with:</p>
+                <ul class="text-body text-secondary" style="margin-left: 20px; margin-top: 8px;">
+                    <li>Tab navigation (focus states should show 2px blue outline)</li>
+                    <li>prefers-reduced-motion (animations should stop)</li>
+                    <li>prefers-contrast: high (borders should be thicker)</li>
+                </ul>
+            </div>
+
+            <!-- Spacer for bottom nav -->
+            <div style="height: 40px;"></div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </button>
+            <button class="nav-item">
+                <span class="nav-icon">➕</span>
+                <span class="nav-label">Add</span>
+            </button>
+            <button class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Stats</span>
+            </button>
+            <button class="nav-item">
+                <span class="nav-icon">📜</span>
+                <span class="nav-label">History</span>
+            </button>
+            <button class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        // Test interactivity
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // Log viewport info
+        console.log('Viewport width:', window.innerWidth);
+        console.log('Viewport height:', window.innerHeight);
+        
+        window.addEventListener('resize', () => {
+            console.log('Resized to:', window.innerWidth, 'x', window.innerHeight);
+        });
+    </script>
+</body>
+</html>

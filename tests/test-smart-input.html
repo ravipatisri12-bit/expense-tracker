@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Input Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">🧪 Smart Input Integration Test</h1>
+        
+        <!-- Test 1: LLM Parser -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test 1: LLM Parser</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Input Text:</label>
+                    <input type="text" id="test-input" value="Spent $45 on groceries" 
+                           class="w-full px-4 py-2 border rounded">
+                </div>
+                <button onclick="testParser()" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Test Parse
+                </button>
+                <div id="test-result" class="mt-4 p-4 bg-gray-50 rounded hidden">
+                    <h3 class="font-semibold mb-2">Result:</h3>
+                    <pre id="result-json" class="text-sm"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test 2: Fallback Parser -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test 2: Fallback Parser (No API)</h2>
+            <div class="space-y-4">
+                <button onclick="testFallback()" 
+                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Test Fallback
+                </button>
+                <div id="fallback-result" class="mt-4 p-4 bg-gray-50 rounded hidden">
+                    <h3 class="font-semibold mb-2">Result:</h3>
+                    <pre id="fallback-json" class="text-sm"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test 3: Category Guessing -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test 3: Category Detection</h2>
+            <div class="space-y-2">
+                <div class="flex justify-between p-2 bg-gray-50 rounded">
+                    <span>"coffee at starbucks"</span>
+                    <span id="cat-coffee" class="font-semibold"></span>
+                </div>
+                <div class="flex justify-between p-2 bg-gray-50 rounded">
+                    <span>"uber ride home"</span>
+                    <span id="cat-uber" class="font-semibold"></span>
+                </div>
+                <div class="flex justify-between p-2 bg-gray-50 rounded">
+                    <span>"lunch at chipotle"</span>
+                    <span id="cat-lunch" class="font-semibold"></span>
+                </div>
+                <div class="flex justify-between p-2 bg-gray-50 rounded">
+                    <span>"movie tickets"</span>
+                    <span id="cat-movie" class="font-semibold"></span>
+                </div>
+                <button onclick="testCategories()" 
+                        class="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    Test Categories
+                </button>
+            </div>
+        </div>
+
+        <!-- Test 4: API Configuration -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test 4: API Configuration</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">API Key Status:</label>
+                    <div id="api-status" class="p-3 rounded bg-gray-50"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Test API Key:</label>
+                    <input type="password" id="test-api-key" placeholder="AIza..." 
+                           class="w-full px-4 py-2 border rounded">
+                </div>
+                <button onclick="testConfig()" 
+                        class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">
+                    Save & Test
+                </button>
+            </div>
+        </div>
+
+        <!-- Test Results Summary -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">✅ Test Summary</h2>
+            <ul id="test-summary" class="space-y-2">
+                <li>Run tests above to see results</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load Scripts -->
+    <script src="js/llm-integration.js"></script>
+    
+    <script>
+        // Test Functions
+        async function testParser() {
+            const input = document.getElementById('test-input').value;
+            const resultDiv = document.getElementById('test-result');
+            const resultJson = document.getElementById('result-json');
+            
+            try {
+                const result = await window.llmParser.parseTransaction(input);
+                resultJson.textContent = JSON.stringify(result, null, 2);
+                resultDiv.classList.remove('hidden');
+                
+                addTestResult('Parser Test', result.confidence === 'high' ? 'PASS' : 'FALLBACK');
+            } catch (error) {
+                resultJson.textContent = 'Error: ' + error.message;
+                resultDiv.classList.remove('hidden');
+                addTestResult('Parser Test', 'FAIL');
+            }
+        }
+
+        async function testFallback() {
+            const input = "Coffee at Starbucks 5.50";
+            const resultDiv = document.getElementById('fallback-result');
+            const resultJson = document.getElementById('fallback-json');
+            
+            try {
+                const result = window.llmParser.fallbackParse(input);
+                resultJson.textContent = JSON.stringify(result, null, 2);
+                resultDiv.classList.remove('hidden');
+                
+                addTestResult('Fallback Parser', result.amount === 5.50 ? 'PASS' : 'FAIL');
+            } catch (error) {
+                resultJson.textContent = 'Error: ' + error.message;
+                resultDiv.classList.remove('hidden');
+                addTestResult('Fallback Parser', 'FAIL');
+            }
+        }
+
+        function testCategories() {
+            const tests = [
+                { text: 'coffee at starbucks', expected: 'Coffee', id: 'cat-coffee' },
+                { text: 'uber ride home', expected: 'Transportation', id: 'cat-uber' },
+                { text: 'lunch at chipotle', expected: 'Food', id: 'cat-lunch' },
+                { text: 'movie tickets', expected: 'Entertainment', id: 'cat-movie' }
+            ];
+            
+            let allPass = true;
+            tests.forEach(test => {
+                const category = window.llmParser.guessCategory(test.text);
+                const element = document.getElementById(test.id);
+                element.textContent = category;
+                
+                if (category === test.expected) {
+                    element.classList.add('text-green-600');
+                } else {
+                    element.classList.add('text-red-600');
+                    allPass = false;
+                }
+            });
+            
+            addTestResult('Category Detection', allPass ? 'PASS' : 'PARTIAL');
+        }
+
+        function testConfig() {
+            const apiKey = document.getElementById('test-api-key').value;
+            const statusDiv = document.getElementById('api-status');
+            
+            if (apiKey) {
+                window.llmParser.configure(apiKey);
+                statusDiv.textContent = '✅ API Key configured (stored in localStorage)';
+                statusDiv.classList.add('text-green-700', 'bg-green-50');
+                addTestResult('API Configuration', 'PASS');
+            } else {
+                statusDiv.textContent = '❌ No API key provided';
+                statusDiv.classList.add('text-red-700', 'bg-red-50');
+                addTestResult('API Configuration', 'FAIL');
+            }
+        }
+
+        function addTestResult(testName, status) {
+            const summary = document.getElementById('test-summary');
+            const statusColor = status === 'PASS' ? 'text-green-600' : 
+                               status === 'FAIL' ? 'text-red-600' : 'text-yellow-600';
+            
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="font-medium">${testName}:</span> <span class="${statusColor}">${status}</span>`;
+            
+            // Remove "Run tests" message if it exists
+            if (summary.children.length === 1 && summary.children[0].textContent.includes('Run tests')) {
+                summary.innerHTML = '';
+            }
+            
+            summary.appendChild(li);
+        }
+
+        // Check API status on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('api-status');
+            if (window.llmParser.isConfigured) {
+                statusDiv.textContent = '✅ API Key is configured';
+                statusDiv.classList.add('text-green-700', 'bg-green-50');
+            } else {
+                statusDiv.textContent = '⚠️ No API Key configured (will use fallback parsing)';
+                statusDiv.classList.add('text-yellow-700', 'bg-yellow-50');
+            }
+        });
+    </script>
+</body>
+</html>

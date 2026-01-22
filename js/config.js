@@ -1,65 +1,45 @@
-/**
- * Firebase Configuration
- * Contains all Firebase setup and initialization
- */
+// Firebase Configuration
+// This file initializes Firebase app and Firestore for the Modern Expense Tracker
 
-// Firebase Configuration Object
+// Firebase configuration object
+// IMPORTANT: Replace these values with your actual Firebase project credentials
+// Get these from Firebase Console > Project Settings > General > Your apps > Firebase SDK snippet
 const firebaseConfig = {
-    apiKey: "AIzaSyDH_RMji5JG-IEP3uu-hapu7H7JKsR_SUA",
-    authDomain: "personal-expense-tracker-7aa9c.firebaseapp.com",
-    projectId: "personal-expense-tracker-7aa9c",
-    storageBucket: "personal-expense-tracker-7aa9c.firebasestorage.app",
-    messagingSenderId: "893806575358",
-    appId: "1:893806575358:web:fdd0b3d75a57122be4efaf"
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+let app = null;
+let db = null;
+let auth = null;
 
-// Firebase Service References
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-// Current user state
-let currentUser = null;
-
-// Tailwind Configuration for primary colors
-const tailwindConfig = {
-    theme: {
-        extend: {
-            colors: {
-                primary: {
-                    50: '#f0f9ff',
-                    500: '#3b82f6',
-                    600: '#2563eb',
-                    700: '#1d4ed8'
-                }
-            }
-        }
+try {
+    // Check if Firebase is loaded
+    if (typeof firebase !== 'undefined') {
+        // Initialize Firebase app
+        app = firebase.initializeApp(firebaseConfig);
+        
+        // Initialize Firestore
+        db = firebase.firestore();
+        
+        // Initialize Firebase Authentication
+        auth = firebase.auth();
+        
+        console.log('Firebase initialized successfully');
+    } else {
+        console.warn('Firebase SDK not loaded. Running in localStorage-only mode.');
     }
-};
-
-// Apply Tailwind configuration
-if (typeof tailwind !== 'undefined') {
-    tailwind.config = tailwindConfig;
+} catch (error) {
+    console.error('Error initializing Firebase:', error);
+    console.warn('Falling back to localStorage-only mode.');
 }
 
-// App Constants
-const APP_CONFIG = {
-    CACHE_NAME: 'expense-tracker-v2',
-    DEFAULT_CATEGORIES: ['Food', 'Transportation', 'Entertainment', 'Coffee', 'Shopping', 'Bills', 'Other'],
-    NOTIFICATION_DURATION: 3000,
-    CURRENCY: 'USD',
-    LOCALE: 'en-US'
-};
-
-// Export configuration for module use (if needed)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        firebaseConfig,
-        db,
-        auth,
-        APP_CONFIG,
-        tailwindConfig
-    };
-}
+// Export Firebase instances for use in other modules
+window.firebaseApp = app;
+window.firebaseDb = db;
+window.firebaseAuth = auth;

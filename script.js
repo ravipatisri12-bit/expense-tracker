@@ -1655,6 +1655,7 @@ function closeEditModal() {
 
 // Initialize the application
 const expenseTracker = new ExpenseTracker();
+window.expenseTracker = expenseTracker; // Expose to window for smart-input.js
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {

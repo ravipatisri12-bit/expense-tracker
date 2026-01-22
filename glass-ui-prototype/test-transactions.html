@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Transactions Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #007AFF;
+        }
+        #console {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .success {
+            color: #34C759;
+        }
+        .error {
+            color: #FF453A;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transactions Page Functionality Tests</h1>
+    <p>Open the browser console to see detailed test results.</p>
+    <div id="console"></div>
+
+    <script src="script.js"></script>
+    <script>
+        // Capture console output
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.join(' ');
+            const span = document.createElement('span');
+            if (message.includes('✓')) {
+                span.className = 'success';
+            }
+            span.textContent = message + '\n';
+            consoleDiv.appendChild(span);
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.join(' ');
+            const span = document.createElement('span');
+            span.className = 'error';
+            span.textContent = message + '\n';
+            consoleDiv.appendChild(span);
+        };
+    </script>
+    <script src="test-transactions.js"></script>
+</body>
+</html>
