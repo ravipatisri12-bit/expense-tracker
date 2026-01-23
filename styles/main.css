@@ -102,7 +102,6 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-
 /* Glassmorphism Tab Selector Component */
 .glass-tab-selector {
   display: flex;
@@ -139,7 +138,7 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  color: #6b7280;  /* Gray-500 for visibility on light backgrounds */
+  color: var(--text-secondary);
   font-size: 17px;
   font-weight: 600;
   cursor: pointer;
@@ -152,8 +151,8 @@
 }
 
 .glass-tab-btn:hover {
-  background: rgba(0, 122, 255, 0.08);
-  color: #111827;  /* Dark gray for better visibility */
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 
 .glass-tab-btn:focus {
@@ -469,108 +468,11 @@ body {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 32px;
+  min-height: 32px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.heatmap-amount {
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.8);
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-  line-height: 1;
-  margin-bottom: 1px;
-}
-
-.heatmap-count {
-  font-size: 7px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.6);
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
-  line-height: 1;
-}
-
-.heatmap-tooltip {
-  position: absolute;
-  background: rgba(17, 24, 39, 0.95);
-  color: white;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 200;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  transform: translateX(-50%) translateY(-100%);
-  margin-top: -8px;
-  min-width: 180px;
-  max-width: 280px;
-}
-
-.heatmap-tooltip.show {
-  opacity: 1;
-}
-
-.tooltip-header {
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #e5e7eb;
-}
-
-.tooltip-summary {
-  margin-bottom: 8px;
-  color: #d1d5db;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 6px;
-}
-
-.tooltip-breakdown {
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-.tooltip-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-  padding: 2px 0;
-}
-
-.expense-desc {
-  color: #f3f4f6;
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-}
-
-.expense-amount {
-  color: #60a5fa;
-  font-weight: 600;
-  font-size: 11px;
-  margin-left: 8px;
-}
-
-.tooltip-more {
-  color: #9ca3af;
-  font-size: 10px;
-  font-style: italic;
-  text-align: center;
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .heatmap-cell:hover {
