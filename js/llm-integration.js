@@ -5,10 +5,11 @@
 
 class LLMTransactionParser {
     constructor() {
-        this.apiKey = null;
+        // Hardcoded API key for personal use
+        this.apiKey = 'AIzaSyD_o5JR782JD8tIsQPzjuMvnjHAw4oocw0';
         this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
         this.model = 'gemini-pro';
-        this.isConfigured = false;
+        this.isConfigured = true;
     }
 
     /**
@@ -29,6 +30,7 @@ class LLMTransactionParser {
      * Load configuration from localStorage
      */
     loadConfig() {
+        // Use hardcoded key, but allow override from localStorage
         const savedKey = localStorage.getItem('llm_api_key');
         
         if (savedKey) {

@@ -381,9 +381,12 @@ let behavioralAI = null;
 function initializeAnalysisTab() {
     if (!window.expenseTracker) return;
     
-    // Initialize AI with API key from settings or demo mode
-    const apiKey = localStorage.getItem('gemini_api_key') || 'demo-mode';
+    // Initialize AI with hardcoded API key
+    const apiKey = 'AIzaSyD_o5JR782JD8tIsQPzjuMvnjHAw4oocw0';
     behavioralAI = new BehavioralAnalysisAI(apiKey);
+    
+    // Add data source indicator at the top
+    addDataSourceIndicator();
     
     // Render all Analysis components
     renderPersonalityProfile();
@@ -391,6 +394,72 @@ function initializeAnalysisTab() {
     renderSpendingTriggers();
     renderProgressTracking();
     renderMonthlyReflection();
+}
+
+function addDataSourceIndicator() {
+    const analysisTab = document.getElementById('analysis-data-tab');
+    if (!analysisTab) return;
+    
+    const expenses = window.expenseTracker.expenses;
+    const expenseCount = expenses.length;
+    const isRealData = expenseCount > 0;
+    
+    // Remove existing indicator if present
+    const existingIndicator = analysisTab.querySelector('.data-source-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // Create new indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'data-source-indicator glass-card mb-6';
+    
+    if (isRealData) {
+        indicator.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-900">AI Analysis Active</h4>
+                        <p class="text-xs text-gray-600">Analyzing ${expenseCount} transaction${expenseCount !== 1 ? 's' : ''} from your history</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Real Data
+                    </span>
+                </div>
+            </div>
+        `;
+    } else {
+        indicator.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-900">No Transaction Data</h4>
+                        <p class="text-xs text-gray-600">Add expenses to get personalized AI insights</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Demo Mode
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Insert at the beginning of the analysis tab
+    analysisTab.insertBefore(indicator, analysisTab.firstChild);
 }
 
 async function renderPersonalityProfile() {
