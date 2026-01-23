@@ -95,6 +95,15 @@ class ExpenseTracker {
         }
         
         this.currentPage = pageId;
+        
+        // Initialize Overview components if navigating to overview page
+        if (pageId === 'overview') {
+            setTimeout(() => {
+                if (typeof initializeOverviewComponents === 'function') {
+                    initializeOverviewComponents();
+                }
+            }, 100);
+        }
     }
 
     // ====================================================================
@@ -319,6 +328,13 @@ class ExpenseTracker {
 
         // Update recent transactions
         this.updateRecentTransactions();
+        
+        // Update Overview components if on overview page
+        if (this.currentPage === 'overview' && typeof initializeOverviewComponents === 'function') {
+            setTimeout(() => {
+                initializeOverviewComponents();
+            }, 100);
+        }
     }
 
     updateVariableExpenses(monthlyExpenses) {
@@ -1669,3 +1685,651 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+
+// Enhanced Overview Page Functions
+function switchOverviewTab(tabName) {
+    // Get elements
+    const overviewBtn = document.getElementById('overview-tab-btn');
+    const analysisBtn = document.getElementById('analysis-tab-btn');
+    const overviewTab = document.getElementById('overview-data-tab');
+    const analysisTab = document.getElementById('analysis-data-tab');
+    
+    // Determine which tab is currently active
+    const currentTab = overviewTab.classList.contains('hidden') ? analysisTab : overviewTab;
+    const targetTab = tabName === 'overview' ? overviewTab : analysisTab;
+    
+    // If clicking the same tab, do nothing
+    if (currentTab === targetTab) {
+        return;
+    }
+    
+    // Step 1: Fade out current tab
+    currentTab.classList.add('fade-out');
+    
+    // Step 2: After fade-out completes, switch tabs
+    setTimeout(() => {
+        // Update button states
+        if (tabName === 'overview') {
+            overviewBtn.classList.add('active');
+            analysisBtn.classList.remove('active');
+            
+            // Hide current, show target
+            analysisTab.classList.add('hidden');
+            analysisTab.classList.remove('fade-out');
+            overviewTab.classList.remove('hidden');
+        } else if (tabName === 'analysis') {
+            analysisBtn.classList.add('active');
+            overviewBtn.classList.remove('active');
+            
+            // Hide current, show target
+            overviewTab.classList.add('hidden');
+            overviewTab.classList.remove('fade-out');
+            analysisTab.classList.remove('hidden');
+        }
+        
+        // Step 3: Fade in new tab
+        targetTab.classList.add('fade-in');
+        
+        // Clean up fade-in class after animation
+        setTimeout(() => {
+            targetTab.classList.remove('fade-in');
+        }, 300);
+    }, 300); // Match CSS transition duration
+    
+    // Save tab preference
+    localStorage.setItem('activeOverviewTab', tabName);
+    
+    // Initialize components based on which tab is being shown
+    if (tabName === 'overview' && window.expenseTracker) {
+        setTimeout(() => {
+            initializeOverviewComponents();
+        }, 350);
+    } else if (tabName === 'analysis' && window.expenseTracker && typeof initializeAnalysisTab === 'function') {
+        setTimeout(() => {
+            initializeAnalysisTab();
+        }, 350);
+    }
+}
+
+// ====================================================================
+// OVERVIEW TAB COMPONENTS
+// ====================================================================
+
+let currentTimePeriod = '1M';
+let lineGraphData = [];
+
+function initializeOverviewComponents() {
+    // Initialize all Overview tab components
+    setupTimePeriodSelector();
+    renderLineGraph();
+    renderHealthGauge();
+    renderHeatmap();
+    renderPieChart();
+}
+
+// ====================================================================
+// 1. ROBINHOOD-STYLE LINE GRAPH (Tasks 2.1-2.8)
+// ====================================================================
+
+function setupTimePeriodSelector() {
+    const buttons = document.querySelectorAll('.time-period-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update period and re-render
+            currentTimePeriod = btn.dataset.period;
+            renderLineGraph();
+        });
+    });
+}
+
+function getLineGraphData(period) {
+    if (!window.expenseTracker) return [];
+    
+    const now = new Date();
+    const cutoffDate = getDateCutoff(now, period);
+    
+    // Filter expenses by date
+    const filteredExpenses = window.expenseTracker.expenses.filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate >= cutoffDate;
+    });
+    
+    // Group by date and calculate daily totals
+    const dailyTotals = {};
+    filteredExpenses.forEach(expense => {
+        const dateStr = new Date(expense.date).toISOString().split('T')[0];
+        if (!dailyTotals[dateStr]) {
+            dailyTotals[dateStr] = 0;
+        }
+        dailyTotals[dateStr] += expense.amount;
+    });
+    
+    // Convert to array and sort by date
+    const dataPoints = Object.keys(dailyTotals)
+        .map(date => ({
+            date: new Date(date),
+            amount: dailyTotals[date]
+        }))
+        .sort((a, b) => a.date - b.date);
+    
+    return dataPoints;
+}
+
+function getDateCutoff(now, period) {
+    const cutoffs = {
+        '1W': new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        '1M': new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()),
+        '3M': new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
+        '6M': new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
+        '1Y': new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()),
+        'ALL': new Date(0)
+    };
+    return cutoffs[period] || cutoffs['1M'];
+}
+
+function renderLineGraph() {
+    const svg = document.getElementById('spending-line-graph');
+    if (!svg) return;
+    
+    const data = getLineGraphData(currentTimePeriod);
+    lineGraphData = data;
+    
+    if (data.length === 0) {
+        svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9ca3af" font-size="14">No data for this period</text>';
+        document.getElementById('graph-current').textContent = '$0';
+        document.getElementById('graph-average').textContent = '$0';
+        return;
+    }
+    
+    // Calculate dimensions
+    const padding = 40;
+    const width = svg.clientWidth || 400;
+    const height = svg.clientHeight || 250;
+    const graphWidth = width - padding * 2;
+    const graphHeight = height - padding * 2;
+    
+    // Find min/max values
+    const amounts = data.map(d => d.amount);
+    const maxAmount = Math.max(...amounts);
+    const minAmount = Math.min(...amounts, 0);
+    const range = maxAmount - minAmount || 1;
+    
+    // Create scales
+    const xScale = (index) => padding + (index / (data.length - 1 || 1)) * graphWidth;
+    const yScale = (amount) => padding + graphHeight - ((amount - minAmount) / range) * graphHeight;
+    
+    // Create line path
+    const linePath = data.map((d, i) => {
+        const x = xScale(i);
+        const y = yScale(d.amount);
+        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+    }).join(' ');
+    
+    // Create area path
+    const areaPath = linePath + 
+        ` L ${xScale(data.length - 1)} ${padding + graphHeight}` +
+        ` L ${xScale(0)} ${padding + graphHeight} Z`;
+    
+    // Build SVG content
+    let svgContent = `
+        <defs>
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#007AFF"/>
+                <stop offset="100%" stop-color="#34C759"/>
+            </linearGradient>
+            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#007AFF" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#007AFF" stop-opacity="0.05"/>
+            </linearGradient>
+        </defs>
+        
+        <!-- Area fill -->
+        <path d="${areaPath}" class="graph-area"/>
+        
+        <!-- Line -->
+        <path d="${linePath}" class="graph-line" stroke-dasharray="1000" stroke-dashoffset="1000"/>
+        
+        <!-- Points -->
+    `;
+    
+    data.forEach((d, i) => {
+        const x = xScale(i);
+        const y = yScale(d.amount);
+        svgContent += `<circle cx="${x}" cy="${y}" r="4" class="graph-point" 
+                        data-amount="${d.amount}" data-date="${d.date.toLocaleDateString()}"
+                        style="animation-delay: ${i * 0.05}s"/>`;
+    });
+    
+    svg.innerHTML = svgContent;
+    
+    // Animate line drawing
+    const line = svg.querySelector('.graph-line');
+    if (line) {
+        setTimeout(() => {
+            line.style.strokeDashoffset = '0';
+            line.style.transition = 'stroke-dashoffset 1s ease-out';
+        }, 100);
+    }
+    
+    // Add tooltip interactions
+    addGraphTooltips();
+    
+    // Update stats
+    const current = data[data.length - 1]?.amount || 0;
+    const average = amounts.reduce((sum, a) => sum + a, 0) / amounts.length;
+    document.getElementById('graph-current').textContent = formatCurrency(current);
+    document.getElementById('graph-average').textContent = formatCurrency(average);
+}
+
+function addGraphTooltips() {
+    const points = document.querySelectorAll('.graph-point');
+    let tooltip = document.querySelector('.graph-tooltip');
+    
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'graph-tooltip';
+        document.getElementById('line-graph-container').appendChild(tooltip);
+    }
+    
+    points.forEach(point => {
+        point.addEventListener('mouseenter', (e) => {
+            const amount = e.target.dataset.amount;
+            const date = e.target.dataset.date;
+            tooltip.innerHTML = `<div><strong>${formatCurrency(parseFloat(amount))}</strong></div><div>${date}</div>`;
+            tooltip.classList.add('show');
+            
+            const rect = e.target.getBoundingClientRect();
+            const container = document.getElementById('line-graph-container').getBoundingClientRect();
+            tooltip.style.left = (rect.left - container.left) + 'px';
+            tooltip.style.top = (rect.top - container.top - 50) + 'px';
+        });
+        
+        point.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('show');
+        });
+    });
+}
+
+// ====================================================================
+// 2. FINANCIAL HEALTH SCORE GAUGE (Tasks 3.1-3.7)
+// ====================================================================
+
+function renderHealthGauge() {
+    if (!window.expenseTracker) return;
+    
+    const score = calculateHealthScore();
+    const progressCircle = document.getElementById('health-gauge-progress');
+    const scoreElement = document.getElementById('health-score');
+    const statusElement = document.getElementById('health-status');
+    const messageElement = document.getElementById('health-message');
+    
+    if (!progressCircle || !scoreElement) return;
+    
+    // Calculate stroke-dasharray for progress (circumference = 2 * π * r = 2 * π * 40 ≈ 251.2)
+    const circumference = 251.2;
+    const progress = (score / 100) * circumference;
+    
+    // Animate count-up
+    animateCountUp(scoreElement, 0, score, 1200);
+    
+    // Animate progress ring
+    setTimeout(() => {
+        progressCircle.style.strokeDasharray = `${progress} ${circumference}`;
+        progressCircle.style.transition = 'stroke-dasharray 1.2s ease-out';
+    }, 100);
+    
+    // Update status and color
+    let status, message, gradientColors;
+    if (score >= 80) {
+        status = 'Excellent';
+        message = 'Strong financial health with consistent savings';
+        gradientColors = ['#34C759', '#00C853'];
+    } else if (score >= 60) {
+        status = 'Good';
+        message = 'Solid financial position with room for improvement';
+        gradientColors = ['#007AFF', '#0051D5'];
+    } else if (score >= 40) {
+        status = 'Fair';
+        message = 'Consider reviewing spending habits';
+        gradientColors = ['#FF9F0A', '#FF8C00'];
+    } else {
+        status = 'Needs Attention';
+        message = 'Focus on reducing expenses and increasing savings';
+        gradientColors = ['#FF453A', '#DC143C'];
+    }
+    
+    statusElement.textContent = status;
+    messageElement.textContent = message;
+    
+    // Update gradient colors
+    const gradient = document.querySelector('#healthGradient');
+    if (gradient) {
+        gradient.innerHTML = `
+            <stop offset="0%" stop-color="${gradientColors[0]}"/>
+            <stop offset="100%" stop-color="${gradientColors[1]}"/>
+        `;
+    }
+}
+
+function calculateHealthScore() {
+    if (!window.expenseTracker) return 0;
+    
+    const settings = window.expenseTracker.settings;
+    const expenses = window.expenseTracker.expenses;
+    
+    // Get current month expenses
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyExpenses = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    
+    const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const income = settings.income || 1;
+    const fixedExpenses = (settings.rent || 0) + (settings.utilities || 0) + (settings.insurance || 0);
+    const variableExpenses = totalExpenses - fixedExpenses;
+    const savings = income - totalExpenses;
+    
+    // Calculate components (40% savings rate, 40% budget adherence, 20% trend)
+    const savingsRate = Math.max(0, Math.min(100, (savings / income) * 100));
+    const savingsScore = (savingsRate / 100) * 40;
+    
+    const totalBudget = getTotalBudget(settings.goals);
+    const budgetAdherence = totalBudget > 0 ? Math.max(0, 100 - (variableExpenses / totalBudget * 100)) : 50;
+    const budgetScore = (budgetAdherence / 100) * 40;
+    
+    // Trend score (simplified - compare to previous month)
+    const trendScore = 20; // Default neutral score
+    
+    const finalScore = Math.round(savingsScore + budgetScore + trendScore);
+    return Math.max(0, Math.min(100, finalScore));
+}
+
+function animateCountUp(element, start, end, duration) {
+    const startTime = Date.now();
+    const range = end - start;
+    
+    function update() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+        const current = Math.round(start + range * easeOut);
+        
+        element.textContent = current;
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    
+    requestAnimationFrame(update);
+}
+
+// ====================================================================
+// 3. WEEKLY SPENDING HEATMAP (Tasks 4.1-4.7)
+// ====================================================================
+
+function renderHeatmap() {
+    const container = document.getElementById('heatmap-container');
+    if (!container || !window.expenseTracker) return;
+    
+    const heatmapData = getHeatmapData();
+    
+    // Build grid HTML
+    let html = '<div class="heatmap-label"></div>'; // Empty corner
+    
+    // Day headers
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    days.forEach(day => {
+        html += `<div class="heatmap-label">${day}</div>`;
+    });
+    
+    // Week rows
+    heatmapData.weeks.forEach((week, weekIndex) => {
+        html += `<div class="heatmap-label">W${weekIndex + 1}</div>`;
+        
+        week.forEach((day, dayIndex) => {
+            const intensity = getIntensityColor(day.amount, heatmapData.maxAmount);
+            const cellClass = day.amount > 0 ? 'heatmap-cell' : 'heatmap-cell empty';
+            const title = day.amount > 0 
+                ? `${day.date}: ${formatCurrency(day.amount)} (${day.count} transactions)`
+                : `${day.date}: No spending`;
+            
+            html += `<div class="${cellClass}" style="background: ${intensity};" title="${title}"></div>`;
+        });
+    });
+    
+    container.innerHTML = html;
+}
+
+function getHeatmapData() {
+    if (!window.expenseTracker) return { weeks: [], maxAmount: 0 };
+    
+    const today = new Date();
+    const weeks = [];
+    let maxAmount = 0;
+    
+    // Generate 4 weeks of data
+    for (let weekIndex = 3; weekIndex >= 0; weekIndex--) {
+        const week = [];
+        
+        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - (weekIndex * 7 + (6 - dayIndex)));
+            
+            const dateStr = date.toISOString().split('T')[0];
+            const dayExpenses = window.expenseTracker.expenses.filter(e => {
+                return new Date(e.date).toISOString().split('T')[0] === dateStr;
+            });
+            
+            const amount = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+            maxAmount = Math.max(maxAmount, amount);
+            
+            week.push({
+                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                amount: amount,
+                count: dayExpenses.length
+            });
+        }
+        
+        weeks.push(week);
+    }
+    
+    return { weeks, maxAmount };
+}
+
+function getIntensityColor(amount, maxAmount) {
+    if (amount === 0) return 'rgba(0, 0, 0, 0.03)';
+    
+    const intensity = amount / (maxAmount || 1);
+    
+    if (intensity < 0.33) {
+        return 'rgba(0, 122, 255, 0.2)';
+    } else if (intensity < 0.66) {
+        return 'rgba(0, 122, 255, 0.5)';
+    } else {
+        return 'rgba(0, 122, 255, 0.9)';
+    }
+}
+
+// ====================================================================
+// 4. CATEGORY SPENDING PIE CHART (Tasks 5.1-5.8)
+// ====================================================================
+
+function renderPieChart() {
+    const svg = document.getElementById('category-pie-chart');
+    const breakdownContainer = document.getElementById('category-breakdown');
+    
+    if (!svg || !breakdownContainer || !window.expenseTracker) return;
+    
+    const categoryData = getCategoryData();
+    
+    if (categoryData.length === 0) {
+        svg.innerHTML = '<text x="50" y="50" text-anchor="middle" fill="#9ca3af" font-size="6">No data</text>';
+        breakdownContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No expenses this month</div>';
+        return;
+    }
+    
+    // Draw pie chart
+    drawPieChart(svg, categoryData);
+    
+    // Draw breakdown bars
+    drawCategoryBreakdown(breakdownContainer, categoryData);
+}
+
+function getCategoryData() {
+    if (!window.expenseTracker) return [];
+    
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    const monthlyExpenses = window.expenseTracker.expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    
+    const categoryTotals = {};
+    monthlyExpenses.forEach(e => {
+        if (!categoryTotals[e.category]) {
+            categoryTotals[e.category] = 0;
+        }
+        categoryTotals[e.category] += e.amount;
+    });
+    
+    const total = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+    
+    // Convert to array and sort by amount (top 5)
+    const categories = Object.keys(categoryTotals)
+        .map(name => ({
+            name,
+            amount: categoryTotals[name],
+            percentage: (categoryTotals[name] / total * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5);
+    
+    return categories;
+}
+
+function drawPieChart(svg, data) {
+    const centerX = 50;
+    const centerY = 50;
+    const radius = 35;
+    const innerRadius = 20; // Donut chart
+    
+    let currentAngle = -90; // Start at top
+    let svgContent = '';
+    
+    const colors = [
+        '#FF9F0A', // Orange
+        '#007AFF', // Blue
+        '#34C759', // Green
+        '#FF453A', // Red
+        '#AF52DE', // Purple
+    ];
+    
+    data.forEach((category, index) => {
+        const angle = (parseFloat(category.percentage) / 100) * 360;
+        const endAngle = currentAngle + angle;
+        
+        const path = describeArc(centerX, centerY, radius, innerRadius, currentAngle, endAngle);
+        const color = colors[index % colors.length];
+        
+        svgContent += `<path d="${path}" fill="${color}" class="pie-segment" 
+                        data-category="${category.name}"
+                        style="animation: fadeInUp 0.6s ease-out ${index * 0.1}s both"/>`;
+        
+        currentAngle = endAngle;
+    });
+    
+    svg.innerHTML = svgContent;
+    
+    // Add hover effects
+    const segments = svg.querySelectorAll('.pie-segment');
+    segments.forEach(segment => {
+        segment.addEventListener('mouseenter', () => {
+            segments.forEach(s => s.classList.remove('highlighted'));
+            segment.classList.add('highlighted');
+        });
+        
+        segment.addEventListener('mouseleave', () => {
+            segment.classList.remove('highlighted');
+        });
+    });
+}
+
+function describeArc(x, y, radius, innerRadius, startAngle, endAngle) {
+    const start = polarToCartesian(x, y, radius, endAngle);
+    const end = polarToCartesian(x, y, radius, startAngle);
+    const innerStart = polarToCartesian(x, y, innerRadius, endAngle);
+    const innerEnd = polarToCartesian(x, y, innerRadius, startAngle);
+    
+    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+    
+    return [
+        'M', start.x, start.y,
+        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+        'L', innerEnd.x, innerEnd.y,
+        'A', innerRadius, innerRadius, 0, largeArcFlag, 1, innerStart.x, innerStart.y,
+        'Z'
+    ].join(' ');
+}
+
+function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+    return {
+        x: centerX + (radius * Math.cos(angleInRadians)),
+        y: centerY + (radius * Math.sin(angleInRadians))
+    };
+}
+
+function drawCategoryBreakdown(container, data) {
+    const colors = [
+        '#FF9F0A', '#007AFF', '#34C759', '#FF453A', '#AF52DE'
+    ];
+    
+    const html = data.map((category, index) => {
+        const color = colors[index % colors.length];
+        return `
+            <div class="category-bar-item" style="animation-delay: ${index * 0.1}s">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background: ${color};"></div>
+                        <span class="font-medium text-gray-900">${category.name}</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-gray-900">${formatCurrency(category.amount)}</div>
+                        <div class="text-xs text-gray-500">${category.percentage}%</div>
+                    </div>
+                </div>
+                <div class="category-bar-progress">
+                    <div class="category-bar-fill" style="width: ${category.percentage}%; background: ${color};"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = html;
+}
+
+// Initialize Overview components when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if we're on the overview page
+    const overviewPage = document.getElementById('overview-page');
+    if (overviewPage && !overviewPage.classList.contains('hidden')) {
+        // Load saved tab preference
+        const savedTab = localStorage.getItem('activeOverviewTab') || 'overview';
+        if (savedTab === 'overview') {
+            setTimeout(() => {
+                initializeOverviewComponents();
+            }, 500);
+        }
+    }
+});
+

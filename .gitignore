@@ -16,3 +16,15 @@
 # Temporary files
 *.tmp
 *.log
+
+# Prototypes (moved outside main application)
+prototypes/
+
+# Temporary documentation (AI-generated summaries)
+*-SUMMARY.md
+*-COMPLETION-*.md
+TASK-*.md
+FIXES-*.md
+IMPLEMENTATION-*.md
+FINAL-*.md
+.kiro/temp/

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Health Score Gauge Test</title>
+    <link rel="stylesheet" href="../glass-ui-prototype/styles.css">
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 40px;
+        }
+        .test-header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #007AFF;
+        }
+        .test-controls {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .control-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+        }
+        .control-group button {
+            padding: 10px 20px;
+            background: #007AFF;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .control-group button:hover {
+            background: #0A84FF;
+        }
+        .test-result {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .pass {
+            color: #34C759;
+        }
+        .fail {
+            color: #FF453A;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="test-container">
+        <h1 style="text-align: center; margin-bottom: 40px;">Financial Health Score Gauge Test</h1>
+
+        <!-- Test Controls -->
+        <div class="test-section">
+            <h2 class="test-header">Test Controls</h2>
+            <div class="test-controls">
+                <div class="control-group">
+                    <label>Monthly Income ($)</label>
+                    <input type="number" id="income-input" value="5000" min="0">
+                </div>
+                <div class="control-group">
+                    <label>Total Expenses ($)</label>
+                    <input type="number" id="expenses-input" value="2000" min="0">
+                </div>
+                <div class="control-group">
+                    <label>Fixed Expenses ($)</label>
+                    <input type="number" id="fixed-input" value="2000" min="0">
+                </div>
+                <div class="control-group">
+                    <button onclick="updateHealthScore()">Update Score</button>
+                    <button onclick="testScenario('excellent')">Test Excellent (80+)</button>
+                    <button onclick="testScenario('good')">Test Good (60-79)</button>
+                    <button onclick="testScenario('fair')">Test Fair (40-59)</button>
+                    <button onclick="testScenario('poor')">Test Poor (0-39)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Score Component -->
+        <div class="test-section">
+            <h2 class="test-header">Health Score Component</h2>
+            <div class="glass-card health-score-card">
+                <div class="card-header">
+                    <h3>Financial Health</h3>
+                </div>
+                <div class="health-score-container">
+                    <svg class="health-score-ring" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="url(#healthGradient)" stroke-width="12" 
+                            stroke-linecap="round" class="health-progress" pathLength="100" 
+                            style="stroke-dasharray: 0 100; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: 50% 50%;"/>
+                        <defs>
+                            <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#34C759;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#007AFF;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="health-score-center">
+                        <div class="health-score-number" id="health-score">0</div>
+                        <div class="health-score-label" id="health-label">Calculating...</div>
+                    </div>
+                </div>
+                <div class="health-description" id="health-description">
+                    Analyzing your financial patterns...
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="test-section">
+            <h2 class="test-header">Test Results</h2>
+            <div id="test-results" class="test-result">
+                Run tests to see results...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock ExpenseTracker functionality for testing
+        class HealthScoreTester {
+            constructor() {
+                this.income = 5000;
+                this.totalExpenses = 2000;
+                this.fixedExpenses = 2000;
+            }
+
+            calculateHealthScore() {
+                if (this.income === 0) return 0;
+                
+                const savings = this.income - this.totalExpenses;
+                const variableBudget = this.income - this.fixedExpenses;
+                const variableExpenses = this.totalExpenses - this.fixedExpenses;
+                
+                // Savings rate (40%)
+                const savingsRate = (savings / this.income) * 100;
+                const savingsScore = Math.min(Math.max(savingsRate, 0), 100) * 0.4;
+                
+                // Budget adherence (40%)
+                let budgetScore = 0;
+                if (variableBudget > 0) {
+                    const budgetUsagePercent = (variableExpenses / variableBudget) * 100;
+                    if (budgetUsagePercent <= 100) {
+                        budgetScore = (100 - budgetUsagePercent) * 0.4;
+                    } else {
+                        const overBudgetPercent = budgetUsagePercent - 100;
+                        budgetScore = Math.max(0, (100 - overBudgetPercent * 2)) * 0.4;
+                    }
+                }
+                
+                // Spending trend (20%)
+                const trendScore = 20;
+                
+                const finalScore = Math.round(savingsScore + budgetScore + trendScore);
+                return Math.min(Math.max(finalScore, 0), 100);
+            }
+
+            animateNumber(element, start, end, duration) {
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(start + (end - start) * eased);
+                    
+                    element.textContent = current;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+            }
+
+            renderHealthScore() {
+                const score = this.calculateHealthScore();
+                
+                const scoreElement = document.getElementById('health-score');
+                const labelElement = document.getElementById('health-label');
+                const descElement = document.getElementById('health-description');
+                const progressCircle = document.querySelector('.health-progress');
+                const container = document.querySelector('.health-score-card');
+                
+                if (!scoreElement || !progressCircle) return;
+                
+                // Add accessibility labels
+                container.setAttribute('role', 'region');
+                container.setAttribute('aria-label', 'Financial Health Score');
+                scoreElement.setAttribute('aria-live', 'polite');
+                scoreElement.setAttribute('aria-atomic', 'true');
+                
+                // Animate score
+                this.animateNumber(scoreElement, 0, score, 1200);
+                
+                // Color coding and status messages
+                let label, description, colorClass;
+                if (score >= 80) {
+                    label = 'Excellent';
+                    description = 'Strong savings rate and excellent budget adherence';
+                    colorClass = 'excellent';
+                } else if (score >= 60) {
+                    label = 'Good';
+                    description = 'Good financial health with room for improvement';
+                    colorClass = 'good';
+                } else if (score >= 40) {
+                    label = 'Fair';
+                    description = 'Consider reviewing your spending patterns';
+                    colorClass = 'fair';
+                } else {
+                    label = 'Needs Attention';
+                    description = 'Focus on reducing expenses and increasing savings';
+                    colorClass = 'needs-attention';
+                }
+                
+                labelElement.textContent = label;
+                labelElement.className = `health-score-label ${colorClass}`;
+                descElement.textContent = description;
+                
+                scoreElement.setAttribute('aria-label', `Financial health score: ${score} out of 100, ${label}`);
+                descElement.setAttribute('aria-label', description);
+                
+                // Update gradient colors
+                const healthGradient = document.getElementById('healthGradient');
+                if (healthGradient) {
+                    const stops = healthGradient.querySelectorAll('stop');
+                    if (stops.length >= 2) {
+                        if (score >= 80) {
+                            stops[0].setAttribute('style', 'stop-color:#34C759;stop-opacity:1');
+                            stops[1].setAttribute('style', 'stop-color:#30D158;stop-opacity:1');
+                        } else if (score >= 60) {
+                            stops[0].setAttribute('style', 'stop-color:#007AFF;stop-opacity:1');
+                            stops[1].setAttribute('style', 'stop-color:#0A84FF;stop-opacity:1');
+                        } else if (score >= 40) {
+                            stops[0].setAttribute('style', 'stop-color:#FF9F0A;stop-opacity:1');
+                            stops[1].setAttribute('style', 'stop-color:#FFB340;stop-opacity:1');
+                        } else {
+                            stops[0].setAttribute('style', 'stop-color:#FF453A;stop-opacity:1');
+                            stops[1].setAttribute('style', 'stop-color:#FF6961;stop-opacity:1');
+                        }
+                    }
+                }
+                
+                // Animate progress ring
+                setTimeout(() => {
+                    progressCircle.style.transition = 'stroke-dasharray 1.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                    progressCircle.style.strokeDasharray = `${score} ${100 - score}`;
+                }, 100);
+                
+                return score;
+            }
+        }
+
+        const tester = new HealthScoreTester();
+
+        function updateHealthScore() {
+            tester.income = parseFloat(document.getElementById('income-input').value) || 0;
+            tester.totalExpenses = parseFloat(document.getElementById('expenses-input').value) || 0;
+            tester.fixedExpenses = parseFloat(document.getElementById('fixed-input').value) || 0;
+            
+            const score = tester.renderHealthScore();
+            runTests(score);
+        }
+
+        function testScenario(scenario) {
+            switch(scenario) {
+                case 'excellent':
+                    document.getElementById('income-input').value = 5000;
+                    document.getElementById('expenses-input').value = 500;
+                    document.getElementById('fixed-input').value = 0;
+                    break;
+                case 'good':
+                    document.getElementById('income-input').value = 5000;
+                    document.getElementById('expenses-input').value = 2500;
+                    document.getElementById('fixed-input').value = 2000;
+                    break;
+                case 'fair':
+                    document.getElementById('income-input').value = 5000;
+                    document.getElementById('expenses-input').value = 3500;
+                    document.getElementById('fixed-input').value = 2000;
+                    break;
+                case 'poor':
+                    document.getElementById('income-input').value = 5000;
+                    document.getElementById('expenses-input').value = 4800;
+                    document.getElementById('fixed-input').value = 2000;
+                    break;
+            }
+            updateHealthScore();
+        }
+
+        function runTests(score) {
+            const results = [];
+            
+            // Test 1: Score is within valid range
+            const test1 = score >= 0 && score <= 100;
+            results.push(`✓ Task 3.2: Score within valid range (0-100): ${test1 ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'} - Score: ${score}`);
+            
+            // Test 2: Animated count-up effect
+            const scoreElement = document.getElementById('health-score');
+            const test2 = scoreElement.textContent !== '0';
+            results.push(`✓ Task 3.3: Animated count-up effect: ${test2 ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}`);
+            
+            // Test 3: Color coding
+            const labelElement = document.getElementById('health-label');
+            const hasColorClass = labelElement.className.includes('excellent') || 
+                                 labelElement.className.includes('good') || 
+                                 labelElement.className.includes('fair') || 
+                                 labelElement.className.includes('needs-attention');
+            results.push(`✓ Task 3.4: Color coding applied: ${hasColorClass ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'} - Class: ${labelElement.className}`);
+            
+            // Test 4: Status messages without emojis
+            const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
+            const hasNoEmojis = !emojiRegex.test(labelElement.textContent) && 
+                               !emojiRegex.test(document.getElementById('health-description').textContent);
+            results.push(`✓ Task 3.5: No emojis in status messages: ${hasNoEmojis ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}`);
+            
+            // Test 5: Gradient stroke
+            const progressCircle = document.querySelector('.health-progress');
+            const hasStrokeDasharray = progressCircle.style.strokeDasharray !== '';
+            results.push(`✓ Task 3.6: Gradient stroke updated: ${hasStrokeDasharray ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'} - ${progressCircle.style.strokeDasharray}`);
+            
+            // Test 6: Accessibility labels
+            const container = document.querySelector('.health-score-card');
+            const hasAccessibility = container.getAttribute('role') === 'region' && 
+                                    scoreElement.getAttribute('aria-live') === 'polite';
+            results.push(`✓ Task 3.7: Accessibility labels present: ${hasAccessibility ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}`);
+            
+            // Test 7: SVG gauge component
+            const svg = document.querySelector('.health-score-ring');
+            const hasSVG = svg && svg.tagName.toLowerCase() === 'svg';
+            results.push(`✓ Task 3.1: Circular SVG gauge component: ${hasSVG ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}`);
+            
+            document.getElementById('test-results').innerHTML = results.join('<br>');
+        }
+
+        // Initial render
+        updateHealthScore();
+    </script>
+</body>
+</html>

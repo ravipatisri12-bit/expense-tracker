@@ -2,15 +2,13 @@
 // This file initializes Firebase app and Firestore for the Modern Expense Tracker
 
 // Firebase configuration object
-// IMPORTANT: Replace these values with your actual Firebase project credentials
-// Get these from Firebase Console > Project Settings > General > Your apps > Firebase SDK snippet
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY_HERE",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDH_RMji5JG-IEP3uu-hapu7H7JKsR_SUA",
+    authDomain: "personal-expense-tracker-7aa9c.firebaseapp.com",
+    projectId: "personal-expense-tracker-7aa9c",
+    storageBucket: "personal-expense-tracker-7aa9c.firebasestorage.app",
+    messagingSenderId: "893806575358",
+    appId: "1:893806575358:web:fdd0b3d75a57122be4efaf"
 };
 
 // Initialize Firebase

@@ -20,6 +20,7 @@
     <script src="js/auth.js"></script>
     <script src="js/llm-integration.js"></script>
     <script src="js/smart-input.js"></script>
+    <script src="js/overview-analysis.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen pb-20 pt-16">
     <!-- Mobile App Header -->
@@ -58,6 +59,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2V5zM16 7h.01M16 11h.01M16 15h.01"></path>
                 </svg>
                 <span class="text-xs font-medium">Dashboard</span>
+            </button>
+            <button onclick="showPage('overview')" class="nav-btn flex-1 flex flex-col items-center py-2 px-1 text-gray-500 active:bg-gray-50">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <span class="text-xs">Overview</span>
             </button>
             <button onclick="showPage('add-expense')" class="nav-btn flex-1 flex flex-col items-center py-2 px-1 text-gray-500 active:bg-gray-50">
                 <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,6 +264,163 @@
                 <div id="recent-transactions" class="space-y-3">
                     <div class="text-gray-500 text-center py-8">
                         No transactions yet. <button onclick="showPage('add-expense')" class="text-primary-600 hover:text-primary-700">Add your first expense</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Overview Page -->
+    <div id="overview-page" class="page-content hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Header -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Financial Overview</h2>
+                <p class="text-gray-600">Insights and analysis</p>
+            </div>
+
+            <!-- Glassmorphism Tab Selector -->
+            <div class="glass-tab-selector mb-6">
+                <button onclick="switchOverviewTab('overview')" id="overview-tab-btn" class="glass-tab-btn active" data-tab="overview">
+                    <span class="tab-label">Overview</span>
+                </button>
+                <button onclick="switchOverviewTab('analysis')" id="analysis-tab-btn" class="glass-tab-btn" data-tab="analysis">
+                    <span class="tab-label">Analysis</span>
+                </button>
+            </div>
+
+            <!-- Overview Tab Content -->
+            <div id="overview-data-tab" class="tab-content">
+                <!-- 1. Robinhood-Style Line Graph -->
+                <div class="glass-card mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Variable Spending</h3>
+                        <div class="flex gap-2" id="time-period-selector">
+                            <button class="time-period-btn active" data-period="1W">1W</button>
+                            <button class="time-period-btn" data-period="1M">1M</button>
+                            <button class="time-period-btn" data-period="3M">3M</button>
+                            <button class="time-period-btn" data-period="6M">6M</button>
+                            <button class="time-period-btn" data-period="1Y">1Y</button>
+                            <button class="time-period-btn" data-period="ALL">ALL</button>
+                        </div>
+                    </div>
+                    <div id="line-graph-container" class="relative" style="height: 250px;">
+                        <svg id="spending-line-graph" class="w-full h-full"></svg>
+                    </div>
+                    <div class="flex justify-between mt-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Current:</span>
+                            <span class="font-semibold text-gray-900" id="graph-current">$0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Average:</span>
+                            <span class="font-semibold text-gray-900" id="graph-average">$0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Financial Health Score Gauge -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Financial Health</h3>
+                    <div class="flex flex-col items-center">
+                        <div class="relative" style="width: 200px; height: 200px;">
+                            <svg id="health-gauge-svg" viewBox="0 0 100 100" class="w-full h-full">
+                                <!-- Background circle -->
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="8"/>
+                                <!-- Progress arc -->
+                                <circle id="health-gauge-progress" cx="50" cy="50" r="40" fill="none" 
+                                        stroke="url(#healthGradient)" stroke-width="8" stroke-linecap="round"
+                                        stroke-dasharray="0 251.2" transform="rotate(-90 50 50)"/>
+                                <defs>
+                                    <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#34C759"/>
+                                        <stop offset="100%" stop-color="#007AFF"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <div class="text-4xl font-bold text-gray-900" id="health-score">0</div>
+                                <div class="text-sm text-gray-600" id="health-status">Calculating...</div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600 text-center mt-4" id="health-message">Loading health metrics...</p>
+                    </div>
+                </div>
+
+                <!-- 3. Weekly Spending Heatmap -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Spending Patterns</h3>
+                    <div id="heatmap-container" class="mb-4">
+                        <!-- Heatmap grid will be generated here -->
+                    </div>
+                    <div class="flex justify-center gap-4 text-xs text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <div class="w-4 h-4 rounded" style="background: rgba(0, 122, 255, 0.2);"></div>
+                            <span>Low</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-4 h-4 rounded" style="background: rgba(0, 122, 255, 0.5);"></div>
+                            <span>Medium</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-4 h-4 rounded" style="background: rgba(0, 122, 255, 0.9);"></div>
+                            <span>High</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Category Spending Pie Chart -->
+                <div class="glass-card">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Spending Distribution</h3>
+                    <div class="flex flex-col items-center mb-6">
+                        <svg id="category-pie-chart" viewBox="0 0 100 100" style="width: 200px; height: 200px;">
+                            <!-- Pie chart segments will be generated here -->
+                        </svg>
+                    </div>
+                    <div id="category-breakdown" class="space-y-3">
+                        <!-- Category breakdown bars will be generated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Tab Content -->
+            <div id="analysis-data-tab" class="tab-content hidden">
+                <!-- 1. Financial Personality Profile -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Financial Personality</h3>
+                    <div id="personality-profile-content">
+                        <div class="text-center py-8 text-gray-500">Loading personality profile...</div>
+                    </div>
+                </div>
+
+                <!-- 2. Primary Pattern Detection -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Detected Pattern</h3>
+                    <div id="pattern-detection-content">
+                        <div class="text-center py-8 text-gray-500">Analyzing patterns...</div>
+                    </div>
+                </div>
+
+                <!-- 3. Spending Triggers -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Spending Triggers</h3>
+                    <div id="spending-triggers-content">
+                        <div class="text-center py-8 text-gray-500">Identifying triggers...</div>
+                    </div>
+                </div>
+
+                <!-- 4. Behavioral Progress Tracking -->
+                <div class="glass-card mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Progress Metrics</h3>
+                    <div id="progress-tracking-content">
+                        <div class="text-center py-8 text-gray-500">Calculating progress...</div>
+                    </div>
+                </div>
+
+                <!-- 5. Monthly Reflection -->
+                <div class="glass-card">
+                    <div id="monthly-reflection-content">
+                        <div class="text-center py-8 text-gray-500">Generating reflection...</div>
                     </div>
                 </div>
             </div>

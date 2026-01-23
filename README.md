@@ -90,8 +90,7 @@ modern-expense-tracker/
 │   └── main.css           # Custom styles
 ├── docs/
 │   └── smart-input/       # Smart input documentation
-├── tests/                 # Test files
-└── glass-ui-prototype/    # Glass UI prototype (separate feature)
+└── tests/                 # Test files
 ```
 
 ## Documentation

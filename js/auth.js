@@ -13,34 +13,48 @@ async function signInWithGoogle() {
     try {
         // Check if Firebase Auth is initialized
         if (!window.firebaseAuth) {
-            throw new Error('Firebase Authentication is not initialized. Please check your Firebase configuration.');
+            alert('Firebase is not configured. The app will work in offline mode using localStorage.');
+            return;
+        }
+
+        // Check if Firebase is properly configured
+        if (window.firebaseApp && window.firebaseApp.options.apiKey === 'YOUR_API_KEY_HERE') {
+            alert('Firebase is not configured. Please set up your Firebase credentials in js/config.js');
+            return;
         }
 
         // Create Google Auth Provider
         const provider = new firebase.auth.GoogleAuthProvider();
-        
-        // Optional: Add scopes if needed
-        // provider.addScope('https://www.googleapis.com/auth/userinfo.email');
         
         // Sign in with popup
         const result = await window.firebaseAuth.signInWithPopup(provider);
         
         console.log('Successfully signed in:', result.user.displayName);
         
+        // Show success notification if available
+        if (typeof showNotification === 'function') {
+            showNotification('Successfully signed in!', 'success');
+        }
+        
         return result;
     } catch (error) {
         console.error('Error signing in with Google:', error);
         
         // Handle specific error codes
+        let errorMessage = 'Sign-in failed. ';
+        
         if (error.code === 'auth/popup-closed-by-user') {
-            throw new Error('Sign-in cancelled. Please try again.');
+            errorMessage += 'Sign-in cancelled.';
         } else if (error.code === 'auth/popup-blocked') {
-            throw new Error('Pop-up blocked by browser. Please allow pop-ups for this site.');
+            errorMessage += 'Pop-up blocked by browser. Please allow pop-ups for this site.';
         } else if (error.code === 'auth/network-request-failed') {
-            throw new Error('Network error. Please check your internet connection.');
+            errorMessage += 'Network error. Please check your internet connection.';
         } else {
-            throw new Error(`Sign-in failed: ${error.message}`);
+            errorMessage += error.message;
         }
+        
+        alert(errorMessage);
+        throw error;
     }
 }
 
@@ -102,29 +116,41 @@ function onAuthStateChanged(callback) {
  */
 function updateAuthUI(user) {
     // Get UI elements
-    const signInButton = document.getElementById('sign-in-button');
-    const signOutButton = document.getElementById('sign-out-button');
+    const signInBtn = document.getElementById('sign-in-btn');
     const userInfo = document.getElementById('user-info');
-    const userName = document.getElementById('user-name');
     const userAvatar = document.getElementById('user-avatar');
+
+    // Check if Firebase is configured
+    const isFirebaseConfigured = window.firebaseAuth && 
+                                  window.firebaseApp && 
+                                  window.firebaseApp.options.apiKey !== 'YOUR_API_KEY_HERE';
+
+    if (!isFirebaseConfigured) {
+        // Firebase not configured - hide sign-in button
+        if (signInBtn) {
+            signInBtn.style.display = 'none';
+        }
+        if (userInfo) {
+            userInfo.classList.add('hidden');
+        }
+        return;
+    }
 
     if (user) {
         // User is signed in - show user info, hide sign-in button
-        if (signInButton) signInButton.style.display = 'none';
-        if (signOutButton) signOutButton.style.display = 'block';
-        if (userInfo) userInfo.style.display = 'flex';
-        
-        // Update user name and avatar
-        if (userName) userName.textContent = user.displayName || 'User';
-        if (userAvatar) {
-            userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';
-            userAvatar.alt = user.displayName || 'User';
+        if (signInBtn) signInBtn.style.display = 'none';
+        if (userInfo) {
+            userInfo.classList.remove('hidden');
+            // Update user avatar
+            if (userAvatar) {
+                userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';
+                userAvatar.alt = user.displayName || 'User';
+            }
         }
     } else {
         // User is signed out - show sign-in button, hide user info
-        if (signInButton) signInButton.style.display = 'block';
-        if (signOutButton) signOutButton.style.display = 'none';
-        if (userInfo) userInfo.style.display = 'none';
+        if (signInBtn) signInBtn.style.display = 'inline-block';
+        if (userInfo) userInfo.classList.add('hidden');
     }
 }
 
@@ -144,6 +170,17 @@ function getCurrentUser() {
  * Sets up auth state listener and UI event handlers
  */
 function initAuth() {
+    // Check if Firebase is configured
+    const isFirebaseConfigured = window.firebaseAuth && 
+                                  window.firebaseApp && 
+                                  window.firebaseApp.options.apiKey !== 'YOUR_API_KEY_HERE';
+
+    if (!isFirebaseConfigured) {
+        console.log('Firebase not configured - running in localStorage-only mode');
+        updateAuthUI(null);
+        return;
+    }
+
     // Set up auth state listener
     onAuthStateChanged((user) => {
         // Update global currentUser variable
@@ -151,44 +188,11 @@ function initAuth() {
         
         updateAuthUI(user);
         
-        // Trigger sync if user is signed in
-        if (user && typeof window.syncToFirestore === 'function') {
-            window.syncToFirestore();
-        }
-        
-        // Load from Firestore if user is signed in
-        if (user && typeof window.loadFromFirestore === 'function') {
-            window.loadFromFirestore();
+        // Load user data if signed in
+        if (user && window.expenseTracker) {
+            window.expenseTracker.loadUserData();
         }
     });
-
-    // Set up sign-in button handler
-    const signInButton = document.getElementById('sign-in-button');
-    if (signInButton) {
-        signInButton.addEventListener('click', async () => {
-            try {
-                await signInWithGoogle();
-                // UI will be updated automatically by auth state listener
-            } catch (error) {
-                // Show error to user
-                alert(error.message);
-            }
-        });
-    }
-
-    // Set up sign-out button handler
-    const signOutButton = document.getElementById('sign-out-button');
-    if (signOutButton) {
-        signOutButton.addEventListener('click', async () => {
-            try {
-                await signOut();
-                // UI will be updated automatically by auth state listener
-            } catch (error) {
-                // Show error to user
-                alert(error.message);
-            }
-        });
-    }
 }
 
 // Export functions for use in other modules

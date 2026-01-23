@@ -14,6 +14,42 @@
   --primary-500: #3b82f6;
   --primary-600: #2563eb;
   --primary-700: #1d4ed8;
+  
+  /* Glassmorphism Design Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.08);
+  --glass-bg-active: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
+  
+  /* Status Colors */
+  --status-primary: #007AFF;
+  --status-good: #34C759;
+  --status-warning: #FF9F0A;
+  --status-danger: #FF453A;
+  
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.6s ease;
 }
 
 /* Custom Component Styles */
@@ -66,6 +102,103 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Glassmorphism Tab Selector Component */
+.glass-tab-selector {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-xs);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top highlight gradient for depth */
+.glass-tab-selector::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.glass-tab-btn {
+  flex: 1;
+  padding: var(--space-md) var(--space-lg);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.glass-tab-btn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.glass-tab-btn:focus {
+  outline: 2px solid var(--status-primary);
+  outline-offset: 2px;
+}
+
+.glass-tab-btn.active {
+  background: var(--status-primary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.glass-tab-btn.active:hover {
+  background: var(--status-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.tab-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tab Content Transitions */
+.tab-content {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  will-change: opacity, transform;
+}
+
+.tab-content.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.tab-content.hidden {
+  display: none;
+}
+
+.tab-content.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
 /* Loading states and animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -80,5 +213,680 @@
 @media print {
   .no-print {
     display: none !important;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .glass-tab-btn {
+    transition: none;
+  }
+  
+  .tab-content {
+    animation: none;
+  }
+}
+
+/* High Contrast Support */
+@media (prefers-contrast: high) {
+  .glass-tab-selector {
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  .glass-tab-btn {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .glass-tab-btn.active {
+    border-color: var(--status-primary);
+    border-width: 2px;
+  }
+}
+
+/* Responsive Design for Tab Selector */
+@media (max-width: 375px) {
+  .glass-tab-selector {
+    padding: 4px;
+  }
+  
+  .glass-tab-btn {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .glass-tab-selector {
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Prevent horizontal scrolling */
+body {
+  overflow-x: hidden;
+}
+
+.page-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure tab content doesn't cause overflow */
+.tab-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ============================================ */
+/* OVERVIEW TAB COMPONENTS */
+/* ============================================ */
+
+/* Glass Card Component */
+.glass-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure text is visible - don't override all colors */
+.glass-card h3,
+.glass-card h4,
+.glass-card h5 {
+  color: #111827 !important;
+  font-weight: 600;
+}
+
+.glass-card p {
+  color: #374151 !important;
+}
+
+.glass-card span {
+  color: #4b5563 !important;
+}
+
+/* Let Tailwind classes work normally */
+.glass-card .text-gray-900 {
+  color: #111827 !important;
+}
+
+.glass-card .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.glass-card .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.glass-card .text-sm {
+  color: #6b7280 !important;
+}
+
+.glass-card .font-semibold {
+  color: #111827 !important;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 0, 0, 0.1) 50%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Time Period Selector Buttons */
+.time-period-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 44px;
+  min-height: 32px;
+}
+
+.time-period-btn:hover {
+  background: rgba(0, 122, 255, 0.05);
+  border-color: rgba(0, 122, 255, 0.3);
+  color: #007AFF;
+}
+
+.time-period-btn.active {
+  background: #007AFF;
+  border-color: #007AFF;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+}
+
+.time-period-btn:focus {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Line Graph Styles */
+#spending-line-graph {
+  overflow: visible;
+}
+
+.graph-line {
+  fill: none;
+  stroke: url(#lineGradient);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.graph-area {
+  fill: url(#areaGradient);
+  opacity: 0.3;
+}
+
+.graph-point {
+  fill: #007AFF;
+  stroke: white;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.graph-point:hover {
+  r: 6;
+  fill: #0051D5;
+}
+
+.graph-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.graph-tooltip.show {
+  opacity: 1;
+}
+
+/* Heatmap Grid */
+#heatmap-container {
+  display: grid;
+  grid-template-columns: auto repeat(7, 1fr);
+  gap: 4px;
+  max-width: 100%;
+}
+
+.heatmap-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 4px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.heatmap-cell.empty {
+  background: rgba(0, 0, 0, 0.03);
+  cursor: default;
+}
+
+.heatmap-cell.empty:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Pie Chart Styles */
+.pie-segment {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.pie-segment:hover {
+  opacity: 0.8;
+  filter: brightness(1.1);
+}
+
+.pie-segment.highlighted {
+  filter: brightness(1.2);
+  stroke: white;
+  stroke-width: 0.5;
+}
+
+/* Category Breakdown Bars */
+.category-bar-item {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.category-bar-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateX(4px);
+}
+
+.category-bar-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.category-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* Animations */
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-draw-line {
+  animation: drawLine 1s ease-out forwards;
+}
+
+.animate-count-up {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Responsive adjustments */
+@media (max-width: 375px) {
+  .glass-card {
+    padding: 16px;
+  }
+  
+  .time-period-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 36px;
+  }
+  
+  .heatmap-cell {
+    min-width: 28px;
+    min-height: 28px;
+  }
+  
+  #heatmap-container {
+    gap: 3px;
+  }
+}
+
+@media (min-width: 768px) {
+  .glass-card {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Reduced Motion Support for Overview Components */
+@media (prefers-reduced-motion: reduce) {
+  .graph-line,
+  .pie-segment,
+  .category-bar-fill,
+  .heatmap-cell {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .animate-draw-line,
+  .animate-count-up,
+  .animate-fade-in-up {
+    animation: none !important;
+  }
+}
+
+
+/* ============================================ */
+/* ANALYSIS TAB COMPONENTS */
+/* ============================================ */
+
+/* Ensure text is visible in Analysis tab */
+#analysis-data-tab {
+  color: #1f2937; /* Dark gray text */
+}
+
+#analysis-data-tab .text-gray-700 {
+  color: #374151 !important;
+}
+
+#analysis-data-tab .text-gray-900 {
+  color: #111827 !important;
+}
+
+#analysis-data-tab .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+#analysis-data-tab .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* Personality Profile Icon Badge */
+.personality-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 122, 255, 0.2);
+  border: 2px solid rgba(0, 122, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+/* Confidence Meter */
+.confidence-meter {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007AFF 0%, #34C759 100%);
+  transition: width 1s ease-out;
+}
+
+/* Multiplier Indicators */
+.multiplier-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 159, 10, 0.2);
+  border: 1px solid rgba(255, 159, 10, 0.4);
+  font-size: 14px;
+  font-weight: 700;
+  color: #FF9F0A;
+  white-space: nowrap;
+}
+
+/* Trend Arrows */
+.trend-arrow {
+  font-size: 16px;
+  font-weight: bold;
+  display: inline-block;
+  animation: bounceIn 0.6s ease-out;
+}
+
+.trend-arrow.up {
+  color: #34C759;
+}
+
+.trend-arrow.down {
+  color: #FF453A;
+}
+
+.trend-arrow.neutral {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Assessment Badge */
+.assessment-badge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.assessment-badge.excellent {
+  background: #34C759;
+}
+
+.assessment-badge.strong {
+  background: #007AFF;
+}
+
+.assessment-badge.steady {
+  background: #FF9F0A;
+}
+
+.assessment-badge.needs-focus {
+  background: #FF453A;
+}
+
+/* Progress Metric Bars */
+.progress-metric {
+  margin-bottom: 16px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #007AFF;
+  border-radius: 4px;
+  transition: width 1s ease-out;
+}
+
+/* Analysis Card Animations */
+.analysis-card {
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation delays for Analysis components */
+#personality-profile-content {
+  animation-delay: 0s;
+}
+
+#pattern-detection-content {
+  animation-delay: 0.1s;
+}
+
+#spending-triggers-content {
+  animation-delay: 0.2s;
+}
+
+#progress-tracking-content {
+  animation-delay: 0.3s;
+}
+
+#monthly-reflection-content {
+  animation-delay: 0.4s;
+}
+
+/* Loading States */
+.analysis-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #9ca3af;
+}
+
+.analysis-loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #007AFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments for Analysis tab */
+@media (max-width: 640px) {
+  .personality-icon-badge {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .multiplier-badge {
+    font-size: 12px;
+    padding: 3px 6px;
+  }
+  
+  .assessment-badge {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* Dark mode support for Analysis components */
+@media (prefers-color-scheme: dark) {
+  .glass-card {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .confidence-meter,
+  .progress-bar-container {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Accessibility improvements */
+.glass-card:focus-within {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Print styles for Analysis tab */
+@media print {
+  .glass-tab-selector {
+    display: none;
+  }
+  
+  #analysis-data-tab {
+    display: block !important;
+  }
+  
+  .glass-card {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
   }
 }
