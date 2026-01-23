@@ -99,8 +99,31 @@ class ExpenseTracker {
         // Initialize Overview components if navigating to overview page
         if (pageId === 'overview') {
             setTimeout(() => {
-                if (typeof initializeOverviewComponents === 'function') {
-                    initializeOverviewComponents();
+                // Check saved tab preference
+                const savedTab = localStorage.getItem('activeOverviewTab') || 'overview';
+                
+                if (savedTab === 'overview') {
+                    if (typeof initializeOverviewComponents === 'function') {
+                        initializeOverviewComponents();
+                    }
+                } else if (savedTab === 'analysis') {
+                    // Initialize analysis tab and set it as active
+                    if (typeof initializeAnalysisTab === 'function') {
+                        // Set analysis tab as active
+                        const overviewBtn = document.getElementById('overview-tab-btn');
+                        const analysisBtn = document.getElementById('analysis-tab-btn');
+                        const overviewTab = document.getElementById('overview-data-tab');
+                        const analysisTab = document.getElementById('analysis-data-tab');
+                        
+                        if (overviewBtn && analysisBtn && overviewTab && analysisTab) {
+                            overviewBtn.classList.remove('active');
+                            analysisBtn.classList.add('active');
+                            overviewTab.classList.add('hidden');
+                            analysisTab.classList.remove('hidden');
+                        }
+                        
+                        initializeAnalysisTab();
+                    }
                 }
             }, 100);
         }
@@ -326,8 +349,7 @@ class ExpenseTracker {
         // Update weekly spending view
         this.updateWeeklySpending('recent');
 
-        // Update recent transactions
-        this.updateRecentTransactions();
+        // updateRecentTransactions method removed as the element was removed from the dashboard
         
         // Update Overview components if on overview page
         if (this.currentPage === 'overview' && typeof initializeOverviewComponents === 'function') {
@@ -381,34 +403,7 @@ class ExpenseTracker {
         });
     }
 
-    updateRecentTransactions() {
-        const container = document.getElementById('recent-transactions');
-        const recentExpenses = [...this.expenses]
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 5);
-
-        if (recentExpenses.length === 0) {
-            container.innerHTML = `
-                <div class="text-gray-500 text-center py-8">
-                    No transactions yet. <button onclick="expenseTracker.showPage('add-expense')" class="text-primary-600 hover:text-primary-700">Add your first expense</button>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = recentExpenses.map(expense => `
-            <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-2 h-2 bg-primary-500 rounded-full"></div>
-                    <div>
-                        <p class="font-medium text-gray-900">${expense.description}</p>
-                        <p class="text-sm text-gray-500">${expense.category} • ${formatDate(expense.date)}</p>
-                    </div>
-                </div>
-                <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
-            </div>
-        `).join('');
-    }
+    // updateRecentTransactions method removed as the recent-transactions element was removed from the dashboard
 
     // ====================================================================
     // TRANSACTIONS RENDERING
@@ -2101,11 +2096,22 @@ function renderHeatmap() {
                 ? `${day.date}: ${formatCurrency(day.amount)} (${day.count} transactions)`
                 : `${day.date}: No spending`;
             
-            html += `<div class="${cellClass}" style="background: ${intensity};" title="${title}"></div>`;
+            // Show amount text in cell if there's spending
+            const amountText = day.amount > 0 ? `$${day.amount < 100 ? day.amount.toFixed(0) : Math.round(day.amount)}` : '';
+            
+            html += `
+                <div class="${cellClass}" style="background: ${intensity};" title="${title}" data-amount="${day.amount}" data-count="${day.count}" data-date="${day.date}">
+                    <div class="heatmap-amount">${amountText}</div>
+                    ${day.count > 0 ? `<div class="heatmap-count">${day.count}</div>` : ''}
+                </div>
+            `;
         });
     });
     
     container.innerHTML = html;
+    
+    // Add enhanced hover interactions
+    addHeatmapInteractions();
 }
 
 function getHeatmapData() {
@@ -2149,13 +2155,87 @@ function getIntensityColor(amount, maxAmount) {
     
     const intensity = amount / (maxAmount || 1);
     
-    if (intensity < 0.33) {
-        return 'rgba(0, 122, 255, 0.2)';
-    } else if (intensity < 0.66) {
-        return 'rgba(0, 122, 255, 0.5)';
+    if (intensity < 0.25) {
+        return 'rgba(0, 122, 255, 0.15)';
+    } else if (intensity < 0.50) {
+        return 'rgba(0, 122, 255, 0.35)';
+    } else if (intensity < 0.75) {
+        return 'rgba(0, 122, 255, 0.60)';
     } else {
-        return 'rgba(0, 122, 255, 0.9)';
+        return 'rgba(0, 122, 255, 0.85)';
     }
+}
+
+function addHeatmapInteractions() {
+    const cells = document.querySelectorAll('.heatmap-cell');
+    let tooltip = document.querySelector('.heatmap-tooltip');
+    
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'heatmap-tooltip';
+        document.getElementById('heatmap-container').parentNode.appendChild(tooltip);
+    }
+    
+    cells.forEach(cell => {
+        cell.addEventListener('mouseenter', (e) => {
+            const amount = parseFloat(e.currentTarget.dataset.amount);
+            const count = parseInt(e.currentTarget.dataset.count) || 0;
+            const date = e.currentTarget.dataset.date;
+            
+            if (amount > 0) {
+                const expenseDetails = getExpenseDetailsForDate(date);
+                let tooltipContent = `
+                    <div class="tooltip-header">
+                        <strong>${date}</strong>
+                    </div>
+                    <div class="tooltip-summary">
+                        Total: <strong>${formatCurrency(amount)}</strong> • ${count} transaction${count !== 1 ? 's' : ''}
+                    </div>
+                `;
+                
+                if (expenseDetails.length > 0) {
+                    tooltipContent += '<div class="tooltip-breakdown">';
+                    expenseDetails.slice(0, 3).forEach(expense => {
+                        tooltipContent += `
+                            <div class="tooltip-item">
+                                <span class="expense-desc">${expense.description}</span>
+                                <span class="expense-amount">${formatCurrency(expense.amount)}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    if (expenseDetails.length > 3) {
+                        tooltipContent += `<div class="tooltip-more">+${expenseDetails.length - 3} more</div>`;
+                    }
+                    tooltipContent += '</div>';
+                }
+                
+                tooltip.innerHTML = tooltipContent;
+                tooltip.classList.add('show');
+                
+                const rect = e.currentTarget.getBoundingClientRect();
+                const container = document.getElementById('heatmap-container').getBoundingClientRect();
+                tooltip.style.left = (rect.left - container.left + rect.width / 2) + 'px';
+                tooltip.style.top = (rect.top - container.top - 10) + 'px';
+            }
+        });
+        
+        cell.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('show');
+        });
+    });
+}
+
+function getExpenseDetailsForDate(dateStr) {
+    if (!window.expenseTracker) return [];
+    
+    return window.expenseTracker.expenses.filter(expense => {
+        const expenseDate = new Date(expense.date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        return expenseDate === dateStr;
+    });
 }
 
 // ====================================================================
@@ -2332,4 +2412,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
