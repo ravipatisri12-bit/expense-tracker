@@ -149,48 +149,54 @@ Return ONLY the JSON array, nothing else.`;
     fallbackParseMultiple(input) {
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        const validCategories = ['Food','Transportation','Entertainment','Coffee','Shopping','Bills','Other'];
         
-        // One transaction per line. Format: description amount [date]
-        // The LAST number on the line (not part of a date) is the amount
         const lines = input.split('\n').map(s => s.trim()).filter(Boolean);
         const transactions = [];
         
         for (let line of lines) {
-            // Extract and remove date from end first
+            // 1. Extract date from end or anywhere
             let date = todayStr;
-            if (/yesterday\s*$/i.test(line)) {
+            // yesterday
+            if (/\byesterday\b/i.test(line)) {
                 const d = new Date(today); d.setDate(d.getDate()-1);
                 date = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-                line = line.replace(/\s*yesterday\s*$/i, '');
-            } else {
-                const dateEnd = line.match(/\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s*$/);
-                if (dateEnd) {
-                    const m = dateEnd[1].match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
-                    const y = m[3] ? (m[3].length === 2 ? '20'+m[3] : m[3]) : today.getFullYear();
-                    date = y+'-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
-                    line = line.substring(0, dateEnd.index);
+                line = line.replace(/\s*\byesterday\b\s*/i, ' ');
+            }
+            // MM/DD or MM/DD/YY
+            const dateMatch = line.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+            if (dateMatch) {
+                const y = dateMatch[3] ? (dateMatch[3].length === 2 ? '20'+dateMatch[3] : dateMatch[3]) : today.getFullYear();
+                date = y+'-'+String(dateMatch[1]).padStart(2,'0')+'-'+String(dateMatch[2]).padStart(2,'0');
+                line = line.replace(dateMatch[0], ' ');
+            }
+            
+            // 2. Extract explicit category (match known categories or "on <word>")
+            let category = null;
+            const catMatch = line.match(/\b(?:on|in|for|category)\s+(\w+)\s*$/i) || line.match(/\b(?:on|in|for|category)\s+(\w+)/i);
+            if (catMatch) {
+                const cat = catMatch[1].charAt(0).toUpperCase() + catMatch[1].slice(1).toLowerCase();
+                if (validCategories.map(c=>c.toLowerCase()).includes(cat.toLowerCase())) {
+                    category = cat;
+                    line = line.replace(catMatch[0], ' ');
                 }
             }
             
-            // Find amount: $N or last standalone number
-            const amountMatch = line.match(/\$\s*(\d+(?:\.\d{1,2})?)/) || line.match(/\b(\d+(?:\.\d{1,2})?)\s*$/);
+            // 3. Extract amount: first number (with optional $)
+            const amountMatch = line.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
             if (!amountMatch) continue;
-            
             const amount = parseFloat(amountMatch[1]);
             if (!amount || amount <= 0) continue;
+            line = line.replace(amountMatch[0], ' ');
             
-            // Description is everything except the amount
-            let desc = line.replace(amountMatch[0], '').trim();
-            desc = desc.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '');
+            // 4. Everything left is description
+            let desc = line.replace(/\b(at|on|in|for|spent|paid|to)\b/gi, ' ').replace(/\s+/g, ' ').trim();
             if (!desc) desc = 'Expense';
+            else desc = desc.charAt(0).toUpperCase() + desc.slice(1);
             
-            transactions.push({
-                amount,
-                description: desc.charAt(0).toUpperCase() + desc.slice(1),
-                category: this.guessCategory(desc.toLowerCase()),
-                date,
-                confidence: 'low'
-            });
+            if (!category) category = this.guessCategory(desc.toLowerCase());
+            
+            transactions.push({ amount, description: desc, category, date, confidence: 'low' });
         }
         
         return transactions.length > 0 ? transactions : [{ amount: null, description: input, category: 'Other', date: todayStr, confidence: 'low' }];
