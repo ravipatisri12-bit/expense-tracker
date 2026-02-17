@@ -1736,20 +1736,24 @@ ExpenseTracker.prototype.renderInsights = function() {
 
     // Try Gemini, fall back to templates
     const apiKey = localStorage.getItem('gemini_api_key') || '';
+    const badge = document.getElementById('insights-badge');
     if (apiKey) {
         this.fetchGeminiInsights(summary, apiKey).then(insights => {
             this._insightsCache = cacheKey;
             this._insightsHtml = this.formatInsights(insights);
             container.innerHTML = this._insightsHtml;
+            if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
         }).catch(() => {
             this._insightsCache = cacheKey;
             this._insightsHtml = this.formatInsights(this.templateInsights(summary));
             container.innerHTML = this._insightsHtml;
+            if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
         });
     } else {
         this._insightsCache = cacheKey;
         this._insightsHtml = this.formatInsights(this.templateInsights(summary));
         container.innerHTML = this._insightsHtml;
+        if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
     }
 };
 
