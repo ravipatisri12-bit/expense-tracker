@@ -84,7 +84,7 @@ class ExpenseTracker {
         // Update navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('text-primary-600', 'active-nav');
-            btn.classList.add('text-gray-400');
+            btn.style.color='var(--md-sys-color-outline)';
             const icon = btn.querySelector('.material-symbols-rounded');
             if (icon) icon.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
         });
@@ -92,7 +92,7 @@ class ExpenseTracker {
         // Highlight active nav button
         const activeBtn = document.querySelector(`[onclick="showPage('${pageId}')"]`);
         if (activeBtn) {
-            activeBtn.classList.remove('text-gray-400');
+            activeBtn.style.color='';
             activeBtn.classList.add('text-primary-600', 'active-nav');
             const icon = activeBtn.querySelector('.material-symbols-rounded');
             if (icon) icon.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
@@ -323,8 +323,8 @@ class ExpenseTracker {
             const diff = totalVariableExpenses - lastMonthTotal;
             const pct = Math.abs(Math.round((diff / lastMonthTotal) * 100));
             trendEl.innerHTML = diff > 0
-                ? `<span class="text-red-500">${pct}% more than last month</span>`
-                : `<span class="text-green-600">${pct}% less than last month</span>`;
+                ? `<span style="color:#cf6679">${pct}% more than last month</span>`
+                : `<span style="color:var(--md-sys-color-primary)">${pct}% less than last month</span>`;
         } else if (trendEl) {
             trendEl.textContent = '';
         }
@@ -382,10 +382,10 @@ class ExpenseTracker {
             expenseItem.innerHTML = `
                 <div class="flex-1">
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">${category}</span>
+                        <span style="color:var(--md-sys-color-on-surface-variant)">${category}</span>
                         <span class="font-medium">${formatCurrency(spent)}/${formatCurrency(goal)}</span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div class="w-full rounded-full h-2 mt-1" style="background:rgba(255,255,255,0.08)">
                         <div class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
                     </div>
                 </div>
@@ -402,7 +402,7 @@ class ExpenseTracker {
 
         if (recentExpenses.length === 0) {
             container.innerHTML = `
-                <div class="text-gray-500 text-center py-8">
+                <div class="text-center py-8" style="color:var(--md-sys-color-outline)">
                     No transactions yet. <button onclick="expenseTracker.showPage('add-expense')" class="text-primary-600 hover:text-primary-700">Add your first expense</button>
                 </div>
             `;
@@ -410,15 +410,15 @@ class ExpenseTracker {
         }
 
         container.innerHTML = recentExpenses.map(expense => `
-            <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
+            <div class="flex items-center justify-between p-3 rounded-lg">
                 <div class="flex items-center space-x-3">
                     <div class="w-2 h-2 bg-primary-500 rounded-full"></div>
                     <div>
-                        <p class="font-medium text-gray-900">${expense.description}</p>
-                        <p class="text-sm text-gray-500">${expense.category} • ${formatDate(expense.date)}</p>
+                        <p class="font-medium " style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                        <p class="text-sm " style="color:var(--md-sys-color-outline)">${expense.category} • ${formatDate(expense.date)}</p>
                     </div>
                 </div>
-                <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
+                <span class="font-semibold " style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(expense.amount)}</span>
             </div>
         `).join('');
     }
@@ -433,7 +433,7 @@ class ExpenseTracker {
 
         if (sortedExpenses.length === 0) {
             container.innerHTML = `
-                <div class="p-8 text-center text-gray-500">
+                <div class="p-8 text-center" style="color:var(--md-sys-color-outline)">
                     No transactions yet. <button onclick="expenseTracker.showPage('add-expense')" class="text-primary-600 hover:text-primary-700">Add your first expense</button>
                 </div>
             `;
@@ -557,12 +557,12 @@ class ExpenseTracker {
         const container = document.getElementById('category-goals-settings');
         container.innerHTML = Object.keys(this.settings.goals).map(category => `
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">${category} Goal</label>
+                <label class="block text-sm font-medium mb-2" style="color:var(--md-sys-color-on-surface-variant)">${category} Goal</label>
                 <div class="relative">
-                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 " style="color:var(--md-sys-color-outline)">$</span>
                     <input type="number" id="goal-${category.toLowerCase()}" step="0.01" placeholder="0.00" 
                            value="${this.settings.goals[category]}"
-                           class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                           class="pl-8 block w-full rounded-lg border-0 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                 </div>
             </div>
         `).join('');
@@ -899,7 +899,7 @@ class ExpenseTracker {
         const container = document.getElementById('history-category-breakdown');
         
         if (Object.keys(expensesByCategory).length === 0) {
-            container.innerHTML = '<div class="text-gray-500 text-center py-8">No expenses found for selected month</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">No expenses found for selected month</div>';
             return;
         }
 
@@ -912,10 +912,10 @@ class ExpenseTracker {
                 <div class="flex justify-between items-center py-2">
                     <div class="flex-1">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">${category}</span>
+                            <span style="color:var(--md-sys-color-on-surface-variant)">${category}</span>
                             <span class="font-medium">${formatCurrency(spent)}/${formatCurrency(goal)}</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div class="w-full rounded-full h-2 mt-1" style="background:rgba(255,255,255,0.08)">
                             <div class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
                         </div>
                     </div>
@@ -933,7 +933,7 @@ class ExpenseTracker {
         const isCurrentMonth = (parseInt(selectedMonth) === currentMonth && parseInt(selectedYear) === currentYear);
 
         if (isCurrentMonth) {
-            container.innerHTML = '<div class="text-gray-500 text-center py-8">This is the current month</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">This is the current month</div>';
             return;
         }
 
@@ -946,29 +946,29 @@ class ExpenseTracker {
 
         container.innerHTML = `
             <div class="space-y-4">
-                <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Variable Expenses</span>
+                <div class="flex justify-between items-center py-2 " style="border-bottom:1px solid rgba(255,255,255,0.06)"">
+                    <span style="color:var(--md-sys-color-on-surface-variant)">Variable Expenses</span>
                     <div class="text-right">
                         <div class="font-medium">${formatCurrency(Math.abs(variableDiff))}</div>
-                        <div class="text-sm ${variableDiff > 0 ? 'text-red-500' : 'text-green-500'}">
+                        <div class="text-sm" style="color:${variableDiff > 0 ? '#cf6679' : 'var(--md-sys-color-primary)'}">
                             ${variableDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Total Expenses</span>
+                <div class="flex justify-between items-center py-2" style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <span style="color:var(--md-sys-color-on-surface-variant)">Total Expenses</span>
                     <div class="text-right">
                         <div class="font-medium">${formatCurrency(Math.abs(totalDiff))}</div>
-                        <div class="text-sm ${totalDiff > 0 ? 'text-red-500' : 'text-green-500'}">
+                        <div class="text-sm" style="color:${totalDiff > 0 ? '#cf6679' : 'var(--md-sys-color-primary)'}">
                             ${totalDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
                         </div>
                     </div>
                 </div>
                 <div class="flex justify-between items-center py-2">
-                    <span class="text-gray-600">Savings</span>
+                    <span style="color:var(--md-sys-color-on-surface-variant)">Savings</span>
                     <div class="text-right">
                         <div class="font-medium">${formatCurrency(Math.abs(savingsDiff))}</div>
-                        <div class="text-sm ${savingsDiff > 0 ? 'text-green-500' : 'text-red-500'}">
+                        <div class="text-sm" style="color:${savingsDiff > 0 ? 'var(--md-sys-color-primary)' : '#cf6679'}">
                             ${savingsDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
                         </div>
                     </div>
@@ -981,7 +981,7 @@ class ExpenseTracker {
         const container = document.getElementById('history-transactions');
         
         if (expenses.length === 0) {
-            container.innerHTML = '<div class="p-8 text-center text-gray-500">No transactions found for selected month</div>';
+            container.innerHTML = '<div class="p-8 text-center" style="color:var(--md-sys-color-outline)">No transactions found for selected month</div>';
             return;
         }
 
@@ -989,21 +989,21 @@ class ExpenseTracker {
         const sortedExpenses = [...expenses].sort((a, b) => b.timestamp - a.timestamp);
 
         container.innerHTML = `
-            <div class="p-4 bg-gray-50 border-b">
-                <h4 class="font-medium text-gray-900">${selectedMonthName} ${selectedYear} - ${expenses.length} transactions</h4>
+            <div class="p-4 border-b">
+                <h4 class="font-medium " style="color:var(--md-sys-color-on-surface)">${selectedMonthName} ${selectedYear} - ${expenses.length} transactions</h4>
             </div>
             ${sortedExpenses.map(expense => `
-                <div class="flex items-center justify-between p-4 hover:bg-gray-50">
+                <div class="flex items-center justify-between p-4">
                     <div class="flex items-center space-x-4">
                         <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                             <span class="text-primary-600 font-medium text-sm">${expense.category.charAt(0)}</span>
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900">${expense.description}</p>
-                            <p class="text-sm text-gray-500">${expense.category} • ${formatDate(expense.date)}</p>
+                            <p class="font-medium " style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                            <p class="text-sm " style="color:var(--md-sys-color-outline)">${expense.category} • ${formatDate(expense.date)}</p>
                         </div>
                     </div>
-                    <span class="font-semibold text-red-600">-${formatCurrency(expense.amount)}</span>
+                    <span class="font-semibold " style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(expense.amount)}</span>
                 </div>
             `).join('')}
         `;
@@ -1030,29 +1030,8 @@ class ExpenseTracker {
     }
 
     applyPrivacyMode() {
-        const privacyText = '••••••';
         const isPrivate = this.settings.privacyMode;
-        
-        // Elements to hide/show based on privacy mode
-        const sensitiveElements = [
-            'total-income',
-            'total-savings',
-            'history-income', 
-            'history-savings'
-        ];
-        
-        sensitiveElements.forEach(elementId => {
-            const element = document.getElementById(elementId);
-            if (element) {
-                if (isPrivate && !element.textContent.includes('••••••')) {
-                    element.setAttribute('data-original', element.textContent);
-                    element.textContent = privacyText;
-                } else if (!isPrivate && element.hasAttribute('data-original')) {
-                    element.textContent = element.getAttribute('data-original');
-                    element.removeAttribute('data-original');
-                }
-            }
-        });
+        document.body.classList.toggle('privacy-mode', isPrivate);
     }
 
     // ====================================================================
@@ -1083,7 +1062,7 @@ class ExpenseTracker {
         const dailyData = this.getDailySpendingData(period);
         
         if (dailyData.days.length === 0) {
-            container.innerHTML = '<div class="text-gray-500 text-center py-8">No expenses found for this period</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">No expenses found for this period</div>';
             averageElement.textContent = '$0.00';
             return;
         }
@@ -1104,18 +1083,18 @@ class ExpenseTracker {
             const percentage = dailyData.maxAmount > 0 ? (day.amount / dailyData.maxAmount) * 100 : 0;
             
             return `
-                <div class="flex items-center justify-between py-3 px-2 hover:bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between py-3 px-2 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <div class="text-sm font-medium text-gray-900 w-20">${day.dayName}</div>
+                        <div class="text-sm font-medium w-20" style="color:var(--md-sys-color-on-surface)">${day.dayName}</div>
                         <div class="flex-1">
-                            <div class="text-xs text-gray-500 mb-1">${day.transactionCount} transaction${day.transactionCount !== 1 ? 's' : ''}</div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="text-xs mb-1" style="color:var(--md-sys-color-outline)">${day.transactionCount} transaction${day.transactionCount !== 1 ? 's' : ''}</div>
+                            <div class="w-full rounded-full h-2" style="background:rgba(255,255,255,0.08)">
                                 <div class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="font-semibold text-gray-900">${formatCurrency(day.amount)}</div>
+                        <div class="font-semibold " style="color:var(--md-sys-color-on-surface)">${formatCurrency(day.amount)}</div>
                         ${day.isToday ? '<div class="text-xs text-primary-600">Today</div>' : ''}
                     </div>
                 </div>
@@ -1244,7 +1223,7 @@ class ExpenseTracker {
         const weeklyData = this.getWeeklySpendingData(period);
         
         if (weeklyData.weeks.length === 0) {
-            container.innerHTML = '<div class="text-gray-500 text-center py-8">No weekly data available</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">No weekly data available</div>';
             averageElement.textContent = '$0.00';
             return;
         }
@@ -1259,19 +1238,19 @@ class ExpenseTracker {
             const percentage = weeklyData.maxAmount > 0 ? (week.amount / weeklyData.maxAmount) * 100 : 0;
             
             return `
-                <div class="flex items-center justify-between py-3 px-2 hover:bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between py-3 px-2 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <div class="text-sm font-medium text-gray-900 w-32">${week.weekName}</div>
+                        <div class="text-sm font-medium w-32" style="color:var(--md-sys-color-on-surface)">${week.weekName}</div>
                         <div class="flex-1">
-                            <div class="text-xs text-gray-500 mb-1">${week.transactionCount} transaction${week.transactionCount !== 1 ? 's' : ''}</div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+                            <div class="text-xs mb-1" style="color:var(--md-sys-color-outline)">${week.transactionCount} transaction${week.transactionCount !== 1 ? 's' : ''}</div>
+                            <div class="w-full rounded-full h-2" style="background:rgba(255,255,255,0.08)">
+                                <div class="h-2 rounded-full transition-all duration-300" style="background:var(--accent-gradient)" style="width: ${percentage}%"></div>
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="font-semibold text-gray-900">${formatCurrency(week.amount)}</div>
-                        ${week.isCurrentWeek ? '<div class="text-xs text-green-600">Current</div>' : ''}
+                        <div class="font-semibold " style="color:var(--md-sys-color-on-surface)">${formatCurrency(week.amount)}</div>
+                        ${week.isCurrentWeek ? '<div class="text-xs " style="color:var(--md-sys-color-primary)">Current</div>' : ''}
                     </div>
                 </div>
             `;
@@ -1405,12 +1384,12 @@ class ExpenseTracker {
         }
         
         container.innerHTML = this.settings.categories.map(category => `
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center justify-between p-3 rounded-lg">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                         <span class="text-primary-600 font-medium text-xs">${category.charAt(0)}</span>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">${category}</span>
+                    <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface)">${category}</span>
                 </div>
                 <div class="flex items-center space-x-2">
                     <button onclick="editCategory('${category}')" 
@@ -1420,7 +1399,7 @@ class ExpenseTracker {
                         </svg>
                     </button>
                     <button onclick="deleteCategory('${category}')" 
-                            class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded">
+                            class="p-1 rounded" style="color:var(--md-sys-color-outline)">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
@@ -1617,12 +1596,12 @@ function switchTrendsView(view) {
     const dailyBtn = document.getElementById('trends-daily-btn');
     const weeklyBtn = document.getElementById('trends-weekly-btn');
     if (view === 'daily') {
-        dailyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm';
-        weeklyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-500';
+        dailyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
+        weeklyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
         expenseTracker.updateDailySpending('week');
     } else {
-        weeklyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm';
-        dailyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-500';
+        weeklyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
+        dailyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
         expenseTracker.updateWeeklySpending('recent');
     }
 }
@@ -1681,7 +1660,7 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
     const total = Object.values(catTotals).reduce((s, a) => s + a, 0);
     if (total === 0) {
         svg.innerHTML = '';
-        breakdown.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No expenses this month</p>';
+        breakdown.innerHTML = '<p class="text-center text-sm py-4" style="color:var(--md-sys-color-outline)">No expenses this month</p>';
         return;
     }
 
@@ -1713,14 +1692,14 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
     breakdown.innerHTML = data.map((cat, i) => {
         const color = colors[i % colors.length];
         return `
-            <div class="flex items-center justify-between py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" onclick="openCategoryFilter('${cat.name}')">
+            <div class="flex items-center justify-between py-2 px-2 rounded-lg cursor-pointer transition-colors" onclick="openCategoryFilter('${cat.name}')">
                 <div class="flex items-center space-x-2">
                     <div class="w-2.5 h-2.5 rounded-full" style="background:${color}"></div>
-                    <span class="text-sm text-gray-700">${cat.name}</span>
+                    <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">${cat.name}</span>
                 </div>
                 <div class="text-right">
-                    <span class="text-sm font-medium text-gray-900">${formatCurrency(cat.amount)}</span>
-                    <span class="text-xs text-gray-400 ml-1">${cat.pct}%</span>
+                    <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface)">${formatCurrency(cat.amount)}</span>
+                    <span class="text-xs ml-1" style="color:var(--md-sys-color-outline)">${cat.pct}%</span>
                 </div>
             </div>
         `;
@@ -1744,16 +1723,16 @@ function openCategoryFilter(category) {
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (filtered.length === 0) {
-        container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No transactions</div>';
+        container.innerHTML = '<div class="p-6 text-center text-sm" style="color:var(--md-sys-color-outline)">No transactions</div>';
     } else {
         const grouped = expenseTracker.groupTransactionsByDate(filtered);
         container.innerHTML = grouped.map(g => `
             <div>
-                <div class="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">${g.dateLabel} · ${formatCurrency(g.totalAmount)}</div>
+                <div class="px-4 py-2 text-xs font-medium " style="color:var(--md-sys-color-outline)">${g.dateLabel} · ${formatCurrency(g.totalAmount)}</div>
                 ${g.transactions.map(e => `
                     <div class="flex justify-between items-center px-4 py-3">
-                        <span class="text-sm text-gray-800">${e.description}</span>
-                        <span class="text-sm font-medium text-gray-900">${formatCurrency(e.amount)}</span>
+                        <span class="text-sm " style="color:var(--md-sys-color-on-surface)">${e.description}</span>
+                        <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface)">${formatCurrency(e.amount)}</span>
                     </div>
                 `).join('')}
             </div>

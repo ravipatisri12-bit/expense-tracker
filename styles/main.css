@@ -239,3 +239,14 @@ button.rounded-xl { border-radius: 20px !important; }
 .peer-checked\:bg-primary-600:is(.peer:checked ~ *) {
   background: var(--md-sys-color-primary) !important;
 }
+
+/* Privacy mode — blur all monetary values */
+body.privacy-mode #big-spending-number,
+body.privacy-mode .font-semibold,
+body.privacy-mode #history-income,
+body.privacy-mode #history-savings,
+body.privacy-mode #monthly-budget-display {
+    filter: blur(8px);
+    user-select: none;
+    transition: filter 0.2s ease;
+}

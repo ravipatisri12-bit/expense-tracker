@@ -61,21 +61,17 @@ CRITICAL RULES:
 1. Look for EVERY amount mentioned (numbers with or without $)
 2. Each amount = separate transaction
 3. ALWAYS return a JSON array, even for 1 transaction
-4. Extract: amount (number), description (string), category (Food/Transportation/Entertainment/Coffee/Shopping/Bills/Other)
+4. Extract: amount (number), description (string), category (Food/Transportation/Entertainment/Coffee/Shopping/Bills/Other), date (YYYY-MM-DD if mentioned, null if not)
+5. Dates can be: MM/DD, MM/DD/YY, "yesterday", "today", or relative. Use ${new Date().getFullYear()} as default year.
 
 Examples:
-Input: "5 at starbucks 10 at chipotle 2 at amazon go"
-Output: [
-  {"amount": 5, "description": "starbucks", "category": "Coffee"},
-  {"amount": 10, "description": "chipotle", "category": "Food"},
-  {"amount": 2, "description": "amazon go", "category": "Shopping"}
-]
+Input: "100 at castilla on food 02/18"
+Output: [{"amount": 100, "description": "castilla", "category": "Food", "date": "${new Date().getFullYear()}-02-18"}]
 
-Input: "Coffee $5, Uber $23, lunch $12"
+Input: "Coffee $5, Uber $23 yesterday"
 Output: [
-  {"amount": 5, "description": "Coffee", "category": "Coffee"},
-  {"amount": 23, "description": "Uber", "category": "Transportation"},
-  {"amount": 12, "description": "lunch", "category": "Food"}
+  {"amount": 5, "description": "Coffee", "category": "Coffee", "date": null},
+  {"amount": 23, "description": "Uber", "category": "Transportation", "date": "${(() => { const d = new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })()}"}
 ]
 
 Input: "Spent $45 on groceries"
@@ -133,6 +129,7 @@ Return ONLY the JSON array, nothing else.`;
                 amount: t.amount,
                 description: t.description || input,
                 category: this.validateCategory(t.category),
+                date: t.date || null,
                 confidence: 'high'
             }));
         } catch (error) {
