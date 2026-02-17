@@ -305,6 +305,8 @@ class ExpenseTracker {
             const circumference = 534.07;
             ring.style.strokeDashoffset = circumference * (1 - Math.min(pct, 1));
             ring.style.stroke = pct > 1 ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#22c55e';
+            const ringLabel = el('budget-ring-label');
+            if (ringLabel) ringLabel.textContent = `${Math.round(pct * 100)}% of $${Math.round(totalBudget)} budget`;
         }
 
         // Trend comparison vs last month
