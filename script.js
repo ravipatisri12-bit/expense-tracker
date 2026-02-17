@@ -114,14 +114,14 @@ class ExpenseTracker {
         if (!amount || !description || !category || !selectedDate) return;
 
         // Create date from selected date, preserving the original date but adding current time
-        const expenseDate = new Date(selectedDate + 'T00:00:00');
+        const expenseDate = selectedDate; // Store as YYYY-MM-DD string
         
         const expense = {
             id: Date.now(),
             amount: amount,
             description: description,
             category: category,
-            date: expenseDate.toISOString(),
+            date: expenseDate,
             timestamp: Date.now()
         };
 
@@ -185,7 +185,7 @@ class ExpenseTracker {
         document.getElementById('edit-category').value = expense.category;
         
         // Format date for input field (convert from ISO to YYYY-MM-DD)
-        const expenseDate = new Date(expense.date);
+        const expenseDate = this.parseLocalDate(expense.date);
         document.getElementById('edit-date').value = this.getLocalDateString(expenseDate);
 
         // Populate category dropdown for edit form
@@ -236,13 +236,12 @@ class ExpenseTracker {
         }
 
         // Create updated expense object
-        const expenseDate = new Date(selectedDate + 'T00:00:00');
         const updatedExpense = {
-            ...this.expenses[expenseIndex], // Keep original id and timestamp
+            ...this.expenses[expenseIndex],
             amount: amount,
             description: description,
             category: category,
-            date: expenseDate.toISOString()
+            date: selectedDate
         };
 
         // Update in local array
@@ -287,7 +286,7 @@ class ExpenseTracker {
         const currentYear = now.getFullYear();
         
         const monthlyExpenses = this.expenses.filter(expense => {
-            const d = new Date(expense.date);
+            const d = this.parseLocalDate(expense.date);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
 
@@ -315,7 +314,7 @@ class ExpenseTracker {
 
         // Trend comparison vs last month
         const lastMonthExpenses = this.expenses.filter(e => {
-            const d = new Date(e.date);
+            const d = this.parseLocalDate(e.date);
             return d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && d.getFullYear() === (currentMonth === 0 ? currentYear - 1 : currentYear);
         });
         const lastMonthTotal = lastMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -493,7 +492,7 @@ class ExpenseTracker {
         yesterday.setDate(today.getDate() - 1);
 
         expenses.forEach(expense => {
-            const expenseDate = new Date(expense.date);
+            const expenseDate = this.parseLocalDate(expense.date);
             const dateString = this.getLocalDateString(expenseDate);
             
             if (!groups[dateString]) {
@@ -833,7 +832,7 @@ class ExpenseTracker {
     getHistoricalData(month, year) {
         // Filter expenses for the selected month and year
         const historicalExpenses = this.expenses.filter(expense => {
-            const expenseDate = new Date(expense.date);
+            const expenseDate = this.parseLocalDate(expense.date);
             return expenseDate.getMonth() === parseInt(month) && expenseDate.getFullYear() === parseInt(year);
         });
 
@@ -1169,7 +1168,7 @@ class ExpenseTracker {
         
         // Filter expenses for this specific date
         const dayExpenses = this.expenses.filter(expense => {
-            const expenseDate = this.getLocalDateString(new Date(expense.date));
+            const expenseDate = this.getLocalDateString(this.parseLocalDate(expense.date));
             return expenseDate === dateString;
         });
 
@@ -1191,6 +1190,19 @@ class ExpenseTracker {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    // Parse date string as local date (not UTC). Handles both YYYY-MM-DD and ISO strings
+    parseLocalDate(dateStr) {
+        if (dateStr instanceof Date) return dateStr;
+        const s = String(dateStr);
+        // YYYY-MM-DD (no time) — parse as local
+        const parts = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (parts) return new Date(parseInt(parts[1]), parseInt(parts[2])-1, parseInt(parts[3]));
+        // ISO string with T — also parse as local to avoid shift
+        const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})T/);
+        if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]));
+        return new Date(s);
     }
 
     formatDayName(date) {
@@ -1322,7 +1334,7 @@ class ExpenseTracker {
         
         // Filter expenses for this week
         const weekExpenses = this.expenses.filter(expense => {
-            const expenseDate = new Date(expense.date).toISOString().split('T')[0];
+            const expenseDate = this.getLocalDateString(this.parseLocalDate(expense.date));
             return expenseDate >= weekStartString && expenseDate <= weekEndString;
         });
 
@@ -1676,7 +1688,7 @@ ExpenseTracker.prototype.calculateStreaks = function() {
             const dateStr = this.getLocalDateString(checkDate);
             
             const hasSpending = this.expenses.some(e => {
-                return e.category === category && this.getLocalDateString(new Date(e.date)) === dateStr;
+                return e.category === category && this.getLocalDateString(this.parseLocalDate(e.date)) === dateStr;
             });
             
             if (hasSpending) break;
