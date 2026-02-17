@@ -95,15 +95,6 @@ class ExpenseTracker {
         }
         
         this.currentPage = pageId;
-        
-        // Initialize Overview components if navigating to overview page
-        if (pageId === 'overview') {
-            setTimeout(() => {
-                if (typeof initializeOverviewComponents === 'function') {
-                    initializeOverviewComponents();
-                }
-            }, 100);
-        }
     }
 
     // ====================================================================
@@ -287,54 +278,60 @@ class ExpenseTracker {
     // ====================================================================
 
     updateDashboard() {
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
         
-        // Filter expenses for current month
         const monthlyExpenses = this.expenses.filter(expense => {
-            const expenseDate = new Date(expense.date);
-            return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+            const d = new Date(expense.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
 
-        // Calculate totals
-        const totalVariableExpenses = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalVariableExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
         const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
-        const totalExpenses = totalVariableExpenses + totalFixedExpenses;
-        const totalSavings = this.settings.income - totalExpenses;
-        const budgetLeft = getTotalBudget(this.settings.goals) - totalVariableExpenses;
 
-        // Update summary cards
-        document.getElementById('total-income').textContent = formatCurrency(this.settings.income);
-        document.getElementById('total-expenses').textContent = formatCurrency(totalExpenses);
-        document.getElementById('variable-expenses-only').textContent = formatCurrency(totalVariableExpenses);
-        document.getElementById('total-savings').textContent = formatCurrency(totalSavings);
-        document.getElementById('budget-left').textContent = formatCurrency(budgetLeft);
+        // Big spending number
+        const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const el = (id) => document.getElementById(id);
+        if (el('month-label')) el('month-label').textContent = monthLabel;
+        if (el('big-spending-number')) el('big-spending-number').textContent = formatCurrency(totalVariableExpenses);
 
-        // Update fixed expenses
-        document.getElementById('rent-amount').textContent = formatCurrency(this.settings.rent);
-        document.getElementById('utilities-amount').textContent = formatCurrency(this.settings.utilities);
-        document.getElementById('insurance-amount').textContent = formatCurrency(this.settings.insurance);
-        document.getElementById('total-fixed').textContent = formatCurrency(totalFixedExpenses);
-
-        // Update variable expenses by category
-        this.updateVariableExpenses(monthlyExpenses);
-        document.getElementById('total-variable').textContent = formatCurrency(totalVariableExpenses);
-
-        // Update daily spending view
-        this.updateDailySpending('week');
-
-        // Update weekly spending view
-        this.updateWeeklySpending('recent');
-
-        // Update recent transactions
-        this.updateRecentTransactions();
-        
-        // Update Overview components if on overview page
-        if (this.currentPage === 'overview' && typeof initializeOverviewComponents === 'function') {
-            setTimeout(() => {
-                initializeOverviewComponents();
-            }, 100);
+        // Trend comparison vs last month
+        const lastMonthExpenses = this.expenses.filter(e => {
+            const d = new Date(e.date);
+            return d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && d.getFullYear() === (currentMonth === 0 ? currentYear - 1 : currentYear);
+        });
+        const lastMonthTotal = lastMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const trendEl = el('spending-trend-text');
+        if (trendEl && lastMonthTotal > 0) {
+            const diff = totalVariableExpenses - lastMonthTotal;
+            const pct = Math.abs(Math.round((diff / lastMonthTotal) * 100));
+            trendEl.innerHTML = diff > 0
+                ? `<span class="text-red-500">${pct}% more than last month</span>`
+                : `<span class="text-green-600">${pct}% less than last month</span>`;
+        } else if (trendEl) {
+            trendEl.textContent = '';
         }
+
+        // Fixed expenses (collapsed)
+        if (el('rent-amount')) el('rent-amount').textContent = formatCurrency(this.settings.rent);
+        if (el('utilities-amount')) el('utilities-amount').textContent = formatCurrency(this.settings.utilities);
+        if (el('insurance-amount')) el('insurance-amount').textContent = formatCurrency(this.settings.insurance);
+        if (el('fixed-total-collapsed')) el('fixed-total-collapsed').textContent = formatCurrency(totalFixedExpenses) + '/mo';
+
+        // Spending trends (default: daily)
+        this.currentTrendsView = this.currentTrendsView || 'daily';
+        if (this.currentTrendsView === 'daily') {
+            this.updateDailySpending('week');
+        } else {
+            this.updateWeeklySpending('recent');
+        }
+
+        // Streaks
+        this.renderStreaks();
+
+        // Pie chart
+        this.renderPieChart(monthlyExpenses);
     }
 
     updateVariableExpenses(monthlyExpenses) {
@@ -1068,24 +1065,12 @@ class ExpenseTracker {
     // ====================================================================
 
     updateDailySpending(period = 'week') {
-        const container = document.getElementById('daily-spending-content');
-        const averageElement = document.getElementById('daily-average');
+        const container = document.getElementById('trends-content');
+        const averageElement = document.getElementById('trends-average');
+        const avgLabel = document.getElementById('trends-avg-label');
         
         if (!container || !averageElement) return;
-
-        // Update button states
-        const weekBtn = document.getElementById('week-btn');
-        const monthBtn = document.getElementById('month-btn');
-        
-        if (weekBtn && monthBtn) {
-            if (period === 'week') {
-                weekBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
-                monthBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
-            } else {
-                weekBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
-                monthBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
-            }
-        }
+        if (avgLabel) avgLabel.textContent = 'Avg per day';
 
         const dailyData = this.getDailySpendingData(period);
         
@@ -1228,24 +1213,12 @@ class ExpenseTracker {
     // ====================================================================
 
     updateWeeklySpending(period = 'recent') {
-        const container = document.getElementById('weekly-spending-content');
-        const averageElement = document.getElementById('weekly-average');
+        const container = document.getElementById('trends-content');
+        const averageElement = document.getElementById('trends-average');
+        const avgLabel = document.getElementById('trends-avg-label');
         
         if (!container || !averageElement) return;
-
-        // Update button states
-        const recentBtn = document.getElementById('recent-weeks-btn');
-        const monthlyBtn = document.getElementById('monthly-weeks-btn');
-        
-        if (recentBtn && monthlyBtn) {
-            if (period === 'recent') {
-                recentBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
-                monthlyBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
-            } else {
-                recentBtn.className = 'px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg';
-                monthlyBtn.className = 'px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg font-medium';
-            }
-        }
+        if (avgLabel) avgLabel.textContent = 'Avg per week';
 
         const weeklyData = this.getWeeklySpendingData(period);
         
@@ -1688,648 +1661,226 @@ if ('serviceWorker' in navigator) {
 
 
 // Enhanced Overview Page Functions
-function switchOverviewTab(tabName) {
-    // Get elements
-    const overviewBtn = document.getElementById('overview-tab-btn');
-    const analysisBtn = document.getElementById('analysis-tab-btn');
-    const overviewTab = document.getElementById('overview-data-tab');
-    const analysisTab = document.getElementById('analysis-data-tab');
-    
-    // Determine which tab is currently active
-    const currentTab = overviewTab.classList.contains('hidden') ? analysisTab : overviewTab;
-    const targetTab = tabName === 'overview' ? overviewTab : analysisTab;
-    
-    // If clicking the same tab, do nothing
-    if (currentTab === targetTab) {
+// (Removed - merged into Home page)
+
+
+// ====================================================================
+// NEW: UNIFIED TRENDS TOGGLE
+// ====================================================================
+
+function switchTrendsView(view) {
+    expenseTracker.currentTrendsView = view;
+    const dailyBtn = document.getElementById('trends-daily-btn');
+    const weeklyBtn = document.getElementById('trends-weekly-btn');
+    if (view === 'daily') {
+        dailyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm';
+        weeklyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-500';
+        expenseTracker.updateDailySpending('week');
+    } else {
+        weeklyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm';
+        dailyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-500';
+        expenseTracker.updateWeeklySpending('recent');
+    }
+}
+
+// ====================================================================
+// NEW: STREAK TRACKING SYSTEM
+// ====================================================================
+
+ExpenseTracker.prototype.renderStreaks = function() {
+    const summary = document.getElementById('streak-summary');
+    const details = document.getElementById('streak-details');
+    if (!summary) return;
+
+    const streaks = this.calculateStreaks();
+    const activeStreaks = streaks.filter(s => s.days >= 2);
+
+    if (activeStreaks.length === 0) {
+        summary.innerHTML = '<p class="text-sm text-gray-400">No active streaks yet. Keep tracking!</p>';
+        if (details) details.innerHTML = '';
         return;
     }
-    
-    // Step 1: Fade out current tab
-    currentTab.classList.add('fade-out');
-    
-    // Step 2: After fade-out completes, switch tabs
-    setTimeout(() => {
-        // Update button states
-        if (tabName === 'overview') {
-            overviewBtn.classList.add('active');
-            analysisBtn.classList.remove('active');
-            
-            // Hide current, show target
-            analysisTab.classList.add('hidden');
-            analysisTab.classList.remove('fade-out');
-            overviewTab.classList.remove('hidden');
-        } else if (tabName === 'analysis') {
-            analysisBtn.classList.add('active');
-            overviewBtn.classList.remove('active');
-            
-            // Hide current, show target
-            overviewTab.classList.add('hidden');
-            overviewTab.classList.remove('fade-out');
-            analysisTab.classList.remove('hidden');
-        }
-        
-        // Step 3: Fade in new tab
-        targetTab.classList.add('fade-in');
-        
-        // Clean up fade-in class after animation
-        setTimeout(() => {
-            targetTab.classList.remove('fade-in');
-        }, 300);
-    }, 300); // Match CSS transition duration
-    
-    // Save tab preference
-    localStorage.setItem('activeOverviewTab', tabName);
-    
-    // Initialize components based on which tab is being shown
-    if (tabName === 'overview' && window.expenseTracker) {
-        setTimeout(() => {
-            initializeOverviewComponents();
-        }, 350);
-    } else if (tabName === 'analysis' && window.expenseTracker && typeof initializeAnalysisTab === 'function') {
-        setTimeout(() => {
-            initializeAnalysisTab();
-        }, 350);
-    }
-}
 
-// ====================================================================
-// OVERVIEW TAB COMPONENTS
-// ====================================================================
-
-let currentTimePeriod = '1M';
-let lineGraphData = [];
-
-function initializeOverviewComponents() {
-    // Initialize all Overview tab components
-    setupTimePeriodSelector();
-    renderLineGraph();
-    renderHealthGauge();
-    renderHeatmap();
-    renderPieChart();
-}
-
-// ====================================================================
-// 1. ROBINHOOD-STYLE LINE GRAPH (Tasks 2.1-2.8)
-// ====================================================================
-
-function setupTimePeriodSelector() {
-    const buttons = document.querySelectorAll('.time-period-btn');
-    buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Update active state
-            buttons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Update period and re-render
-            currentTimePeriod = btn.dataset.period;
-            renderLineGraph();
-        });
-    });
-}
-
-function getLineGraphData(period) {
-    if (!window.expenseTracker) return [];
-    
-    const now = new Date();
-    const cutoffDate = getDateCutoff(now, period);
-    
-    // Filter expenses by date
-    const filteredExpenses = window.expenseTracker.expenses.filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate >= cutoffDate;
-    });
-    
-    // Group by date and calculate daily totals
-    const dailyTotals = {};
-    filteredExpenses.forEach(expense => {
-        const dateStr = new Date(expense.date).toISOString().split('T')[0];
-        if (!dailyTotals[dateStr]) {
-            dailyTotals[dateStr] = 0;
-        }
-        dailyTotals[dateStr] += expense.amount;
-    });
-    
-    // Convert to array and sort by date
-    const dataPoints = Object.keys(dailyTotals)
-        .map(date => ({
-            date: new Date(date),
-            amount: dailyTotals[date]
-        }))
-        .sort((a, b) => a.date - b.date);
-    
-    return dataPoints;
-}
-
-function getDateCutoff(now, period) {
-    const cutoffs = {
-        '1W': new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-        '1M': new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()),
-        '3M': new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
-        '6M': new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
-        '1Y': new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()),
-        'ALL': new Date(0)
-    };
-    return cutoffs[period] || cutoffs['1M'];
-}
-
-function renderLineGraph() {
-    const svg = document.getElementById('spending-line-graph');
-    if (!svg) return;
-    
-    const data = getLineGraphData(currentTimePeriod);
-    lineGraphData = data;
-    
-    if (data.length === 0) {
-        svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9ca3af" font-size="14">No data for this period</text>';
-        document.getElementById('graph-current').textContent = '$0';
-        document.getElementById('graph-average').textContent = '$0';
-        return;
-    }
-    
-    // Calculate dimensions
-    const padding = 40;
-    const width = svg.clientWidth || 400;
-    const height = svg.clientHeight || 250;
-    const graphWidth = width - padding * 2;
-    const graphHeight = height - padding * 2;
-    
-    // Find min/max values
-    const amounts = data.map(d => d.amount);
-    const maxAmount = Math.max(...amounts);
-    const minAmount = Math.min(...amounts, 0);
-    const range = maxAmount - minAmount || 1;
-    
-    // Create scales
-    const xScale = (index) => padding + (index / (data.length - 1 || 1)) * graphWidth;
-    const yScale = (amount) => padding + graphHeight - ((amount - minAmount) / range) * graphHeight;
-    
-    // Create line path
-    const linePath = data.map((d, i) => {
-        const x = xScale(i);
-        const y = yScale(d.amount);
-        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-    }).join(' ');
-    
-    // Create area path
-    const areaPath = linePath + 
-        ` L ${xScale(data.length - 1)} ${padding + graphHeight}` +
-        ` L ${xScale(0)} ${padding + graphHeight} Z`;
-    
-    // Build SVG content
-    let svgContent = `
-        <defs>
-            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#007AFF"/>
-                <stop offset="100%" stop-color="#34C759"/>
-            </linearGradient>
-            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#007AFF" stop-opacity="0.3"/>
-                <stop offset="100%" stop-color="#007AFF" stop-opacity="0.05"/>
-            </linearGradient>
-        </defs>
-        
-        <!-- Area fill -->
-        <path d="${areaPath}" class="graph-area"/>
-        
-        <!-- Line -->
-        <path d="${linePath}" class="graph-line" stroke-dasharray="1000" stroke-dashoffset="1000"/>
-        
-        <!-- Points -->
+    // Show top streak in summary
+    const top = activeStreaks[0];
+    summary.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <span class="text-2xl">🔥</span>
+            <div>
+                <p class="text-sm font-semibold text-gray-900">${top.days} day streak</p>
+                <p class="text-xs text-gray-500">No spending on ${top.category}</p>
+            </div>
+        </div>
     `;
-    
-    data.forEach((d, i) => {
-        const x = xScale(i);
-        const y = yScale(d.amount);
-        svgContent += `<circle cx="${x}" cy="${y}" r="4" class="graph-point" 
-                        data-amount="${d.amount}" data-date="${d.date.toLocaleDateString()}"
-                        style="animation-delay: ${i * 0.05}s"/>`;
-    });
-    
-    svg.innerHTML = svgContent;
-    
-    // Animate line drawing
-    const line = svg.querySelector('.graph-line');
-    if (line) {
-        setTimeout(() => {
-            line.style.strokeDashoffset = '0';
-            line.style.transition = 'stroke-dashoffset 1s ease-out';
-        }, 100);
+
+    // Show all streaks in details
+    if (details) {
+        details.innerHTML = activeStreaks.map(s => `
+            <div class="flex items-center justify-between py-2">
+                <div class="flex items-center space-x-2">
+                    <span class="text-lg">${s.days >= 7 ? '🔥' : '✨'}</span>
+                    <span class="text-sm text-gray-700">${s.category}</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900">${s.days} days</span>
+            </div>
+        `).join('');
     }
-    
-    // Add tooltip interactions
-    addGraphTooltips();
-    
-    // Update stats
-    const current = data[data.length - 1]?.amount || 0;
-    const average = amounts.reduce((sum, a) => sum + a, 0) / amounts.length;
-    document.getElementById('graph-current').textContent = formatCurrency(current);
-    document.getElementById('graph-average').textContent = formatCurrency(average);
-}
+};
 
-function addGraphTooltips() {
-    const points = document.querySelectorAll('.graph-point');
-    let tooltip = document.querySelector('.graph-tooltip');
-    
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.className = 'graph-tooltip';
-        document.getElementById('line-graph-container').appendChild(tooltip);
-    }
-    
-    points.forEach(point => {
-        point.addEventListener('mouseenter', (e) => {
-            const amount = e.target.dataset.amount;
-            const date = e.target.dataset.date;
-            tooltip.innerHTML = `<div><strong>${formatCurrency(parseFloat(amount))}</strong></div><div>${date}</div>`;
-            tooltip.classList.add('show');
-            
-            const rect = e.target.getBoundingClientRect();
-            const container = document.getElementById('line-graph-container').getBoundingClientRect();
-            tooltip.style.left = (rect.left - container.left) + 'px';
-            tooltip.style.top = (rect.top - container.top - 50) + 'px';
-        });
-        
-        point.addEventListener('mouseleave', () => {
-            tooltip.classList.remove('show');
-        });
-    });
-}
-
-// ====================================================================
-// 2. FINANCIAL HEALTH SCORE GAUGE (Tasks 3.1-3.7)
-// ====================================================================
-
-function renderHealthGauge() {
-    if (!window.expenseTracker) return;
-    
-    const score = calculateHealthScore();
-    const progressCircle = document.getElementById('health-gauge-progress');
-    const scoreElement = document.getElementById('health-score');
-    const statusElement = document.getElementById('health-status');
-    const messageElement = document.getElementById('health-message');
-    
-    if (!progressCircle || !scoreElement) return;
-    
-    // Calculate stroke-dasharray for progress (circumference = 2 * π * r = 2 * π * 40 ≈ 251.2)
-    const circumference = 251.2;
-    const progress = (score / 100) * circumference;
-    
-    // Animate count-up
-    animateCountUp(scoreElement, 0, score, 1200);
-    
-    // Animate progress ring
-    setTimeout(() => {
-        progressCircle.style.strokeDasharray = `${progress} ${circumference}`;
-        progressCircle.style.transition = 'stroke-dasharray 1.2s ease-out';
-    }, 100);
-    
-    // Update status and color
-    let status, message, gradientColors;
-    if (score >= 80) {
-        status = 'Excellent';
-        message = 'Strong financial health with consistent savings';
-        gradientColors = ['#34C759', '#00C853'];
-    } else if (score >= 60) {
-        status = 'Good';
-        message = 'Solid financial position with room for improvement';
-        gradientColors = ['#007AFF', '#0051D5'];
-    } else if (score >= 40) {
-        status = 'Fair';
-        message = 'Consider reviewing spending habits';
-        gradientColors = ['#FF9F0A', '#FF8C00'];
-    } else {
-        status = 'Needs Attention';
-        message = 'Focus on reducing expenses and increasing savings';
-        gradientColors = ['#FF453A', '#DC143C'];
-    }
-    
-    statusElement.textContent = status;
-    messageElement.textContent = message;
-    
-    // Update gradient colors
-    const gradient = document.querySelector('#healthGradient');
-    if (gradient) {
-        gradient.innerHTML = `
-            <stop offset="0%" stop-color="${gradientColors[0]}"/>
-            <stop offset="100%" stop-color="${gradientColors[1]}"/>
-        `;
-    }
-}
-
-function calculateHealthScore() {
-    if (!window.expenseTracker) return 0;
-    
-    const settings = window.expenseTracker.settings;
-    const expenses = window.expenseTracker.expenses;
-    
-    // Get current month expenses
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    const monthlyExpenses = expenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-    
-    const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const income = settings.income || 1;
-    const fixedExpenses = (settings.rent || 0) + (settings.utilities || 0) + (settings.insurance || 0);
-    const variableExpenses = totalExpenses - fixedExpenses;
-    const savings = income - totalExpenses;
-    
-    // Calculate components (40% savings rate, 40% budget adherence, 20% trend)
-    const savingsRate = Math.max(0, Math.min(100, (savings / income) * 100));
-    const savingsScore = (savingsRate / 100) * 40;
-    
-    const totalBudget = getTotalBudget(settings.goals);
-    const budgetAdherence = totalBudget > 0 ? Math.max(0, 100 - (variableExpenses / totalBudget * 100)) : 50;
-    const budgetScore = (budgetAdherence / 100) * 40;
-    
-    // Trend score (simplified - compare to previous month)
-    const trendScore = 20; // Default neutral score
-    
-    const finalScore = Math.round(savingsScore + budgetScore + trendScore);
-    return Math.max(0, Math.min(100, finalScore));
-}
-
-function animateCountUp(element, start, end, duration) {
-    const startTime = Date.now();
-    const range = end - start;
-    
-    function update() {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
-        const current = Math.round(start + range * easeOut);
-        
-        element.textContent = current;
-        
-        if (progress < 1) {
-            requestAnimationFrame(update);
-        }
-    }
-    
-    requestAnimationFrame(update);
-}
-
-// ====================================================================
-// 3. WEEKLY SPENDING HEATMAP (Tasks 4.1-4.7)
-// ====================================================================
-
-function renderHeatmap() {
-    const container = document.getElementById('heatmap-container');
-    if (!container || !window.expenseTracker) return;
-    
-    const heatmapData = getHeatmapData();
-    
-    // Build grid HTML
-    let html = '<div class="heatmap-label"></div>'; // Empty corner
-    
-    // Day headers
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    days.forEach(day => {
-        html += `<div class="heatmap-label">${day}</div>`;
-    });
-    
-    // Week rows
-    heatmapData.weeks.forEach((week, weekIndex) => {
-        html += `<div class="heatmap-label">W${weekIndex + 1}</div>`;
-        
-        week.forEach((day, dayIndex) => {
-            const intensity = getIntensityColor(day.amount, heatmapData.maxAmount);
-            const cellClass = day.amount > 0 ? 'heatmap-cell' : 'heatmap-cell empty';
-            const title = day.amount > 0 
-                ? `${day.date}: ${formatCurrency(day.amount)} (${day.count} transactions)`
-                : `${day.date}: No spending`;
-            
-            html += `<div class="${cellClass}" style="background: ${intensity};" title="${title}"></div>`;
-        });
-    });
-    
-    container.innerHTML = html;
-}
-
-function getHeatmapData() {
-    if (!window.expenseTracker) return { weeks: [], maxAmount: 0 };
-    
+ExpenseTracker.prototype.calculateStreaks = function() {
     const today = new Date();
-    const weeks = [];
-    let maxAmount = 0;
+    const todayStr = this.getLocalDateString(today);
+    const categories = this.settings.categories || Object.keys(this.settings.goals);
     
-    // Generate 4 weeks of data
-    for (let weekIndex = 3; weekIndex >= 0; weekIndex--) {
-        const week = [];
-        
-        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - (weekIndex * 7 + (6 - dayIndex)));
+    return categories.map(category => {
+        let days = 0;
+        for (let i = 0; i < 60; i++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(today.getDate() - i);
+            const dateStr = this.getLocalDateString(checkDate);
             
-            const dateStr = date.toISOString().split('T')[0];
-            const dayExpenses = window.expenseTracker.expenses.filter(e => {
-                return new Date(e.date).toISOString().split('T')[0] === dateStr;
+            const hasSpending = this.expenses.some(e => {
+                return e.category === category && this.getLocalDateString(new Date(e.date)) === dateStr;
             });
             
-            const amount = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
-            maxAmount = Math.max(maxAmount, amount);
-            
-            week.push({
-                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                amount: amount,
-                count: dayExpenses.length
-            });
+            if (hasSpending) break;
+            days++;
         }
-        
-        weeks.push(week);
-    }
-    
-    return { weeks, maxAmount };
-}
+        return { category, days };
+    }).filter(s => s.days >= 1).sort((a, b) => b.days - a.days);
+};
 
-function getIntensityColor(amount, maxAmount) {
-    if (amount === 0) return 'rgba(0, 0, 0, 0.03)';
-    
-    const intensity = amount / (maxAmount || 1);
-    
-    if (intensity < 0.33) {
-        return 'rgba(0, 122, 255, 0.2)';
-    } else if (intensity < 0.66) {
-        return 'rgba(0, 122, 255, 0.5)';
-    } else {
-        return 'rgba(0, 122, 255, 0.9)';
-    }
+function toggleStreakDetails() {
+    const details = document.getElementById('streak-details');
+    const btn = document.getElementById('streak-toggle');
+    if (!details) return;
+    details.classList.toggle('hidden');
+    btn.textContent = details.classList.contains('hidden') ? 'Show all' : 'Hide';
 }
 
 // ====================================================================
-// 4. CATEGORY SPENDING PIE CHART (Tasks 5.1-5.8)
+// NEW: PIE CHART WITH CLICKABLE CATEGORIES
 // ====================================================================
 
-function renderPieChart() {
+ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
     const svg = document.getElementById('category-pie-chart');
-    const breakdownContainer = document.getElementById('category-breakdown');
-    
-    if (!svg || !breakdownContainer || !window.expenseTracker) return;
-    
-    const categoryData = getCategoryData();
-    
-    if (categoryData.length === 0) {
-        svg.innerHTML = '<text x="50" y="50" text-anchor="middle" fill="#9ca3af" font-size="6">No data</text>';
-        breakdownContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No expenses this month</div>';
+    const breakdown = document.getElementById('category-breakdown');
+    if (!svg || !breakdown) return;
+
+    const catTotals = {};
+    monthlyExpenses.forEach(e => {
+        catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+    });
+
+    const total = Object.values(catTotals).reduce((s, a) => s + a, 0);
+    if (total === 0) {
+        svg.innerHTML = '<text x="50" y="50" text-anchor="middle" fill="#d1d5db" font-size="6">No data</text>';
+        breakdown.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No expenses this month</p>';
         return;
     }
-    
-    // Draw pie chart
-    drawPieChart(svg, categoryData);
-    
-    // Draw breakdown bars
-    drawCategoryBreakdown(breakdownContainer, categoryData);
-}
 
-function getCategoryData() {
-    if (!window.expenseTracker) return [];
-    
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const monthlyExpenses = window.expenseTracker.expenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-    
-    const categoryTotals = {};
-    monthlyExpenses.forEach(e => {
-        if (!categoryTotals[e.category]) {
-            categoryTotals[e.category] = 0;
-        }
-        categoryTotals[e.category] += e.amount;
-    });
-    
-    const total = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
-    
-    // Convert to array and sort by amount (top 5)
-    const categories = Object.keys(categoryTotals)
-        .map(name => ({
-            name,
-            amount: categoryTotals[name],
-            percentage: (categoryTotals[name] / total * 100).toFixed(1)
-        }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
-    
-    return categories;
-}
+    const data = Object.entries(catTotals)
+        .map(([name, amount]) => ({ name, amount, pct: ((amount / total) * 100).toFixed(1) }))
+        .sort((a, b) => b.amount - a.amount);
 
-function drawPieChart(svg, data) {
-    const centerX = 50;
-    const centerY = 50;
-    const radius = 35;
-    const innerRadius = 20; // Donut chart
-    
-    let currentAngle = -90; // Start at top
+    const colors = ['#007AFF', '#FF9F0A', '#34C759', '#FF453A', '#AF52DE', '#5AC8FA', '#FF2D55'];
+    let angle = -90;
     let svgContent = '';
-    
-    const colors = [
-        '#FF9F0A', // Orange
-        '#007AFF', // Blue
-        '#34C759', // Green
-        '#FF453A', // Red
-        '#AF52DE', // Purple
-    ];
-    
-    data.forEach((category, index) => {
-        const angle = (parseFloat(category.percentage) / 100) * 360;
-        const endAngle = currentAngle + angle;
+
+    data.forEach((cat, i) => {
+        const sweep = (parseFloat(cat.pct) / 100) * 360;
+        const endAngle = angle + sweep;
+        const color = colors[i % colors.length];
+        const largeArc = sweep > 180 ? 1 : 0;
         
-        const path = describeArc(centerX, centerY, radius, innerRadius, currentAngle, endAngle);
-        const color = colors[index % colors.length];
+        const r = 38, ir = 22, cx = 50, cy = 50;
+        const toXY = (a, rad) => ({ x: cx + rad * Math.cos((a - 90) * Math.PI / 180), y: cy + rad * Math.sin((a - 90) * Math.PI / 180) });
+        const s1 = toXY(endAngle, r), e1 = toXY(angle, r), s2 = toXY(endAngle, ir), e2 = toXY(angle, ir);
         
-        svgContent += `<path d="${path}" fill="${color}" class="pie-segment" 
-                        data-category="${category.name}"
-                        style="animation: fadeInUp 0.6s ease-out ${index * 0.1}s both"/>`;
-        
-        currentAngle = endAngle;
+        const path = `M ${s1.x} ${s1.y} A ${r} ${r} 0 ${largeArc} 0 ${e1.x} ${e1.y} L ${e2.x} ${e2.y} A ${ir} ${ir} 0 ${largeArc} 1 ${s2.x} ${s2.y} Z`;
+        svgContent += `<path d="${path}" fill="${color}" class="pie-segment" data-category="${cat.name}" onclick="openCategoryFilter('${cat.name}')" style="cursor:pointer"/>`;
+        angle = endAngle;
     });
-    
+
     svg.innerHTML = svgContent;
-    
-    // Add hover effects
-    const segments = svg.querySelectorAll('.pie-segment');
-    segments.forEach(segment => {
-        segment.addEventListener('mouseenter', () => {
-            segments.forEach(s => s.classList.remove('highlighted'));
-            segment.classList.add('highlighted');
-        });
-        
-        segment.addEventListener('mouseleave', () => {
-            segment.classList.remove('highlighted');
-        });
-    });
-}
 
-function describeArc(x, y, radius, innerRadius, startAngle, endAngle) {
-    const start = polarToCartesian(x, y, radius, endAngle);
-    const end = polarToCartesian(x, y, radius, startAngle);
-    const innerStart = polarToCartesian(x, y, innerRadius, endAngle);
-    const innerEnd = polarToCartesian(x, y, innerRadius, startAngle);
-    
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-    
-    return [
-        'M', start.x, start.y,
-        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-        'L', innerEnd.x, innerEnd.y,
-        'A', innerRadius, innerRadius, 0, largeArcFlag, 1, innerStart.x, innerStart.y,
-        'Z'
-    ].join(' ');
-}
-
-function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-    return {
-        x: centerX + (radius * Math.cos(angleInRadians)),
-        y: centerY + (radius * Math.sin(angleInRadians))
-    };
-}
-
-function drawCategoryBreakdown(container, data) {
-    const colors = [
-        '#FF9F0A', '#007AFF', '#34C759', '#FF453A', '#AF52DE'
-    ];
-    
-    const html = data.map((category, index) => {
-        const color = colors[index % colors.length];
+    breakdown.innerHTML = data.map((cat, i) => {
+        const color = colors[i % colors.length];
         return `
-            <div class="category-bar-item" style="animation-delay: ${index * 0.1}s">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full" style="background: ${color};"></div>
-                        <span class="font-medium text-gray-900">${category.name}</span>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-semibold text-gray-900">${formatCurrency(category.amount)}</div>
-                        <div class="text-xs text-gray-500">${category.percentage}%</div>
-                    </div>
+            <div class="flex items-center justify-between py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" onclick="openCategoryFilter('${cat.name}')">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2.5 h-2.5 rounded-full" style="background:${color}"></div>
+                    <span class="text-sm text-gray-700">${cat.name}</span>
                 </div>
-                <div class="category-bar-progress">
-                    <div class="category-bar-fill" style="width: ${category.percentage}%; background: ${color};"></div>
+                <div class="text-right">
+                    <span class="text-sm font-medium text-gray-900">${formatCurrency(cat.amount)}</span>
+                    <span class="text-xs text-gray-400 ml-1">${cat.pct}%</span>
                 </div>
             </div>
         `;
     }).join('');
+};
+
+// ====================================================================
+// NEW: CATEGORY FILTER MODAL
+// ====================================================================
+
+function openCategoryFilter(category) {
+    const modal = document.getElementById('category-filter-modal');
+    const title = document.getElementById('filter-modal-title');
+    const container = document.getElementById('filter-modal-transactions');
+    if (!modal || !container) return;
+
+    title.textContent = category;
     
-    container.innerHTML = html;
+    const filtered = expenseTracker.expenses
+        .filter(e => e.category === category)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">No transactions</div>';
+    } else {
+        const grouped = expenseTracker.groupTransactionsByDate(filtered);
+        container.innerHTML = grouped.map(g => `
+            <div>
+                <div class="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">${g.dateLabel} · ${formatCurrency(g.totalAmount)}</div>
+                ${g.transactions.map(e => `
+                    <div class="flex justify-between items-center px-4 py-3">
+                        <span class="text-sm text-gray-800">${e.description}</span>
+                        <span class="text-sm font-medium text-gray-900">${formatCurrency(e.amount)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    modal.classList.remove('hidden');
 }
 
-// Initialize Overview components when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if we're on the overview page
-    const overviewPage = document.getElementById('overview-page');
-    if (overviewPage && !overviewPage.classList.contains('hidden')) {
-        // Load saved tab preference
-        const savedTab = localStorage.getItem('activeOverviewTab') || 'overview';
-        if (savedTab === 'overview') {
-            setTimeout(() => {
-                initializeOverviewComponents();
-            }, 500);
-        }
-    }
-});
+function closeCategoryFilter() {
+    document.getElementById('category-filter-modal')?.classList.add('hidden');
+}
 
+// ====================================================================
+// NEW: FIXED EXPENSES TOGGLE
+// ====================================================================
+
+function toggleFixedExpenses() {
+    const details = document.getElementById('fixed-expenses-details');
+    const chevron = document.getElementById('fixed-chevron');
+    if (!details) return;
+    details.classList.toggle('hidden');
+    if (chevron) chevron.style.transform = details.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+// ====================================================================
+// KEEP: Global function wrappers (updated)
+// ====================================================================
+
+function updateDailyView(period) {
+    expenseTracker.updateDailySpending(period);
+}
+
+function updateWeeklyView(period) {
+    expenseTracker.updateWeeklySpending(period);
+}
