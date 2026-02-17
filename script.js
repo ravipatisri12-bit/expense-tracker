@@ -1612,13 +1612,16 @@ function switchTrendsView(view) {
     expenseTracker.currentTrendsView = view;
     const dailyBtn = document.getElementById('trends-daily-btn');
     const weeklyBtn = document.getElementById('trends-weekly-btn');
+    const title = document.getElementById('trends-title');
     if (view === 'daily') {
         dailyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
         weeklyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
+        if (title) title.textContent = 'Daily Spending (This Week)';
         expenseTracker.updateDailySpending('week');
     } else {
         weeklyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
         dailyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
+        if (title) title.textContent = 'Weekly Spending (Recent)';
         expenseTracker.updateWeeklySpending('recent');
     }
 }
