@@ -459,7 +459,7 @@ class ExpenseTracker {
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                            <p class="text-xs" style="color:var(--md-sys-color-outline)">${expense.category}</p>
+                            <p class="text-xs" style="color:${c}">${expense.category}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
