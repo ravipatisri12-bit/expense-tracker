@@ -355,7 +355,7 @@ class ExpenseTracker {
         // Monthly report
         const spent = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
         const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const income = this.settings.monthlyIncome || 0;
+        const income = this.settings.income || 0;
         const overall = spent + fixed;
         const saved = income - overall;
         const _el = id => document.getElementById(id);
