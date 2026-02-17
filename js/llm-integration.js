@@ -150,40 +150,38 @@ Return ONLY the JSON array, nothing else.`;
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
         
-        // Strict format: one transaction per line
-        // Format: description $amount [date]
+        // One transaction per line. Format: description amount [date]
+        // The LAST number on the line (not part of a date) is the amount
         const lines = input.split('\n').map(s => s.trim()).filter(Boolean);
         const transactions = [];
         
-        for (const line of lines) {
-            // Must contain a $ amount
-            const amountMatch = line.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
+        for (let line of lines) {
+            // Extract and remove date from end first
+            let date = todayStr;
+            if (/yesterday\s*$/i.test(line)) {
+                const d = new Date(today); d.setDate(d.getDate()-1);
+                date = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+                line = line.replace(/\s*yesterday\s*$/i, '');
+            } else {
+                const dateEnd = line.match(/\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s*$/);
+                if (dateEnd) {
+                    const m = dateEnd[1].match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+                    const y = m[3] ? (m[3].length === 2 ? '20'+m[3] : m[3]) : today.getFullYear();
+                    date = y+'-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0');
+                    line = line.substring(0, dateEnd.index);
+                }
+            }
+            
+            // Find amount: $N or last standalone number
+            const amountMatch = line.match(/\$\s*(\d+(?:\.\d{1,2})?)/) || line.match(/\b(\d+(?:\.\d{1,2})?)\s*$/);
             if (!amountMatch) continue;
             
             const amount = parseFloat(amountMatch[1]);
             if (!amount || amount <= 0) continue;
             
-            // Everything before $ is description
-            const dollarIdx = line.indexOf('$');
-            let desc = line.substring(0, dollarIdx).trim();
-            
-            // Everything after the amount is the date
-            let afterAmount = line.substring(dollarIdx + amountMatch[0].length - (line.length - dollarIdx - amountMatch[0].length >= 0 ? 0 : 0));
-            afterAmount = line.substring(amountMatch.index + amountMatch[0].length).trim();
-            
-            // Parse date from remainder
-            let date = todayStr;
-            if (/yesterday/i.test(afterAmount)) {
-                const d = new Date(today); d.setDate(d.getDate()-1);
-                date = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-            } else {
-                const mdMatch = afterAmount.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
-                if (mdMatch) {
-                    const y = mdMatch[3] ? (mdMatch[3].length === 2 ? '20'+mdMatch[3] : mdMatch[3]) : today.getFullYear();
-                    date = y+'-'+String(mdMatch[1]).padStart(2,'0')+'-'+String(mdMatch[2]).padStart(2,'0');
-                }
-            }
-            
+            // Description is everything except the amount
+            let desc = line.replace(amountMatch[0], '').trim();
+            desc = desc.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '');
             if (!desc) desc = 'Expense';
             
             transactions.push({
