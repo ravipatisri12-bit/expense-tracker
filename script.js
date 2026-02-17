@@ -294,7 +294,7 @@ class ExpenseTracker {
         const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const el = (id) => document.getElementById(id);
         if (el('month-label')) el('month-label').textContent = monthLabel;
-        if (el('big-spending-number')) el('big-spending-number').textContent = formatCurrency(totalVariableExpenses);
+        if (el('big-spending-number')) el('big-spending-number').textContent = '$' + Math.round(totalVariableExpenses);
 
         // Budget ring
         const totalBudget = Object.values(this.settings.goals).reduce((s, v) => s + v, 0);
