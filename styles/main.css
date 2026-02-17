@@ -27,7 +27,7 @@
 
 /* Page visibility */
 .page-content.hidden { display: none !important; }
-.page-content { display: block !important; }
+.page-content { display: block; }
 
 /* Body */
 body {
@@ -257,8 +257,8 @@ body.privacy-mode #monthly-budget-display {
 
 /* Center add-expense page content */
 #add-expense-page:not(.hidden) {
-    display: flex;
+    display: flex !important;
     align-items: center;
+    justify-content: center;
     min-height: calc(100vh - 140px);
-    padding-top: 0;
 }
