@@ -302,7 +302,7 @@ class ExpenseTracker {
         const ringLabel = el('budget-ring-label');
         if (ring && totalBudget > 0) {
             const pct = Math.min(totalVariableExpenses / totalBudget, 1.2);
-            const circumference = 326.73;
+            const circumference = 427.26;
             ring.style.strokeDashoffset = circumference * (1 - Math.min(pct, 1));
             ring.style.stroke = pct > 1 ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#22c55e';
             if (ringLabel) ringLabel.textContent = `${Math.round(pct * 100)}% of ${formatCurrency(totalBudget)} budget`;
