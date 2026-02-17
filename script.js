@@ -1723,7 +1723,7 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
         .map(([name, amount]) => ({ name, amount, pct: ((amount / total) * 100).toFixed(1) }))
         .sort((a, b) => b.amount - a.amount);
 
-    const colors = ['#007AFF', '#FF9F0A', '#34C759', '#FF453A', '#AF52DE', '#5AC8FA', '#FF2D55'];
+    const colors = ['#667eea', '#f093fb', '#43e97b', '#f5576c', '#4facfe', '#fccb90', '#a18cd1'];
     let angle = -90;
     let svgContent = '';
 

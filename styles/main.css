@@ -5,17 +5,21 @@
   --md-sys-color-primary: #a8c7fa;
   --md-sys-color-on-primary: #062e6f;
   --md-sys-color-primary-container: #1b4a8a;
-  --md-sys-color-surface: #131316;
-  --md-sys-color-surface-container: #1e1f22;
-  --md-sys-color-surface-container-high: #282a2d;
-  --md-sys-color-surface-container-highest: #333537;
+  --md-sys-color-surface: #0f1118;
+  --md-sys-color-surface-container: #1a1b23;
+  --md-sys-color-surface-container-high: #242530;
+  --md-sys-color-surface-container-highest: #2e303b;
   --md-sys-color-on-surface: #e3e2e6;
   --md-sys-color-on-surface-variant: #c4c6d0;
   --md-sys-color-outline: #8e9099;
   --md-sys-color-outline-variant: #44474f;
   --md-sys-color-error: #ffb4ab;
   --md-sys-color-tertiary: #efb8c8;
-  --md-sys-color-secondary-container: #3b4858;
+  --md-sys-color-secondary-container: #2a3040;
+  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --accent-warm: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --accent-cool: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --accent-mint: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
 }
 
 * { font-family: 'Roboto', sans-serif; }
@@ -35,8 +39,21 @@ body {
 .card {
   background: var(--md-sys-color-surface-container);
   border-radius: 16px;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.04);
   box-shadow: none;
+}
+
+/* Hero spending card */
+.hero-card {
+  background: linear-gradient(145deg, #1a1d2e 0%, #1a1b23 50%, #1e1a23 100%) !important;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.hero-card #big-spending-number {
+  background: linear-gradient(135deg, #e3e2e6 0%, #a8c7fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2.5rem;
 }
 
 /* Header - MD3 surface */
@@ -67,6 +84,7 @@ nav.fixed {
   background: var(--md-sys-color-secondary-container);
   border-radius: 16px;
   padding: 4px 16px;
+  color: var(--md-sys-color-primary);
 }
 .nav-btn.active-nav::after { display: none; }
 
@@ -89,17 +107,19 @@ nav.fixed {
 /* MD3 Accent colors */
 .text-primary-600 { color: var(--md-sys-color-primary) !important; }
 .bg-primary-600 {
-  background: var(--md-sys-color-primary) !important;
-  color: var(--md-sys-color-on-primary) !important;
+  background: var(--accent-gradient) !important;
+  color: #fff !important;
+  border: none !important;
   border-radius: 20px;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
 .text-red-500 { color: var(--md-sys-color-error) !important; }
-.text-green-600 { color: #a8dab5 !important; }
-.bg-green-100 { background: rgba(168,218,181,0.12) !important; }
-.bg-blue-50 { background: rgba(168,199,250,0.1) !important; }
+.text-green-600 { color: #6ee7b7 !important; }
+.bg-green-100 { background: rgba(110,231,183,0.1) !important; }
+.bg-blue-50 { background: rgba(168,199,250,0.08) !important; }
 .text-blue-900 { color: var(--md-sys-color-primary) !important; }
+.bg-green-600 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; color: #0f1118 !important; }
 
 /* Inputs - MD3 filled style */
 input, select, textarea {
@@ -128,14 +148,14 @@ button.bg-primary-600 {
 }
 
 /* Budget ring */
-#budget-ring circle:first-child { stroke: var(--md-sys-color-outline-variant); }
+#budget-ring circle:first-child { stroke: rgba(255,255,255,0.06); }
 #budget-ring-progress {
   transition: stroke-dashoffset 1s cubic-bezier(0.2, 0, 0, 1), stroke 0.3s ease;
 }
 
 /* Pie chart */
-.pie-segment { transition: opacity 0.15s ease; transform-origin: center; }
-.pie-segment:hover { opacity: 0.75; }
+.pie-segment { transition: opacity 0.15s ease; transform-origin: center; cursor: pointer; }
+.pie-segment:hover { opacity: 0.8; filter: brightness(1.15); }
 
 /* Trends toggle - MD3 segmented button */
 .trends-toggle-btn {
@@ -144,14 +164,20 @@ button.bg-primary-600 {
   transition: all 0.2s ease;
 }
 .trends-toggle-btn.active {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-surface);
-  box-shadow: none;
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(102,126,234,0.3);
+}
+
+/* Trend bars */
+.trend-bar {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(102,126,234,0.6), rgba(118,75,162,0.6));
 }
 
 /* Streak badges */
-.bg-green-100 { background: rgba(168,218,181,0.12) !important; }
-.text-green-600 { color: #a8dab5 !important; }
+.bg-green-100 { background: rgba(110,231,183,0.1) !important; }
+.text-green-600 { color: #6ee7b7 !important; }
 
 /* Modals - MD3 dialog */
 #category-filter-modal > div,
