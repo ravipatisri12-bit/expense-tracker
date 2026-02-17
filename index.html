@@ -172,19 +172,40 @@
                 </div>
             </div>
 
-            <!-- Fixed Expenses (collapsed) -->
+            <!-- Fixed Expenses -->
             <div class="card p-5">
                 <button onclick="toggleFixedExpenses()" class="w-full flex justify-between items-center">
-                    <span class="text-base font-semibold " style="color:var(--md-sys-color-on-surface)">Fixed Costs</span>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface-variant)" id="fixed-total-collapsed">$0/mo</span>
-                        <span id="fixed-chevron" class="material-symbols-rounded text-xl transition-transform" style="color:var(--md-sys-color-outline)">expand_more</span>
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">receipt_long</span>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Fixed Costs</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)" id="fixed-total-collapsed">$0/mo</span>
+                        <span id="fixed-chevron" class="material-symbols-rounded transition-transform" style="color:var(--md-sys-color-outline);font-size:20px">expand_more</span>
                     </div>
                 </button>
-                <div id="fixed-expenses-details" class="hidden mt-4 space-y-3">
-                    <div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Rent</span><span style="color:var(--md-sys-color-on-surface)" id="rent-amount">$0</span></div>
-                    <div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Utilities</span><span style="color:var(--md-sys-color-on-surface)" id="utilities-amount">$0</span></div>
-                    <div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Car/Insurance</span><span style="color:var(--md-sys-color-on-surface)" id="insurance-amount">$0</span></div>
+                <div id="fixed-expenses-details" class="hidden mt-4 space-y-2">
+                    <div class="flex justify-between items-center py-2.5 px-3 rounded-xl" style="background:var(--md-sys-color-surface-container-high)">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-rounded" style="color:var(--md-sys-color-outline);font-size:18px">home</span>
+                            <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">Rent</span>
+                        </div>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)" id="rent-amount">$0</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2.5 px-3 rounded-xl" style="background:var(--md-sys-color-surface-container-high)">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-rounded" style="color:var(--md-sys-color-outline);font-size:18px">bolt</span>
+                            <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">Utilities</span>
+                        </div>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)" id="utilities-amount">$0</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2.5 px-3 rounded-xl" style="background:var(--md-sys-color-surface-container-high)">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-rounded" style="color:var(--md-sys-color-outline);font-size:18px">directions_car</span>
+                            <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">Car/Insurance</span>
+                        </div>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)" id="insurance-amount">$0</span>
+                    </div>
                 </div>
             </div>
         </div>

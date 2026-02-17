@@ -1890,14 +1890,16 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
     breakdown.innerHTML = data.map((cat, i) => {
         const color = colors[i % colors.length];
         return `
-            <div class="flex items-center justify-between py-2 px-2 rounded-lg cursor-pointer transition-colors" onclick="openCategoryFilter('${cat.name}')">
-                <div class="flex items-center space-x-2">
-                    <div class="w-2.5 h-2.5 rounded-full" style="background:${color}"></div>
-                    <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">${cat.name}</span>
+            <div class="flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer transition-colors" style="background:transparent" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" onclick="openCategoryFilter('${cat.name}')">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:${color}25">
+                        <span style="color:${color};font-weight:600;font-size:11px">${cat.name.charAt(0)}</span>
+                    </div>
+                    <span class="text-sm font-medium" style="color:${color}">${cat.name}</span>
                 </div>
-                <div class="text-right">
-                    <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface)">${formatCurrency(cat.amount)}</span>
-                    <span class="text-xs ml-1" style="color:var(--md-sys-color-outline)">${cat.pct}%</span>
+                <div class="text-right flex items-center gap-2">
+                    <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(cat.amount)}</span>
+                    <span class="text-xs px-1.5 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">${cat.pct}%</span>
                 </div>
             </div>
         `;
