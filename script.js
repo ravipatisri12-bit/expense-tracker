@@ -302,7 +302,7 @@ class ExpenseTracker {
         const ringLabel = el('budget-ring-label');
         if (ring && totalBudget > 0) {
             const pct = Math.min(totalVariableExpenses / totalBudget, 1.2);
-            const circumference = 427.26;
+            const circumference = 534.07;
             ring.style.strokeDashoffset = circumference * (1 - Math.min(pct, 1));
             ring.style.stroke = pct > 1 ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#22c55e';
         }
@@ -1713,7 +1713,7 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
 
     const total = Object.values(catTotals).reduce((s, a) => s + a, 0);
     if (total === 0) {
-        svg.innerHTML = '<text x="50" y="50" text-anchor="middle" fill="#d1d5db" font-size="6">No data</text>';
+        svg.innerHTML = '';
         breakdown.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">No expenses this month</p>';
         return;
     }
@@ -1732,7 +1732,7 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
         const color = colors[i % colors.length];
         const largeArc = sweep > 180 ? 1 : 0;
         
-        const r = 38, ir = 22, cx = 50, cy = 50;
+        const r = 93, ir = 77, cx = 100, cy = 100;
         const toXY = (a, rad) => ({ x: cx + rad * Math.cos((a - 90) * Math.PI / 180), y: cy + rad * Math.sin((a - 90) * Math.PI / 180) });
         const s1 = toXY(endAngle, r), e1 = toXY(angle, r), s2 = toXY(endAngle, ir), e2 = toXY(angle, ir);
         
