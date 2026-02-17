@@ -1734,7 +1734,7 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
         const color = colors[i % colors.length];
         const largeArc = sweep > 180 ? 1 : 0;
         
-        const r = 93, ir = 77, cx = 100, cy = 100;
+        const r = 90, ir = 60, cx = 100, cy = 100;
         const toXY = (a, rad) => ({ x: cx + rad * Math.cos((a - 90) * Math.PI / 180), y: cy + rad * Math.sin((a - 90) * Math.PI / 180) });
         const s1 = toXY(endAngle, r), e1 = toXY(angle, r), s2 = toXY(endAngle, ir), e2 = toXY(angle, ir);
         
