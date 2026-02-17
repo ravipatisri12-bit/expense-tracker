@@ -49,19 +49,20 @@ function formatDate(dateString, locale = 'en-US') {
 function showNotification(message, type = 'success', duration = 3000) {
     const notification = document.createElement('div');
     notification.style.cssText = `
-        position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);z-index:9999;
-        padding:12px 20px;border-radius:12px;font-size:13px;font-family:Roboto,sans-serif;
-        max-width:calc(100% - 48px);text-align:center;opacity:0;
+        position:fixed;top:60px;right:16px;z-index:9999;
+        padding:10px 16px;border-radius:12px;font-size:13px;font-family:Roboto,sans-serif;
+        max-width:280px;opacity:0;
         transition:all 0.3s cubic-bezier(0.2,0,0,1);
         background:${type === 'error' ? '#3c1f1f' : '#1a2332'};
         color:${type === 'error' ? '#ffb4ab' : '#a8c7fa'};
         border:1px solid ${type === 'error' ? 'rgba(255,180,171,0.15)' : 'rgba(168,199,250,0.15)'};
+        transform:translateY(-10px);
     `;
     notification.textContent = message;
     document.body.appendChild(notification);
-    setTimeout(() => { notification.style.opacity = '1'; notification.style.transform = 'translateX(-50%) translateY(0)'; }, 10);
+    setTimeout(() => { notification.style.opacity = '1'; notification.style.transform = 'translateY(0)'; }, 10);
     setTimeout(() => {
-        notification.style.opacity = '0'; notification.style.transform = 'translateX(-50%) translateY(20px)';
+        notification.style.opacity = '0'; notification.style.transform = 'translateY(-10px)';
         setTimeout(() => { if (notification.parentNode) notification.remove(); }, 300);
     }, duration);
 }
