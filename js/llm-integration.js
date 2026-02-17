@@ -6,7 +6,7 @@
 class LLMTransactionParser {
     constructor() {
         // Hardcoded API key for personal use
-        this.apiKey = 'AIzaSyD_o5JR782JD8tIsQPzjuMvnjHAw4oocw0';
+        this.apiKey = localStorage.getItem('gemini_api_key') || '';
         this.apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
         this.model = 'gemini-2.0-flash-lite';
         this.isConfigured = true;
