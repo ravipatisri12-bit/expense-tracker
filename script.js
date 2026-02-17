@@ -639,6 +639,11 @@ class ExpenseTracker {
             
             if (settingsDoc.exists) {
                 this.settings = { ...this.getDefaultSettings(), ...settingsDoc.data() };
+                // Restore API key from synced settings
+                if (this.settings.geminiApiKey) {
+                    localStorage.setItem('gemini_api_key', this.settings.geminiApiKey);
+                    if (window.llmParser) window.llmParser.configure(this.settings.geminiApiKey);
+                }
             }
 
             // Update UI

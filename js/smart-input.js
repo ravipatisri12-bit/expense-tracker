@@ -294,7 +294,7 @@ class SmartTransactionInput {
         const apiKeyInput = document.getElementById('llm-api-key');
         
         if (apiKeyInput) {
-            apiKeyInput.value = localStorage.getItem('llm_api_key') || '';
+            apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
         }
 
         // Open modal

@@ -22,7 +22,12 @@ class LLMTransactionParser {
         
         // Save to localStorage
         if (apiKey) {
-            localStorage.setItem('llm_api_key', apiKey);
+            localStorage.setItem('gemini_api_key', apiKey);
+            // Sync to Firebase if signed in
+            if (window.expenseTracker) {
+                window.expenseTracker.settings.geminiApiKey = apiKey;
+                window.expenseTracker.saveSettingsToFirebase();
+            }
         }
     }
 
