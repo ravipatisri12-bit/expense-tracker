@@ -463,7 +463,7 @@ class ExpenseTracker {
             const transactionsHtml = dateGroup.transactions.map(expense => {
                 const c = catColors[expense.category] || '#a18cd1';
                 return `
-                <div class="flex items-center justify-between px-4 py-3.5">
+                <div class="flex items-center justify-between px-4 py-3.5" style="border-bottom:1px solid rgba(255,255,255,0.04)">
                     <div class="flex items-center space-x-3">
                         <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}30">
                             <span style="color:${c};font-weight:600" class="text-xs">${expense.category.charAt(0)}</span>
