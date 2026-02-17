@@ -254,3 +254,10 @@ body.privacy-mode #monthly-budget-display {
 /* Shimmer loading animation */
 @keyframes shimmer { 0% { opacity: 0.4; } 50% { opacity: 0.7; } 100% { opacity: 0.4; } }
 .shimmer { animation: shimmer 1.5s ease-in-out infinite; }
+
+/* Center add-expense page content */
+#add-expense-page:not(.hidden) {
+    display: flex;
+    align-items: center;
+    min-height: calc(100vh - 80px);
+}
