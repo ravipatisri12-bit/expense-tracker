@@ -1632,79 +1632,37 @@ function switchTrendsView(view) {
 // ====================================================================
 
 ExpenseTracker.prototype.renderStreaks = function() {
-    const summary = document.getElementById('streak-summary');
-    const details = document.getElementById('streak-details');
-    if (!summary) return;
+    const countEl = document.getElementById('streak-count');
+    const labelEl = document.getElementById('streak-label');
+    if (!countEl) return;
 
-    const streaks = this.calculateStreaks();
-    const activeStreaks = streaks.filter(s => s.days >= 2);
+    const days = this.calculateFoodStreak();
+    countEl.textContent = days;
 
-    if (activeStreaks.length === 0) {
-        summary.innerHTML = '<p class="text-sm text-gray-400">No active streaks yet. Keep tracking!</p>';
-        if (details) details.innerHTML = '';
-        return;
-    }
-
-    // Show top streak in summary
-    const top = activeStreaks[0];
-    summary.innerHTML = `
-        <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span class="text-xs font-bold text-green-600">${top.days}d</span>
-            </div>
-            <div>
-                <p class="text-sm font-semibold text-gray-900">${top.days} day streak</p>
-                <p class="text-xs text-gray-500">No spending on ${top.category}</p>
-            </div>
-        </div>
-    `;
-
-    // Show all streaks in details
-    if (details) {
-        details.innerHTML = activeStreaks.map(s => `
-            <div class="flex items-center justify-between py-2">
-                <div class="flex items-center space-x-2">
-                    <div class="w-6 h-6 rounded-full ${s.days >= 7 ? 'bg-green-100' : 'bg-gray-100'} flex items-center justify-center">
-                        <span class="text-xs font-bold ${s.days >= 7 ? 'text-green-600' : 'text-gray-500'}">${s.days}</span>
-                    </div>
-                    <span class="text-sm text-gray-700">${s.category}</span>
-                </div>
-                <span class="text-sm font-medium text-gray-900">${s.days} days</span>
-            </div>
-        `).join('');
+    if (days === 0) {
+        labelEl.textContent = 'You ate out today — streak reset';
+    } else if (days === 1) {
+        labelEl.textContent = '1 day without eating out';
+    } else {
+        labelEl.textContent = days + ' days without eating out';
     }
 };
 
-ExpenseTracker.prototype.calculateStreaks = function() {
+ExpenseTracker.prototype.calculateFoodStreak = function() {
     const today = new Date();
-    const todayStr = this.getLocalDateString(today);
-    const categories = this.settings.categories || Object.keys(this.settings.goals);
-    
-    return categories.map(category => {
-        let days = 0;
-        for (let i = 0; i < 60; i++) {
-            const checkDate = new Date(today);
-            checkDate.setDate(today.getDate() - i);
-            const dateStr = this.getLocalDateString(checkDate);
-            
-            const hasSpending = this.expenses.some(e => {
-                return e.category === category && this.getLocalDateString(this.parseLocalDate(e.date)) === dateStr;
-            });
-            
-            if (hasSpending) break;
-            days++;
-        }
-        return { category, days };
-    }).filter(s => s.days >= 1).sort((a, b) => b.days - a.days);
+    let days = 0;
+    for (let i = 0; i < 365; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateStr = this.getLocalDateString(checkDate);
+        const ateOut = this.expenses.some(e =>
+            e.category === 'Food' && this.getLocalDateString(this.parseLocalDate(e.date)) === dateStr
+        );
+        if (ateOut) break;
+        days++;
+    }
+    return days;
 };
-
-function toggleStreakDetails() {
-    const details = document.getElementById('streak-details');
-    const btn = document.getElementById('streak-toggle');
-    if (!details) return;
-    details.classList.toggle('hidden');
-    btn.textContent = details.classList.contains('hidden') ? 'Show all' : 'Hide';
-}
 
 // ====================================================================
 // NEW: PIE CHART WITH CLICKABLE CATEGORIES
