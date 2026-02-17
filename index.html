@@ -221,21 +221,23 @@
                         <button type="button" id="close-manual-form" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
                     </div>
                     <form id="expense-form" class="space-y-5">
-                        <div>
-                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Amount</label>
-                            <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="amount" step="0.01" placeholder="0.00" required class="pl-9 block w-full text-sm"></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Amount</label>
+                                <div class="relative"><span class="input-prefix">$</span><input type="number" id="amount" step="0.01" placeholder="0.00" required class="has-prefix"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Date</label>
+                                <input type="date" id="expense-date" required>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Description</label>
-                            <input type="text" id="description" placeholder="What did you spend on?" required class="block w-full text-sm">
+                            <input type="text" id="description" placeholder="What did you spend on?" required>
                         </div>
                         <div>
                             <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Category</label>
-                            <select id="category" required class="block w-full text-sm"><option value="">Select</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Date</label>
-                            <input type="date" id="expense-date" required class="block w-full text-sm">
+                            <select id="category" required><option value="">Select</option></select>
                         </div>
                         <button type="submit" class="w-full bg-primary-600 text-white font-medium py-3 rounded-full text-sm">Add Expense</button>
                     </form>
@@ -296,68 +298,70 @@
     <!-- SETTINGS PAGE -->
     <div id="settings-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6 space-y-5">
-            <h2 class="text-xl font-bold text-gray-900">Settings</h2>
+            <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">Settings</h2>
             <div class="card p-5">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Privacy</h3>
+                <h3 class="text-base font-medium mb-4" style="color:var(--md-sys-color-on-surface)">Privacy</h3>
                 <div class="flex items-center justify-between">
-                    <div><label class="text-sm font-medium text-gray-700">Hide Sensitive Info</label><p class="text-xs text-gray-400">Hide income, savings amounts</p></div>
-                    <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="privacy-toggle" class="sr-only peer" onchange="togglePrivacyMode()"><div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div></label>
+                    <div><label class="text-sm" style="color:var(--md-sys-color-on-surface)">Hide Sensitive Info</label><p class="text-xs" style="color:var(--md-sys-color-outline)">Hide income, savings amounts</p></div>
+                    <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="privacy-toggle" class="sr-only peer" onchange="togglePrivacyMode()"><div class="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600" style="background:var(--md-sys-color-outline-variant)"><div class="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all" style="background:var(--md-sys-color-on-surface)"></div></div></label>
                 </div>
             </div>
             <div class="card p-5">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Fixed Expenses</h3>
+                <h3 class="text-base font-medium mb-4" style="color:var(--md-sys-color-on-surface)">Fixed Expenses</h3>
                 <div class="space-y-3">
-                    <div><label class="block text-xs text-gray-500 mb-1">Rent</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-rent" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div></div>
-                    <div><label class="block text-xs text-gray-500 mb-1">Utilities</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-utilities" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div></div>
-                    <div><label class="block text-xs text-gray-500 mb-1">Car/Insurance</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-insurance" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div></div>
+                    <div><label class="block text-xs mb-1" style="color:var(--md-sys-color-outline)">Rent</label><div class="relative"><span class="input-prefix">$</span><input type="number" id="setting-rent" step="0.01" placeholder="0" class="has-prefix"></div></div>
+                    <div><label class="block text-xs mb-1" style="color:var(--md-sys-color-outline)">Utilities</label><div class="relative"><span class="input-prefix">$</span><input type="number" id="setting-utilities" step="0.01" placeholder="0" class="has-prefix"></div></div>
+                    <div><label class="block text-xs mb-1" style="color:var(--md-sys-color-outline)">Car/Insurance</label><div class="relative"><span class="input-prefix">$</span><input type="number" id="setting-insurance" step="0.01" placeholder="0" class="has-prefix"></div></div>
                 </div>
             </div>
             <div class="card p-5">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Monthly Income</h3>
-                <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-income" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div>
+                <h3 class="text-base font-medium mb-4" style="color:var(--md-sys-color-on-surface)">Monthly Income</h3>
+                <div class="relative"><span class="input-prefix">$</span><input type="number" id="setting-income" step="0.01" placeholder="0" class="has-prefix"></div>
             </div>
             <div class="card p-5">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Categories</h3>
-                <div class="flex space-x-2 mb-4"><input type="text" id="new-category-name" placeholder="New category" class="flex-1 rounded-xl border-gray-200 text-sm"><button onclick="addCategory()" class="bg-green-600 text-white px-3 py-2 rounded-xl text-sm font-medium">Add</button></div>
+                <h3 class="text-base font-medium mb-4" style="color:var(--md-sys-color-on-surface)">Categories</h3>
+                <div class="flex gap-2 mb-4"><input type="text" id="new-category-name" placeholder="New category" class="flex-1"><button onclick="addCategory()" class="bg-primary-600 text-white px-4 py-2 rounded-full text-sm font-medium">Add</button></div>
                 <div id="existing-categories" class="space-y-2"></div>
             </div>
             <div class="card p-5">
-                <h3 class="text-base font-semibold text-gray-900 mb-4">Category Goals</h3>
+                <h3 class="text-base font-medium mb-4" style="color:var(--md-sys-color-on-surface)">Category Goals</h3>
                 <div class="space-y-3" id="category-goals-settings"></div>
             </div>
-            <button onclick="saveSettings()" class="w-full bg-primary-600 text-white py-2.5 rounded-xl font-medium text-sm">Save Settings</button>
-            <button onclick="document.getElementById('llm-config-modal').classList.remove('hidden')" id="llm-config-btn" class="w-full border border-gray-200 text-gray-700 py-2.5 rounded-xl font-medium text-sm">Configure Gemini AI Key</button>
+            <button onclick="saveSettings()" class="w-full bg-primary-600 text-white py-3 rounded-full font-medium text-sm">Save Settings</button>
+            <button onclick="document.getElementById('llm-config-modal').classList.remove('hidden')" id="llm-config-btn" class="w-full py-3 rounded-full font-medium text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline-variant)">Configure Gemini AI Key</button>
         </div>
     </div>
 
     <!-- LLM Config Modal -->
     <div id="llm-config-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+        <div class="max-w-md w-full p-6" style="background:var(--md-sys-color-surface-container-high);border-radius:28px">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base font-semibold text-gray-900">Gemini AI Config</h3>
-                <button id="close-llm-config" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
+                <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Gemini AI Config</h3>
+                <button id="close-llm-config" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
             </div>
             <div class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-600 mb-1">API Key</label><input type="password" id="llm-api-key" placeholder="AIza..." class="block w-full rounded-xl border-gray-200 text-sm"><p class="text-xs text-gray-400 mt-1">Get free key at <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-primary-600">Google AI Studio</a></p></div>
-                <div class="flex space-x-3"><button id="save-llm-config" class="flex-1 bg-primary-600 text-white py-2 rounded-xl text-sm font-medium">Save</button><button id="close-llm-config-btn" onclick="document.getElementById('llm-config-modal').classList.add('hidden')" class="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 text-sm">Cancel</button></div>
+                <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">API Key</label><input type="password" id="llm-api-key" placeholder="AIza..."><p class="text-xs mt-1.5" style="color:var(--md-sys-color-outline)">Get free key at <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color:var(--md-sys-color-primary)">Google AI Studio</a></p></div>
+                <div class="flex gap-3"><button id="save-llm-config" class="flex-1 bg-primary-600 text-white py-2.5 rounded-full text-sm font-medium">Save</button><button id="close-llm-config-btn" onclick="document.getElementById('llm-config-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-full text-sm" style="background:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface)">Cancel</button></div>
             </div>
         </div>
     </div>
 
     <!-- Edit Expense Modal -->
     <div id="edit-expense-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+        <div class="max-w-md w-full p-6" style="background:var(--md-sys-color-surface-container-high);border-radius:28px">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base font-semibold text-gray-900">Edit Transaction</h3>
-                <button onclick="closeEditModal()" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
+                <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Edit Transaction</h3>
+                <button onclick="closeEditModal()" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
             </div>
             <form id="edit-expense-form" class="space-y-4">
                 <input type="hidden" id="edit-expense-id">
-                <div><label class="block text-sm font-medium text-gray-600 mb-1">Amount</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="edit-amount" step="0.01" required class="pl-8 block w-full rounded-xl border-gray-200"></div></div>
-                <div><label class="block text-sm font-medium text-gray-600 mb-1">Description</label><input type="text" id="edit-description" required class="block w-full rounded-xl border-gray-200"></div>
-                <div><label class="block text-sm font-medium text-gray-600 mb-1">Category</label><select id="edit-category" required class="block w-full rounded-xl border-gray-200"><option value="">Select</option></select></div>
-                <div><label class="block text-sm font-medium text-gray-600 mb-1">Date</label><input type="date" id="edit-date" required class="block w-full rounded-xl border-gray-200"></div>
-                <div class="flex space-x-3"><button type="submit" class="flex-1 bg-primary-600 text-white py-2 rounded-xl text-sm font-medium">Save</button><button type="button" onclick="closeEditModal()" class="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 text-sm">Cancel</button></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Amount</label><div class="relative"><span class="input-prefix">$</span><input type="number" id="edit-amount" step="0.01" required class="has-prefix"></div></div>
+                    <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Date</label><input type="date" id="edit-date" required></div>
+                </div>
+                <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Description</label><input type="text" id="edit-description" required></div>
+                <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Category</label><select id="edit-category" required><option value="">Select</option></select></div>
+                <div class="flex gap-3"><button type="submit" class="flex-1 bg-primary-600 text-white py-2.5 rounded-full text-sm font-medium">Save</button><button type="button" onclick="closeEditModal()" class="px-4 py-2.5 rounded-full text-sm" style="background:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface)">Cancel</button></div>
             </form>
         </div>
     </div>

@@ -125,13 +125,16 @@ nav.fixed {
 input, select, textarea {
   background: var(--md-sys-color-surface-container-high) !important;
   border: none !important;
-  border-bottom: 1px solid var(--md-sys-color-outline) !important;
+  border-bottom: 2px solid var(--md-sys-color-outline-variant) !important;
   border-radius: 12px 12px 0 0 !important;
   color: var(--md-sys-color-on-surface) !important;
-  padding: 12px 16px !important;
+  padding: 14px 16px !important;
   font-size: 14px;
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
+input.has-prefix { padding-left: 32px !important; }
 input:focus, select:focus, textarea:focus {
   border-bottom-color: var(--md-sys-color-primary) !important;
   outline: none !important;
@@ -139,6 +142,10 @@ input:focus, select:focus, textarea:focus {
 }
 input::placeholder, textarea::placeholder { color: var(--md-sys-color-outline) !important; }
 option { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+.input-prefix {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--md-sys-color-outline); font-size: 14px; pointer-events: none;
+}
 
 /* MD3 Buttons */
 button.bg-primary-600 {
