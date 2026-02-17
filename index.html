@@ -30,20 +30,20 @@
     <script src="js/llm-integration.js"></script>
     <script src="js/smart-input.js"></script>
 </head>
-<body class="min-h-screen pb-20 pt-14 text-white" style="background:#111113">
+<body class="min-h-screen pb-20 pt-14">
     <!-- Header -->
-    <header class="bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50">
+    <header class="fixed top-0 left-0 right-0 z-50" style="background:var(--md-sys-color-surface)">
         <div class="px-4 py-3 flex items-center justify-between">
-            <h1 class="text-lg font-bold text-gray-900">Expense Tracker</h1>
-            <div class="flex items-center space-x-2">
-                <div id="auth-status" class="text-xs text-gray-500">
-                    <button id="sign-in-btn" onclick="signInWithGoogle()" class="bg-primary-600 text-white px-3 py-1 rounded text-xs">Sign In</button>
-                    <div id="user-info" class="hidden flex items-center space-x-2">
-                        <img id="user-avatar" class="w-6 h-6 rounded-full" src="" alt="User">
-                        <button onclick="signOut()" class="text-red-500 text-xs">Sign Out</button>
+            <h1 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Expense Tracker</h1>
+            <div class="flex items-center gap-2">
+                <div id="auth-status" class="text-xs">
+                    <button id="sign-in-btn" onclick="signInWithGoogle()" class="bg-primary-600 text-white px-3 py-1.5 rounded-full text-xs font-medium">Sign In</button>
+                    <div id="user-info" class="hidden flex items-center gap-2">
+                        <img id="user-avatar" class="w-7 h-7 rounded-full" src="" alt="">
+                        <button onclick="signOut()" class="text-xs" style="color:var(--md-sys-color-error)">Sign Out</button>
                     </div>
                 </div>
-                <button onclick="showPage('settings')" class="p-2 text-gray-400">
+                <button onclick="showPage('settings')" class="p-1.5 rounded-full" style="color:var(--md-sys-color-on-surface-variant)">
                     <span class="material-symbols-rounded text-xl">settings</span>
                 </button>
             </div>
@@ -51,7 +51,7 @@
     </header>
 
     <!-- Bottom Navigation - 4 tabs -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-area-inset-bottom">
+    <nav class="fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style="background:var(--md-sys-color-surface-container)">
         <div class="flex">
             <button onclick="showPage('dashboard')" class="nav-btn active-nav flex-1 flex flex-col items-center py-2 px-1 text-primary-600">
                 <span class="material-symbols-rounded text-2xl mb-0.5">home</span>
@@ -136,7 +136,7 @@
                     <div class="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center">
                         <h3 id="filter-modal-title" class="text-lg font-semibold text-gray-900">Category</h3>
                         <button onclick="closeCategoryFilter()" class="text-gray-400 p-1">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <span class="material-symbols-rounded">close</span>
                         </button>
                     </div>
                     <div id="filter-modal-transactions" class=""></div>
@@ -149,7 +149,7 @@
                     <span class="text-base font-semibold text-gray-900">Fixed Costs</span>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm font-medium text-gray-600" id="fixed-total-collapsed">$0/mo</span>
-                        <svg id="fixed-chevron" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        <span id="fixed-chevron" class="material-symbols-rounded text-xl text-gray-400 transition-transform">expand_more</span>
                     </div>
                 </button>
                 <div id="fixed-expenses-details" class="hidden mt-4 space-y-3">
@@ -177,7 +177,7 @@
                     <textarea id="smart-input" rows="4" placeholder="Type naturally:&#10;5 at starbucks 10 at chipotle&#10;Coffee $5, Uber $23, lunch $12" class="w-full bg-gray-50 text-gray-900 text-base px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder-gray-400 resize-none"></textarea>
                     <div class="flex items-center justify-between mt-4">
                         <button type="button" id="toggle-manual-form" class="text-gray-500 text-sm font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span class="material-symbols-rounded text-lg mr-1">add</span>
                             Manual Entry
                         </button>
                         <button type="button" id="parse-smart-input" class="bg-primary-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">Add Expenses</button>
@@ -201,7 +201,7 @@
                 <div class="card p-5">
                     <div class="flex items-center justify-between mb-5">
                         <h3 class="text-base font-semibold text-gray-900">Manual Entry</h3>
-                        <button type="button" id="close-manual-form" class="text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        <button type="button" id="close-manual-form" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
                     </div>
                     <form id="expense-form" class="space-y-4">
                         <div>
@@ -309,7 +309,7 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base font-semibold text-gray-900">Gemini AI Config</h3>
-                <button id="close-llm-config" class="text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <button id="close-llm-config" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
             </div>
             <div class="space-y-4">
                 <div><label class="block text-sm font-medium text-gray-600 mb-1">API Key</label><input type="password" id="llm-api-key" placeholder="AIza..." class="block w-full rounded-xl border-gray-200 text-sm"><p class="text-xs text-gray-400 mt-1">Get free key at <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-primary-600">Google AI Studio</a></p></div>
@@ -323,7 +323,7 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base font-semibold text-gray-900">Edit Transaction</h3>
-                <button onclick="closeEditModal()" class="text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <button onclick="closeEditModal()" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
             </div>
             <form id="edit-expense-form" class="space-y-4">
                 <input type="hidden" id="edit-expense-id">

@@ -36,20 +36,19 @@ body {
   background: var(--md-sys-color-surface-container);
   border-radius: 16px;
   border: none;
+  box-shadow: none;
 }
 
 /* Header - MD3 surface */
 header {
   background: var(--md-sys-color-surface) !important;
-  border-color: var(--md-sys-color-outline-variant) !important;
+  border: none !important;
 }
-header h1 { color: var(--md-sys-color-on-surface) !important; }
 
 /* Bottom nav - MD3 surface container */
 nav.fixed {
   background: var(--md-sys-color-surface-container) !important;
-  border-color: transparent !important;
-  border-radius: 0;
+  border: none !important;
 }
 
 /* Navigation */
@@ -189,4 +188,21 @@ button { -webkit-user-select: none; user-select: none; }
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* MD3 typography refinements */
+h2 { letter-spacing: 0; }
+h3 { letter-spacing: 0.01em; }
+.text-xs { letter-spacing: 0.02em; }
+
+/* MD3 label colors */
+label { color: var(--md-sys-color-on-surface-variant) !important; }
+
+/* Rounded buttons */
+button.rounded-xl { border-radius: 20px !important; }
+.rounded-xl { border-radius: 16px !important; }
+
+/* Toggle switch MD3 */
+.peer-checked\:bg-primary-600:is(.peer:checked ~ *) {
+  background: var(--md-sys-color-primary) !important;
 }
