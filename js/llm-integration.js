@@ -147,33 +147,52 @@ Return ONLY the JSON array, nothing else.`;
      * @returns {Array} Array of parsed transaction data
      */
     fallbackParseMultiple(input) {
-        const segments = input.split(/[,\n]+|(?:\s+and\s+)/i).map(s => s.trim()).filter(Boolean);
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
         
+        // First strip out date patterns and store them, so their numbers don't get picked up as amounts
+        let cleaned = input;
+        const dateMap = new Map(); // placeholder -> date string
+        let placeholderIdx = 0;
+        
+        const dateReplacements = [
+            { re: /\byesterday\b/gi, fn: () => { const d = new Date(today); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }},
+            { re: /\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*/gi, fn: (m,day,mon) => { const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12}; return today.getFullYear()+'-'+String(months[mon.toLowerCase().slice(0,3)]).padStart(2,'0')+'-'+String(day).padStart(2,'0'); }},
+            { re: /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g, fn: (m,mo,da,yr) => { const y = yr ? (yr.length === 2 ? '20'+yr : yr) : today.getFullYear(); return y+'-'+String(mo).padStart(2,'0')+'-'+String(da).padStart(2,'0'); }},
+            { re: /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, fn: m => m }
+        ];
+        
+        for (const p of dateReplacements) {
+            cleaned = cleaned.replace(p.re, (...args) => {
+                const dateVal = p.fn(...args);
+                const ph = `__DATE${placeholderIdx++}__`;
+                dateMap.set(ph, dateVal);
+                return ph;
+            });
+        }
+        
+        // Now split on commas or newlines
+        const segments = cleaned.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+        
         const transactions = [];
         for (const seg of segments) {
-            const amountMatch = seg.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
+            const amountMatch = seg.match(/\$\s*(\d+(?:\.\d{1,2})?)\b|\b(\d+(?:\.\d{1,2})?)\b/);
             if (!amountMatch) continue;
             
-            const amount = parseFloat(amountMatch[1]);
-            let desc = seg.replace(amountMatch[0], '');
+            const amount = parseFloat(amountMatch[1] || amountMatch[2]);
+            if (amount <= 0) continue;
             
-            // Extract date patterns
+            // Find date placeholder in this segment
             let date = todayStr;
-            const datePatterns = [
-                { re: /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/, fn: m => { const y = m[3] ? (m[3].length === 2 ? '20'+m[3] : m[3]) : today.getFullYear(); return y+'-'+String(m[1]).padStart(2,'0')+'-'+String(m[2]).padStart(2,'0'); }},
-                { re: /(\d{4})-(\d{1,2})-(\d{1,2})/, fn: m => m[0] },
-                { re: /\byesterday\b/i, fn: () => { const d = new Date(today); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }},
-                { re: /\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i, fn: m => { const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12}; return today.getFullYear()+'-'+String(months[m[2].toLowerCase().slice(0,3)]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0'); }}
-            ];
-            for (const p of datePatterns) {
-                const m = desc.match(p.re);
-                if (m) { date = p.fn(m); desc = desc.replace(m[0], ''); break; }
+            for (const [ph, d] of dateMap) {
+                if (seg.includes(ph)) { date = d; break; }
             }
             
-            desc = desc.replace(/^[\s,\-–(at|on|for|spent|paid|to)]+/i, '').trim();
-            desc = desc.replace(/[\s,\-–(at|on|for|spent|paid|to)]+$/i, '').trim();
+            // Remove amount and date placeholders to get description
+            let desc = seg.replace(amountMatch[0], '').replace(/__DATE\d+__/g, '').trim();
+            desc = desc.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '');
+            desc = desc.replace(/^(at|on|for|spent|paid|to)\s+/i, '').trim();
+            desc = desc.replace(/\s+(at|on|for|spent|paid|to)$/i, '').trim();
             if (!desc) desc = 'Expense';
             
             transactions.push({
@@ -183,14 +202,6 @@ Return ONLY the JSON array, nothing else.`;
                 date,
                 confidence: 'low'
             });
-        }
-        
-        if (transactions.length === 0) {
-            const amountPattern = /\$?\s*(\d+(?:\.\d{1,2})?)/g;
-            let match;
-            while ((match = amountPattern.exec(input)) !== null) {
-                transactions.push({ amount: parseFloat(match[1]), description: 'Expense', category: 'Other', date: todayStr, confidence: 'low' });
-            }
         }
         
         return transactions.length > 0 ? transactions : [{ amount: null, description: input, category: 'Other', date: todayStr, confidence: 'low' }];
