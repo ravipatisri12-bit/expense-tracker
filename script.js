@@ -359,8 +359,8 @@ class ExpenseTracker {
         const overall = spent + fixed;
         const saved = income - overall;
         const _el = id => document.getElementById(id);
-        if (_el('report-spent')) _el('report-spent').textContent = formatCurrency(spent);
-        if (_el('report-saved')) { _el('report-saved').textContent = formatCurrency(Math.abs(saved)); _el('report-saved').style.color = saved >= 0 ? 'var(--md-sys-color-primary)' : '#cf6679'; }
+        if (_el('report-spent')) { _el('report-spent').textContent = formatCurrency(spent); _el('report-spent').style.color = (income && spent <= income) ? '#43e97b' : '#cf6679'; }
+        if (_el('report-saved')) { _el('report-saved').textContent = formatCurrency(Math.abs(saved)); _el('report-saved').style.color = saved >= 0 ? '#43e97b' : '#cf6679'; }
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
     }
 
