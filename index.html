@@ -331,26 +331,18 @@
         <div class="max-w-lg mx-auto px-4 py-6 space-y-4">
             <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">Settings</h2>
 
-            <!-- Monthly Income -->
+            <!-- Monthly Overview (Income + Fixed) -->
             <div class="card p-5">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">account_balance_wallet</span>
-                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Monthly Income</h3>
+                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Monthly Overview</h3>
                 </div>
                 <p class="text-xs mb-3 ml-7" style="color:var(--md-sys-color-outline)" id="income-month-label"></p>
-                <div class="flex items-center justify-between py-3 px-4 rounded-xl" style="background:var(--md-sys-color-surface-container-high)" onclick="this.querySelector('input').focus()">
-                    <span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">Income</span>
-                    <div class="flex items-center gap-1"><span class="text-sm" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="setting-income" step="0.01" placeholder="0" class="text-right text-sm font-semibold" style="background:transparent;border:none;outline:none;color:var(--md-sys-color-on-surface);width:80px"></div>
-                </div>
-            </div>
-
-            <!-- Fixed Expenses -->
-            <div class="card p-5">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">receipt_long</span>
-                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Fixed Expenses</h3>
-                </div>
                 <div class="rounded-xl overflow-hidden" style="background:var(--md-sys-color-surface-container-high)">
+                    <div class="flex items-center justify-between py-3 px-4" style="border-bottom:1px solid rgba(255,255,255,0.05)" onclick="this.querySelector('input').focus()">
+                        <div class="flex items-center gap-3"><span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">payments</span><span class="text-sm" style="color:var(--md-sys-color-on-surface)">Income</span></div>
+                        <div class="flex items-center gap-1"><span class="text-sm" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="setting-income" step="0.01" placeholder="0" class="text-right text-sm font-semibold" style="background:transparent;border:none;outline:none;color:var(--md-sys-color-primary);width:80px"></div>
+                    </div>
                     <div class="flex items-center justify-between py-3 px-4" style="border-bottom:1px solid rgba(255,255,255,0.05)" onclick="this.querySelector('input').focus()">
                         <div class="flex items-center gap-3"><span class="material-symbols-rounded" style="color:var(--md-sys-color-outline);font-size:18px">home</span><span class="text-sm" style="color:var(--md-sys-color-on-surface-variant)">Rent</span></div>
                         <div class="flex items-center gap-1"><span class="text-sm" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="setting-rent" step="0.01" placeholder="0" class="text-right text-sm font-semibold" style="background:transparent;border:none;outline:none;color:var(--md-sys-color-on-surface);width:80px"></div>
@@ -375,14 +367,19 @@
                 <div class="space-y-4" id="category-goals-settings"></div>
             </div>
 
-            <!-- Categories -->
-            <div class="card p-5">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">category</span>
-                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Categories</h3>
+            <!-- Categories (dropdown) -->
+            <div class="card p-4">
+                <button onclick="toggleSettingsDropdown('categories-dropdown','categories-chevron')" class="w-full flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">category</span>
+                        <span class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Categories</span>
+                    </div>
+                    <span id="categories-chevron" class="material-symbols-rounded transition-transform" style="color:var(--md-sys-color-outline);font-size:20px">expand_more</span>
+                </button>
+                <div id="categories-dropdown" class="hidden mt-4">
+                    <div class="flex gap-2 mb-4"><input type="text" id="new-category-name" placeholder="New category" class="flex-1"><button onclick="addCategory()" class="px-4 py-2 rounded-full text-sm font-medium" style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">Add</button></div>
+                    <div id="existing-categories" class="space-y-2"></div>
                 </div>
-                <div class="flex gap-2 mb-4"><input type="text" id="new-category-name" placeholder="New category" class="flex-1"><button onclick="addCategory()" class="px-4 py-2 rounded-full text-sm font-medium" style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">Add</button></div>
-                <div id="existing-categories" class="space-y-2"></div>
             </div>
 
             <!-- Privacy -->

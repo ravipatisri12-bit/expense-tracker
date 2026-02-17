@@ -2013,6 +2013,14 @@ function toggleMonthlyReport() {
     if (chevron) chevron.style.transform = details.classList.contains('hidden') ? '' : 'rotate(180deg)';
 }
 
+function toggleSettingsDropdown(id, chevronId) {
+    const el = document.getElementById(id);
+    const ch = document.getElementById(chevronId);
+    if (!el) return;
+    el.classList.toggle('hidden');
+    if (ch) ch.style.transform = el.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
 // ====================================================================
 // KEEP: Global function wrappers (updated)
 // ====================================================================
