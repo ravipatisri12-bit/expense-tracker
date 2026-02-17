@@ -53,6 +53,9 @@ class SmartTransactionInput {
         // Toggle show/hide
         toggleButton.addEventListener('click', () => {
             manualFormContainer.classList.toggle('hidden');
+            if (!manualFormContainer.classList.contains('hidden') && window.expenseTracker) {
+                window.expenseTracker.updateCategoryDropdown();
+            }
             
             // Update button text
             if (manualFormContainer.classList.contains('hidden')) {
