@@ -1006,14 +1006,17 @@ class ExpenseTracker {
         const sortedExpenses = [...expenses].sort((a, b) => b.timestamp - a.timestamp);
 
         container.innerHTML = `
-            <div class="p-4 border-b">
+            <div class="p-4" style="border-bottom:1px solid rgba(255,255,255,0.06)">
                 <h4 class="font-medium " style="color:var(--md-sys-color-on-surface)">${selectedMonthName} ${selectedYear} - ${expenses.length} transactions</h4>
             </div>
-            ${sortedExpenses.map(expense => `
+            ${sortedExpenses.map(expense => {
+                const catColors = {Food:'#f5576c',Coffee:'#f093fb',Transportation:'#4facfe',Entertainment:'#667eea',Shopping:'#43e97b',Bills:'#fccb90',Other:'#a18cd1'};
+                const c = catColors[expense.category] || '#a18cd1';
+                return `
                 <div class="flex items-center justify-between p-4">
                     <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                            <span class="text-primary-600 font-medium text-sm">${expense.category.charAt(0)}</span>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:${c}30">
+                            <span style="color:${c};font-weight:600" class="text-sm">${expense.category.charAt(0)}</span>
                         </div>
                         <div>
                             <p class="font-medium " style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
@@ -1022,7 +1025,7 @@ class ExpenseTracker {
                     </div>
                     <span class="font-semibold " style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(expense.amount)}</span>
                 </div>
-            `).join('')}
+            `}).join('')}
         `;
     }
 
