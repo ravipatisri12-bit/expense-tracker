@@ -150,49 +150,40 @@ Return ONLY the JSON array, nothing else.`;
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
         
-        // First strip out date patterns and store them, so their numbers don't get picked up as amounts
-        let cleaned = input;
-        const dateMap = new Map(); // placeholder -> date string
-        let placeholderIdx = 0;
-        
-        const dateReplacements = [
-            { re: /\byesterday\b/gi, fn: () => { const d = new Date(today); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }},
-            { re: /\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*/gi, fn: (m,day,mon) => { const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12}; return today.getFullYear()+'-'+String(months[mon.toLowerCase().slice(0,3)]).padStart(2,'0')+'-'+String(day).padStart(2,'0'); }},
-            { re: /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g, fn: (m,mo,da,yr) => { const y = yr ? (yr.length === 2 ? '20'+yr : yr) : today.getFullYear(); return y+'-'+String(mo).padStart(2,'0')+'-'+String(da).padStart(2,'0'); }},
-            { re: /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, fn: m => m }
-        ];
-        
-        for (const p of dateReplacements) {
-            cleaned = cleaned.replace(p.re, (...args) => {
-                const dateVal = p.fn(...args);
-                const ph = `__DATE${placeholderIdx++}__`;
-                dateMap.set(ph, dateVal);
-                return ph;
-            });
-        }
-        
-        // Now split on commas or newlines
-        const segments = cleaned.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
-        
+        // Strict format: one transaction per line
+        // Format: description $amount [date]
+        const lines = input.split('\n').map(s => s.trim()).filter(Boolean);
         const transactions = [];
-        for (const seg of segments) {
-            const amountMatch = seg.match(/\$\s*(\d+(?:\.\d{1,2})?)\b|\b(\d+(?:\.\d{1,2})?)\b/);
+        
+        for (const line of lines) {
+            // Must contain a $ amount
+            const amountMatch = line.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
             if (!amountMatch) continue;
             
-            const amount = parseFloat(amountMatch[1] || amountMatch[2]);
-            if (amount <= 0) continue;
+            const amount = parseFloat(amountMatch[1]);
+            if (!amount || amount <= 0) continue;
             
-            // Find date placeholder in this segment
+            // Everything before $ is description
+            const dollarIdx = line.indexOf('$');
+            let desc = line.substring(0, dollarIdx).trim();
+            
+            // Everything after the amount is the date
+            let afterAmount = line.substring(dollarIdx + amountMatch[0].length - (line.length - dollarIdx - amountMatch[0].length >= 0 ? 0 : 0));
+            afterAmount = line.substring(amountMatch.index + amountMatch[0].length).trim();
+            
+            // Parse date from remainder
             let date = todayStr;
-            for (const [ph, d] of dateMap) {
-                if (seg.includes(ph)) { date = d; break; }
+            if (/yesterday/i.test(afterAmount)) {
+                const d = new Date(today); d.setDate(d.getDate()-1);
+                date = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            } else {
+                const mdMatch = afterAmount.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+                if (mdMatch) {
+                    const y = mdMatch[3] ? (mdMatch[3].length === 2 ? '20'+mdMatch[3] : mdMatch[3]) : today.getFullYear();
+                    date = y+'-'+String(mdMatch[1]).padStart(2,'0')+'-'+String(mdMatch[2]).padStart(2,'0');
+                }
             }
             
-            // Remove amount and date placeholders to get description
-            let desc = seg.replace(amountMatch[0], '').replace(/__DATE\d+__/g, '').trim();
-            desc = desc.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '');
-            desc = desc.replace(/^(at|on|for|spent|paid|to)\s+/i, '').trim();
-            desc = desc.replace(/\s+(at|on|for|spent|paid|to)$/i, '').trim();
             if (!desc) desc = 'Expense';
             
             transactions.push({
