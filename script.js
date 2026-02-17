@@ -454,8 +454,8 @@ class ExpenseTracker {
                 return `
                 <div class="flex items-center justify-between px-4 py-3.5">
                     <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}18">
-                            <span style="color:${c}" class="font-medium text-xs">${expense.category.charAt(0)}</span>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}30">
+                            <span style="color:${c};font-weight:600" class="text-xs">${expense.category.charAt(0)}</span>
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
