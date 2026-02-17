@@ -6,6 +6,9 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <text x="256" y="300" text-anchor="middle" font-family="Roboto,sans-serif" font-weight="300" font-size="180" letter-spacing="12" fill="rgba(255,255,255,0.95)">LR</text>
-  <circle cx="390" cy="175" r="8" fill="rgba(255,255,255,0.6)"/>
+  <!-- Wallet icon -->
+  <rect x="126" y="186" width="260" height="180" rx="24" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="20"/>
+  <path d="M126 230 h260" stroke="rgba(255,255,255,0.92)" stroke-width="20"/>
+  <circle cx="330" cy="300" r="16" fill="rgba(255,255,255,0.92)"/>
+  <path d="M186 186 v-30 a24 24 0 0 1 24-24 h100" stroke="rgba(255,255,255,0.92)" stroke-width="20" fill="none" stroke-linecap="round"/>
 </svg>
