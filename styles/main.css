@@ -56,19 +56,18 @@ nav.fixed {
 .nav-btn {
   transition: all 0.2s ease;
   position: relative;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.nav-btn.active-nav::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56px;
-  height: 28px;
-  border-radius: 14px;
+.nav-btn .material-symbols-rounded {
+  position: relative;
+  z-index: 1;
+}
+.nav-btn.active-nav .material-symbols-rounded {
   background: var(--md-sys-color-secondary-container);
-  z-index: -1;
+  border-radius: 16px;
+  padding: 4px 16px;
 }
 .nav-btn.active-nav::after { display: none; }
 
