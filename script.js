@@ -83,15 +83,15 @@ class ExpenseTracker {
         
         // Update navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('text-primary-600', 'border-b-2', 'border-primary-600');
-            btn.classList.add('text-gray-500', 'hover:text-gray-700');
+            btn.classList.remove('text-primary-600', 'active-nav');
+            btn.classList.add('text-gray-400');
         });
         
         // Highlight active nav button
         const activeBtn = document.querySelector(`[onclick="showPage('${pageId}')"]`);
         if (activeBtn) {
-            activeBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
-            activeBtn.classList.add('text-primary-600', 'border-b-2', 'border-primary-600');
+            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add('text-primary-600', 'active-nav');
         }
         
         this.currentPage = pageId;
@@ -1646,7 +1646,9 @@ ExpenseTracker.prototype.renderStreaks = function() {
     const top = activeStreaks[0];
     summary.innerHTML = `
         <div class="flex items-center space-x-3">
-            <span class="text-2xl">🔥</span>
+            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                <span class="text-xs font-bold text-green-600">${top.days}d</span>
+            </div>
             <div>
                 <p class="text-sm font-semibold text-gray-900">${top.days} day streak</p>
                 <p class="text-xs text-gray-500">No spending on ${top.category}</p>
@@ -1659,7 +1661,9 @@ ExpenseTracker.prototype.renderStreaks = function() {
         details.innerHTML = activeStreaks.map(s => `
             <div class="flex items-center justify-between py-2">
                 <div class="flex items-center space-x-2">
-                    <span class="text-lg">${s.days >= 7 ? '🔥' : '✨'}</span>
+                    <div class="w-6 h-6 rounded-full ${s.days >= 7 ? 'bg-green-100' : 'bg-gray-100'} flex items-center justify-center">
+                        <span class="text-xs font-bold ${s.days >= 7 ? 'text-green-600' : 'text-gray-500'}">${s.days}</span>
+                    </div>
                     <span class="text-sm text-gray-700">${s.category}</span>
                 </div>
                 <span class="text-sm font-medium text-gray-900">${s.days} days</span>

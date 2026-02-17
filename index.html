@@ -51,7 +51,7 @@
     <!-- Bottom Navigation - 4 tabs -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-area-inset-bottom">
         <div class="flex">
-            <button onclick="showPage('dashboard')" class="nav-btn flex-1 flex flex-col items-center py-2 px-1 text-primary-600">
+            <button onclick="showPage('dashboard')" class="nav-btn active-nav flex-1 flex flex-col items-center py-2 px-1 text-primary-600">
                 <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 <span class="text-xs font-medium">Home</span>
             </button>
@@ -75,7 +75,7 @@
         <div class="max-w-lg mx-auto px-4 py-6 space-y-6">
 
             <!-- Big Monthly Spending Number with Ring -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-6 text-center">
+            <div class="card p-6 text-center">
                 <p class="text-sm text-gray-500 mb-4" id="month-label">February 2026</p>
                 <div class="relative inline-flex items-center justify-center">
                     <svg id="budget-ring" viewBox="0 0 200 200" style="width:260px;height:260px;transform:rotate(-90deg)">
@@ -90,7 +90,7 @@
             </div>
 
             <!-- Spending Trends (Daily/Weekly toggle) -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-base font-semibold text-gray-900">Spending Trends</h3>
                     <div class="flex bg-gray-100 rounded-lg p-0.5">
@@ -106,7 +106,7 @@
             </div>
 
             <!-- Streak Badge -->
-            <div id="streak-section" class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div id="streak-section" class="card p-5">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base font-semibold text-gray-900">Streaks</h3>
                     <button onclick="toggleStreakDetails()" id="streak-toggle" class="text-xs text-gray-400">Show all</button>
@@ -117,7 +117,7 @@
 
 
             <!-- Spending Distribution -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-base font-semibold text-gray-900">Spending Distribution</h3>
                     <p class="text-xs text-gray-400" id="budget-ring-label"></p>
@@ -142,7 +142,7 @@
             </div>
 
             <!-- Fixed Expenses (collapsed) -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <button onclick="toggleFixedExpenses()" class="w-full flex justify-between items-center">
                     <span class="text-base font-semibold text-gray-900">Fixed Costs</span>
                     <div class="flex items-center space-x-2">
@@ -167,7 +167,7 @@
                 <p class="text-gray-500 text-sm mt-1">Add single or multiple transactions</p>
             </div>
             <div class="mb-6">
-                <div class="bg-white rounded-2xl border border-gray-100 p-5">
+                <div class="card p-5">
                     <div class="flex items-center justify-between mb-3">
                         <label class="block text-sm font-medium text-gray-900">Add Expenses</label>
                         <span class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">AI Powered</span>
@@ -196,7 +196,7 @@
                 <div id="recent-added-list" class="space-y-2"></div>
             </div>
             <div id="manual-form-container" class="hidden">
-                <div class="bg-white rounded-2xl border border-gray-100 p-5">
+                <div class="card p-5">
                     <div class="flex items-center justify-between mb-5">
                         <h3 class="text-base font-semibold text-gray-900">Manual Entry</h3>
                         <button type="button" id="close-manual-form" class="text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
@@ -223,7 +223,7 @@
                 <h2 class="text-xl font-bold text-gray-900">Transactions</h2>
                 <button onclick="exportCSV()" class="text-primary-600 text-sm font-medium">Export CSV</button>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100">
+            <div class="card">
                 <div id="all-transactions" class="divide-y divide-gray-50">
                     <div class="p-8 text-center text-gray-400 text-sm">No transactions yet.</div>
                 </div>
@@ -238,27 +238,27 @@
                 <h2 class="text-xl font-bold text-gray-900">Monthly History</h2>
                 <p class="text-gray-500 text-sm">Compare your monthly expenses</p>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+            <div class="card p-5 mb-6">
                 <div class="flex gap-3 items-end">
                     <div class="flex-1"><label class="block text-xs font-medium text-gray-500 mb-1">Month</label><select id="history-month" onchange="updateHistoryView()" class="block w-full rounded-xl border-gray-200 text-sm"><option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option></select></div>
                     <div class="flex-1"><label class="block text-xs font-medium text-gray-500 mb-1">Year</label><select id="history-year" onchange="updateHistoryView()" class="block w-full rounded-xl border-gray-200 text-sm"></select></div>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500">Total Expenses</p><p class="text-lg font-bold text-gray-900" id="history-total-expenses">$0</p></div>
-                <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500">Variable Only</p><p class="text-lg font-bold text-gray-900" id="history-variable-only">$0</p></div>
-                <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500">Income</p><p class="text-lg font-bold text-gray-900" id="history-income">$0</p></div>
-                <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500">Savings</p><p class="text-lg font-bold text-gray-900" id="history-savings">$0</p></div>
+                <div class="card p-4 text-center"><p class="text-xs text-gray-500">Total Expenses</p><p class="text-lg font-bold text-gray-900" id="history-total-expenses">$0</p></div>
+                <div class="card p-4 text-center"><p class="text-xs text-gray-500">Variable Only</p><p class="text-lg font-bold text-gray-900" id="history-variable-only">$0</p></div>
+                <div class="card p-4 text-center"><p class="text-xs text-gray-500">Income</p><p class="text-lg font-bold text-gray-900" id="history-income">$0</p></div>
+                <div class="card p-4 text-center"><p class="text-xs text-gray-500">Savings</p><p class="text-lg font-bold text-gray-900" id="history-savings">$0</p></div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+            <div class="card p-5 mb-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-3">Category Breakdown</h3>
                 <div id="history-category-breakdown" class="space-y-2"><div class="text-gray-400 text-center py-6 text-sm">Select a month</div></div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+            <div class="card p-5 mb-6">
                 <h3 class="text-base font-semibold text-gray-900 mb-3">vs Current Month</h3>
                 <div id="history-comparison" class="space-y-3"><div class="text-gray-400 text-center py-6 text-sm">Comparison data</div></div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100">
+            <div class="card">
                 <h3 class="text-base font-semibold text-gray-900 p-5 pb-3">Transactions</h3>
                 <div id="history-transactions" class="divide-y divide-gray-50"><div class="p-6 text-center text-gray-400 text-sm">Select a month</div></div>
             </div>
@@ -269,14 +269,14 @@
     <div id="settings-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6 space-y-5">
             <h2 class="text-xl font-bold text-gray-900">Settings</h2>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Privacy</h3>
                 <div class="flex items-center justify-between">
                     <div><label class="text-sm font-medium text-gray-700">Hide Sensitive Info</label><p class="text-xs text-gray-400">Hide income, savings amounts</p></div>
                     <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="privacy-toggle" class="sr-only peer" onchange="togglePrivacyMode()"><div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div></label>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Fixed Expenses</h3>
                 <div class="space-y-3">
                     <div><label class="block text-xs text-gray-500 mb-1">Rent</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-rent" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div></div>
@@ -284,16 +284,16 @@
                     <div><label class="block text-xs text-gray-500 mb-1">Car/Insurance</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-insurance" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div></div>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Monthly Income</h3>
                 <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="setting-income" step="0.01" placeholder="0" class="pl-8 block w-full rounded-xl border-gray-200 text-sm"></div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Categories</h3>
                 <div class="flex space-x-2 mb-4"><input type="text" id="new-category-name" placeholder="New category" class="flex-1 rounded-xl border-gray-200 text-sm"><button onclick="addCategory()" class="bg-green-600 text-white px-3 py-2 rounded-xl text-sm font-medium">Add</button></div>
                 <div id="existing-categories" class="space-y-2"></div>
             </div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="card p-5">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">Category Goals</h3>
                 <div class="space-y-3" id="category-goals-settings"></div>
             </div>
