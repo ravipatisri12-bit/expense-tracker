@@ -263,3 +263,41 @@ body.privacy-mode #monthly-budget-display {
     min-height: calc(100vh - 140px);
 }
 #add-expense-page > div { width: 100%; }
+
+/* 1. Card press feedback */
+.card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.card:active { transform: scale(0.97); }
+
+/* 2. Card entrance animations */
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.page-content:not(.hidden) .card {
+    animation: cardIn 0.35s ease both;
+}
+.page-content:not(.hidden) .card:nth-child(2) { animation-delay: 0.05s; }
+.page-content:not(.hidden) .card:nth-child(3) { animation-delay: 0.1s; }
+.page-content:not(.hidden) .card:nth-child(4) { animation-delay: 0.15s; }
+.page-content:not(.hidden) .card:nth-child(5) { animation-delay: 0.2s; }
+.page-content:not(.hidden) .card:nth-child(6) { animation-delay: 0.25s; }
+
+/* 3. Gradient border on hero card */
+.hero-card {
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+.hero-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--accent-gradient);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.5;
+}

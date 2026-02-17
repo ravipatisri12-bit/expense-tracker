@@ -297,7 +297,7 @@ class ExpenseTracker {
         const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const el = (id) => document.getElementById(id);
         if (el('month-label')) el('month-label').textContent = monthLabel;
-        if (el('big-spending-number')) el('big-spending-number').textContent = '$' + Math.round(totalVariableExpenses);
+        if (el('big-spending-number')) this.animateCount(el('big-spending-number'), Math.round(totalVariableExpenses));
 
         // Budget ring
         const totalBudget = Object.values(this.settings.goals).reduce((s, v) => s + v, 0);
@@ -1195,13 +1195,25 @@ class ExpenseTracker {
     parseLocalDate(dateStr) {
         if (dateStr instanceof Date) return dateStr;
         const s = String(dateStr);
-        // YYYY-MM-DD (no time) — parse as local
         const parts = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (parts) return new Date(parseInt(parts[1]), parseInt(parts[2])-1, parseInt(parts[3]));
-        // ISO string with T — also parse as local to avoid shift
         const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})T/);
         if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]));
         return new Date(s);
+    }
+
+    animateCount(el, target) {
+        const duration = 600;
+        const start = parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+        if (start === target) { el.textContent = '$' + target; return; }
+        const t0 = performance.now();
+        const step = (now) => {
+            const p = Math.min((now - t0) / duration, 1);
+            const ease = 1 - Math.pow(1 - p, 3);
+            el.textContent = '$' + Math.round(start + (target - start) * ease);
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
     }
 
     formatDayName(date) {
