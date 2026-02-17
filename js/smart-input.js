@@ -135,12 +135,14 @@ class SmartTransactionInput {
                     }
 
                     // Create expense object
+                    const today = new Date();
+                    const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
                     const expense = {
-                        id: Date.now() + i, // Ensure unique IDs
+                        id: Date.now() + i,
                         amount: parsed.amount,
                         description: parsed.description || 'Expense',
                         category: parsed.category || 'Other',
-                        date: new Date().toISOString(),
+                        date: dateStr,
                         timestamp: Date.now() + i
                     };
 

@@ -105,6 +105,10 @@ Return ONLY the JSON array, nothing else.`;
 
             if (!response.ok) {
                 const errorData = await response.json();
+                if (response.status === 429) {
+                    console.warn('Gemini rate limited, using fallback parser');
+                    return this.fallbackParseMultiple(input);
+                }
                 throw new Error(`API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
             }
 
@@ -143,63 +147,44 @@ Return ONLY the JSON array, nothing else.`;
      * @returns {Array} Array of parsed transaction data
      */
     fallbackParseMultiple(input) {
-        // Find all amounts in the input
-        const amountPattern = /\$?(\d+(?:\.\d{1,2})?)/g;
-        const amounts = [];
-        let match;
+        // Split on commas, newlines, "and", or multiple spaces between entries
+        const segments = input.split(/[,\n]+|(?:\s+and\s+)/i).map(s => s.trim()).filter(Boolean);
         
-        while ((match = amountPattern.exec(input)) !== null) {
-            amounts.push({
-                amount: parseFloat(match[1]),
-                index: match.index,
-                fullMatch: match[0]
+        const transactions = [];
+        for (const seg of segments) {
+            const amountMatch = seg.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
+            if (!amountMatch) continue;
+            
+            const amount = parseFloat(amountMatch[1]);
+            // Remove the amount and clean up description
+            let desc = seg.replace(amountMatch[0], '').trim();
+            desc = desc.replace(/^(at|on|for|spent|paid|to|-|–)\s*/i, '').trim();
+            desc = desc.replace(/\s*(at|on|for|spent|paid|to|-|–)\s*$/i, '').trim();
+            if (!desc) desc = 'Expense';
+            
+            transactions.push({
+                amount,
+                description: desc.charAt(0).toUpperCase() + desc.slice(1),
+                category: this.guessCategory(desc.toLowerCase()),
+                confidence: 'low'
             });
         }
         
-        // If we found multiple amounts, try to extract context for each
-        if (amounts.length > 1) {
-            const transactions = [];
-            
-            for (let i = 0; i < amounts.length; i++) {
-                const current = amounts[i];
-                const next = amounts[i + 1];
-                
-                // Extract text between this amount and the next (or end of string)
-                const startIdx = current.index + current.fullMatch.length;
-                const endIdx = next ? next.index : input.length;
-                let context = input.substring(startIdx, endIdx).trim();
-                
-                // Clean up common words
-                context = context.replace(/^(at|on|for|spent|paid|to)\s+/i, '').trim();
-                context = context.replace(/\s+(and|also|then)$/i, '').trim();
-                
-                if (!context) {
-                    context = 'Expense';
-                }
-                
+        // If splitting didn't work, try finding all amounts in raw input
+        if (transactions.length === 0) {
+            const amountPattern = /\$?\s*(\d+(?:\.\d{1,2})?)/g;
+            let match;
+            while ((match = amountPattern.exec(input)) !== null) {
                 transactions.push({
-                    amount: current.amount,
-                    description: context,
-                    category: this.guessCategory(context.toLowerCase()),
+                    amount: parseFloat(match[1]),
+                    description: 'Expense',
+                    category: 'Other',
                     confidence: 'low'
                 });
             }
-            
-            return transactions;
         }
         
-        // Single transaction or no amounts found
-        if (amounts.length === 1) {
-            return [this.fallbackParseSingle(input)];
-        }
-        
-        // No amounts found
-        return [{
-            amount: null,
-            description: input,
-            category: 'Other',
-            confidence: 'low'
-        }];
+        return transactions.length > 0 ? transactions : [{ amount: null, description: input, category: 'Other', confidence: 'low' }];
     }
 
     /**
