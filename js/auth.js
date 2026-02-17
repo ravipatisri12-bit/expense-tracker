@@ -141,6 +141,7 @@ function updateAuthUI(user) {
         if (signInBtn) signInBtn.style.display = 'none';
         if (userInfo) {
             userInfo.classList.remove('hidden');
+            userInfo.style.display = 'flex';
             // Update user avatar
             if (userAvatar) {
                 userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';

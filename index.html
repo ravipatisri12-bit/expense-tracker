@@ -37,8 +37,11 @@
             <h1 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Expense Tracker</h1>
             <div class="flex items-center gap-2">
                 <div id="auth-status" class="text-xs">
-                    <button id="sign-in-btn" onclick="signInWithGoogle()" class="bg-primary-600 text-white px-3 py-1.5 rounded-full text-xs font-medium">Sign In</button>
-                    <div id="user-info" class="hidden flex items-center gap-2">
+                    <button id="sign-in-btn" onclick="signInWithGoogle()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface)">
+                        <span class="material-symbols-rounded text-base">person</span>
+                        Sign In
+                    </button>
+                    <div id="user-info" class="hidden items-center gap-2">
                         <img id="user-avatar" class="w-7 h-7 rounded-full" src="" alt="">
                         <button onclick="signOut()" class="text-xs" style="color:var(--md-sys-color-error)">Sign Out</button>
                     </div>
@@ -222,12 +225,12 @@
     <div id="transactions-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-gray-900">Transactions</h2>
-                <button onclick="exportCSV()" class="text-primary-600 text-sm font-medium">Export CSV</button>
+                <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">Transactions</h2>
+                <button onclick="exportCSV()" class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Export CSV</button>
             </div>
             <div class="card">
                 <div id="all-transactions" class="">
-                    <div class="p-8 text-center text-gray-400 text-sm">No transactions yet.</div>
+                    <div class="p-8 text-center text-sm" style="color:var(--md-sys-color-outline)">No transactions yet.</div>
                 </div>
             </div>
         </div>

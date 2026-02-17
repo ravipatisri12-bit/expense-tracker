@@ -447,44 +447,40 @@ class ExpenseTracker {
         // Render grouped transactions
         container.innerHTML = groupedByDate.map(dateGroup => {
             const transactionsHtml = dateGroup.transactions.map(expense => `
-                <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center justify-between px-4 py-3.5">
                     <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.06)">
-                            <span class="text-gray-500 font-medium text-xs">${expense.category.charAt(0)}</span>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15))">
+                            <span style="color:var(--md-sys-color-primary)" class="font-medium text-xs">${expense.category.charAt(0)}</span>
                         </div>
                         <div>
-                            <p class="font-medium text-sm text-gray-900">${expense.description}</p>
-                            <p class="text-xs text-gray-500">${expense.category}</p>
+                            <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">${expense.category}</p>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="font-semibold text-sm text-gray-900">${formatCurrency(expense.amount)}</span>
-                        <button onclick="expenseTracker.editExpense(${expense.id})" class="text-gray-500 p-1 rounded">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    <div class="flex items-center gap-2">
+                        <span class="font-semibold text-sm" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
+                        <button onclick="expenseTracker.editExpense(${expense.id})" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                            <span class="material-symbols-rounded text-base">edit</span>
                         </button>
-                        <button onclick="expenseTracker.deleteExpense(${expense.id})" class="text-gray-500 p-1 rounded">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <button onclick="expenseTracker.deleteExpense(${expense.id})" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                            <span class="material-symbols-rounded text-base">delete</span>
                         </button>
                     </div>
                 </div>
             `).join('');
 
             return `
-                <div class="mb-4">
-                    <!-- Date Header -->
+                <div class="mb-2">
                     <div class="px-4 py-2.5">
                         <div class="flex justify-between items-center">
                             <div>
-                                <h3 class="font-semibold text-gray-900 text-sm">${dateGroup.dateLabel}</h3>
-                                <p class="text-xs text-gray-500">${dateGroup.transactions.length} transaction${dateGroup.transactions.length !== 1 ? 's' : ''}</p>
+                                <h3 class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${dateGroup.dateLabel}</h3>
+                                <p class="text-xs" style="color:var(--md-sys-color-outline)">${dateGroup.transactions.length} transaction${dateGroup.transactions.length !== 1 ? 's' : ''}</p>
                             </div>
-                            <p class="font-semibold text-sm text-gray-900">-${formatCurrency(dateGroup.totalAmount)}</p>
+                            <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(dateGroup.totalAmount)}</p>
                         </div>
                     </div>
-                    <!-- Transactions for this date -->
-                    <div>
-                        ${transactionsHtml}
-                    </div>
+                    <div>${transactionsHtml}</div>
                 </div>
             `;
         }).join('');
