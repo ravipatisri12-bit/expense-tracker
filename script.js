@@ -572,17 +572,24 @@ class ExpenseTracker {
 
     renderCategoryGoalsSettings() {
         const container = document.getElementById('category-goals-settings');
-        container.innerHTML = Object.keys(this.settings.goals).map(category => `
+        const catColors = {Food:'#f5576c',Coffee:'#f093fb',Transportation:'#4facfe',Entertainment:'#667eea',Shopping:'#43e97b',Bills:'#fccb90',Other:'#a18cd1'};
+        container.innerHTML = Object.keys(this.settings.goals).map(category => {
+            const val = this.settings.goals[category] || 0;
+            const c = catColors[category] || '#a18cd1';
+            return `
             <div>
-                <label class="block text-sm font-medium mb-2" style="color:var(--md-sys-color-on-surface-variant)">${category} Goal</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 " style="color:var(--md-sys-color-outline)">$</span>
-                    <input type="number" id="goal-${category.toLowerCase()}" step="0.01" placeholder="0.00" 
-                           value="${this.settings.goals[category]}"
-                           class="pl-8 block w-full rounded-lg border-0 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background:${c}"></div>
+                        <span class="text-sm" style="color:var(--md-sys-color-on-surface)">${category}</span>
+                    </div>
+                    <span class="text-sm font-semibold" style="color:${c}" id="goal-display-${category.toLowerCase()}">$${val}</span>
                 </div>
-            </div>
-        `).join('');
+                <input type="range" min="0" max="1000" step="25" value="${val}" id="goal-${category.toLowerCase()}"
+                    oninput="document.getElementById('goal-display-${category.toLowerCase()}').textContent='$'+this.value"
+                    style="width:100%;accent-color:${c};height:4px">
+            </div>`;
+        }).join('');
     }
 
     loadSettings() {
@@ -590,6 +597,10 @@ class ExpenseTracker {
         document.getElementById('setting-utilities').value = this.settings.utilities;
         document.getElementById('setting-insurance').value = this.settings.insurance;
         document.getElementById('setting-income').value = this.settings.income;
+        
+        // Month label
+        const ml = document.getElementById('income-month-label');
+        if (ml) { const d = new Date(); ml.textContent = `Setting for ${d.toLocaleString('default',{month:'long'})} ${d.getFullYear()}`; }
         
         // Load privacy toggle
         document.getElementById('privacy-toggle').checked = this.settings.privacyMode;
