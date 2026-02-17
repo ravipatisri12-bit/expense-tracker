@@ -1,6 +1,6 @@
-/* Modern Expense Tracker - Simplified Styles */
+/* Modern Expense Tracker - Styles */
 
-/* Page visibility - must override Tailwind's hidden */
+/* Page visibility */
 .page-content.hidden { display: none !important; }
 .page-content { display: block !important; }
 
@@ -18,41 +18,67 @@
   background: #2563eb;
 }
 
-/* Cards */
+/* Cards - elevated with depth */
 .card {
   background: white;
   border-radius: 1rem;
-  border: 1px solid #f3f4f6;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 
+    0 0 0 1px rgba(0,0,0,0.03),
+    0 2px 4px rgba(0,0,0,0.04),
+    0 8px 16px rgba(0,0,0,0.06);
 }
 
-/* Safe area for mobile */
-.safe-area-inset-bottom { padding-bottom: env(safe-area-inset-bottom); }
+/* Header with subtle depth */
+header {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
 
-/* Prevent horizontal scroll */
-body { overflow-x: hidden; }
-.page-content { max-width: 100%; overflow-x: hidden; }
+/* Bottom nav with depth */
+nav.fixed {
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.06);
+}
+
+/* Budget ring */
+#budget-ring-progress {
+  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
+}
+
+/* Spending trend bars */
+.trend-bar {
+  border-radius: 6px;
+  min-height: 6px;
+  transition: width 0.4s ease;
+}
+
+/* Pie chart */
+.pie-segment {
+  transition: opacity 0.15s ease;
+  transform-origin: center;
+}
+.pie-segment:hover { opacity: 0.75; }
 
 /* Trends toggle */
 .trends-toggle-btn.active {
   background: white;
   color: #111827;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-/* Pie chart */
-.pie-segment {
-  transition: opacity 0.2s ease;
-  transform-origin: center;
+/* Category breakdown rows */
+.category-row {
+  transition: background 0.15s ease;
+  border-radius: 0.5rem;
 }
-.pie-segment:hover { opacity: 0.8; }
+.category-row:active { background: #f9fafb; }
 
-/* Budget ring gradient */
-#budget-ring-progress {
-  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
-}
+/* Safe area */
+.safe-area-inset-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-/* Smooth interactions */
+/* Layout */
+body { overflow-x: hidden; }
+.page-content { max-width: 100%; overflow-x: hidden; }
+
+/* Interactions */
 * { -webkit-tap-highlight-color: transparent; }
 button { -webkit-user-select: none; user-select: none; }
 
