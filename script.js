@@ -1908,26 +1908,33 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
 function openCategoryFilter(category) {
     const modal = document.getElementById('category-filter-modal');
     const title = document.getElementById('filter-modal-title');
+    const summary = document.getElementById('filter-modal-summary');
     const container = document.getElementById('filter-modal-transactions');
     if (!modal || !container) return;
 
     title.textContent = category;
-    
+
     const filtered = expenseTracker.expenses
         .filter(e => e.category === category)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+        .sort((a, b) => expenseTracker.parseLocalDate(b.date) - expenseTracker.parseLocalDate(a.date));
+
+    const total = filtered.reduce((s, e) => s + e.amount, 0);
+    summary.textContent = `${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} · ${formatCurrency(total)} total`;
 
     if (filtered.length === 0) {
-        container.innerHTML = '<div class="p-6 text-center text-sm" style="color:var(--md-sys-color-outline)">No transactions</div>';
+        container.innerHTML = '<div class="py-8 text-center text-sm" style="color:var(--md-sys-color-outline)">No transactions</div>';
     } else {
         const grouped = expenseTracker.groupTransactionsByDate(filtered);
         container.innerHTML = grouped.map(g => `
-            <div>
-                <div class="px-4 py-2 text-xs font-medium " style="color:var(--md-sys-color-outline)">${g.dateLabel} · ${formatCurrency(g.totalAmount)}</div>
+            <div class="mb-3">
+                <div class="flex justify-between items-center py-2 px-1">
+                    <span class="text-xs font-medium" style="color:var(--md-sys-color-outline)">${g.dateLabel}</span>
+                    <span class="text-xs font-medium" style="color:var(--md-sys-color-outline)">${formatCurrency(g.totalAmount)}</span>
+                </div>
                 ${g.transactions.map(e => `
-                    <div class="flex justify-between items-center px-4 py-3">
-                        <span class="text-sm " style="color:var(--md-sys-color-on-surface)">${e.description}</span>
-                        <span class="text-sm font-medium " style="color:var(--md-sys-color-on-surface)">${formatCurrency(e.amount)}</span>
+                    <div class="flex justify-between items-center px-3 py-3 mb-1 rounded-xl" style="background:var(--md-sys-color-surface-container)">
+                        <span class="text-sm" style="color:var(--md-sys-color-on-surface)">${e.description}</span>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(e.amount)}</span>
                     </div>
                 `).join('')}
             </div>

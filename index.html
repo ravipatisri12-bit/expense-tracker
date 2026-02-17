@@ -156,15 +156,18 @@
             </div>
 
             <!-- Category Filter Modal (slide-up) -->
-            <div id="category-filter-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-                <div class="bg-white rounded-t-2xl w-full max-h-[70vh] overflow-y-auto">
-                    <div class="sticky top-0 bg-white p-4 border-b border-gray-100 flex justify-between items-center">
-                        <h3 id="filter-modal-title" class="text-lg font-semibold " style="color:var(--md-sys-color-on-surface)">Category</h3>
-                        <button onclick="closeCategoryFilter()" class="p-1" style="color:var(--md-sys-color-outline)">
-                            <span class="material-symbols-rounded">close</span>
+            <div id="category-filter-modal" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this)closeCategoryFilter()">
+                <div class="w-full max-h-[75vh] overflow-y-auto" style="background:var(--md-sys-color-surface-container-high);border-radius:28px 28px 0 0">
+                    <div class="sticky top-0 p-5 pb-3 flex justify-between items-center" style="background:var(--md-sys-color-surface-container-high);border-radius:28px 28px 0 0">
+                        <div>
+                            <h3 id="filter-modal-title" class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">Category</h3>
+                            <p id="filter-modal-summary" class="text-xs mt-0.5" style="color:var(--md-sys-color-outline)"></p>
+                        </div>
+                        <button onclick="closeCategoryFilter()" class="p-1.5 rounded-full" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">
+                            <span class="material-symbols-rounded" style="font-size:20px">close</span>
                         </button>
                     </div>
-                    <div id="filter-modal-transactions" class=""></div>
+                    <div id="filter-modal-transactions" class="px-4 pb-6"></div>
                 </div>
             </div>
 
