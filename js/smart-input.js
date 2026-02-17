@@ -254,19 +254,17 @@ class SmartTransactionInput {
         if (!container || !listContainer || this.recentlyAdded.length === 0) return;
 
         listContainer.innerHTML = this.recentlyAdded.map(expense => `
-            <div class="bg-green-50 rounded-lg p-4 border border-green-200 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
+            <div class="card flex items-center justify-between p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(168,199,250,0.12)">
+                        <span class="material-symbols-rounded" style="font-size:16px;color:var(--md-sys-color-primary)">check</span>
                     </div>
                     <div>
-                        <p class="text-gray-900 text-sm font-medium">${expense.description}</p>
-                        <p class="text-gray-600 text-xs">${expense.category}</p>
+                        <p class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">${expense.category}</p>
                     </div>
                 </div>
-                <span class="text-green-600 font-semibold">$${expense.amount.toFixed(2)}</span>
+                <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">$${expense.amount.toFixed(2)}</span>
             </div>
         `).join('');
 
