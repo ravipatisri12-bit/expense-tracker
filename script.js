@@ -85,6 +85,8 @@ class ExpenseTracker {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('text-primary-600', 'active-nav');
             btn.classList.add('text-gray-400');
+            const icon = btn.querySelector('.material-symbols-rounded');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
         });
         
         // Highlight active nav button
@@ -92,6 +94,8 @@ class ExpenseTracker {
         if (activeBtn) {
             activeBtn.classList.remove('text-gray-400');
             activeBtn.classList.add('text-primary-600', 'active-nav');
+            const icon = activeBtn.querySelector('.material-symbols-rounded');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
         }
         
         this.currentPage = pageId;
