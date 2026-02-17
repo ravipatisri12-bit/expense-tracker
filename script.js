@@ -351,6 +351,17 @@ class ExpenseTracker {
 
         // Pie chart
         this.renderPieChart(monthlyExpenses);
+
+        // Monthly report
+        const spent = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
+        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
+        const income = this.settings.monthlyIncome || 0;
+        const overall = spent + fixed;
+        const saved = income - overall;
+        const _el = id => document.getElementById(id);
+        if (_el('report-spent')) _el('report-spent').textContent = formatCurrency(spent);
+        if (_el('report-saved')) { _el('report-saved').textContent = formatCurrency(Math.abs(saved)); _el('report-saved').style.color = saved >= 0 ? 'var(--md-sys-color-primary)' : '#cf6679'; }
+        if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
     }
 
     updateVariableExpenses(monthlyExpenses) {
@@ -1960,6 +1971,14 @@ function closeCategoryFilter() {
 function toggleFixedExpenses() {
     const details = document.getElementById('fixed-expenses-details');
     const chevron = document.getElementById('fixed-chevron');
+    if (!details) return;
+    details.classList.toggle('hidden');
+    if (chevron) chevron.style.transform = details.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+function toggleMonthlyReport() {
+    const details = document.getElementById('monthly-report-details');
+    const chevron = document.getElementById('report-chevron');
     if (!details) return;
     details.classList.toggle('hidden');
     if (chevron) chevron.style.transform = details.classList.contains('hidden') ? '' : 'rotate(180deg)';

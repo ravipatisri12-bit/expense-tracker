@@ -172,6 +172,31 @@
                 </div>
             </div>
 
+            <!-- Monthly Report -->
+            <div class="card p-4">
+                <button onclick="toggleMonthlyReport()" class="w-full flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">summarize</span>
+                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Monthly Report</span>
+                    </div>
+                    <span id="report-chevron" class="material-symbols-rounded transition-transform" style="color:var(--md-sys-color-outline);font-size:20px">expand_more</span>
+                </button>
+                <div id="monthly-report-details" class="hidden mt-4 flex gap-2">
+                    <div class="flex-1 py-3 px-3 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Spent</p>
+                        <p class="text-sm font-bold" id="report-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
+                    </div>
+                    <div class="flex-1 py-3 px-3 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Saved</p>
+                        <p class="text-sm font-bold" id="report-saved" style="color:var(--md-sys-color-primary)">$0</p>
+                    </div>
+                    <div class="flex-1 py-3 px-3 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Overall</p>
+                        <p class="text-sm font-bold" id="report-overall" style="color:var(--md-sys-color-on-surface)">$0</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
