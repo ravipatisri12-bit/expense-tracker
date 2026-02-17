@@ -447,12 +447,15 @@ class ExpenseTracker {
         const groupedByDate = this.groupTransactionsByDate(sortedExpenses);
         
         // Render grouped transactions
+        const catColors = {Food:'#f5576c',Coffee:'#f093fb',Transportation:'#4facfe',Entertainment:'#667eea',Shopping:'#43e97b',Bills:'#fccb90',Other:'#a18cd1'};
         container.innerHTML = groupedByDate.map(dateGroup => {
-            const transactionsHtml = dateGroup.transactions.map(expense => `
+            const transactionsHtml = dateGroup.transactions.map(expense => {
+                const c = catColors[expense.category] || '#a18cd1';
+                return `
                 <div class="flex items-center justify-between px-4 py-3.5">
                     <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15))">
-                            <span style="color:var(--md-sys-color-primary)" class="font-medium text-xs">${expense.category.charAt(0)}</span>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}18">
+                            <span style="color:${c}" class="font-medium text-xs">${expense.category.charAt(0)}</span>
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
@@ -469,7 +472,7 @@ class ExpenseTracker {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             return `
                 <div class="mb-2">
