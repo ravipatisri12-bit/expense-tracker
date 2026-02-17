@@ -290,11 +290,25 @@ class ExpenseTracker {
         const totalVariableExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
         const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
 
-        // Big spending number
+        // Big spending number + budget ring
         const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const el = (id) => document.getElementById(id);
         if (el('month-label')) el('month-label').textContent = monthLabel;
         if (el('big-spending-number')) el('big-spending-number').textContent = formatCurrency(totalVariableExpenses);
+
+        // Budget ring
+        const totalBudget = Object.values(this.settings.goals).reduce((s, v) => s + v, 0);
+        const ring = el('budget-ring-progress');
+        const ringLabel = el('budget-ring-label');
+        if (ring && totalBudget > 0) {
+            const pct = Math.min(totalVariableExpenses / totalBudget, 1.2);
+            const circumference = 326.73;
+            ring.style.strokeDashoffset = circumference * (1 - Math.min(pct, 1));
+            ring.style.stroke = pct > 1 ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#22c55e';
+            if (ringLabel) ringLabel.textContent = `${Math.round(pct * 100)}% of ${formatCurrency(totalBudget)} budget`;
+        } else if (ringLabel) {
+            ringLabel.textContent = 'no budget set';
+        }
 
         // Trend comparison vs last month
         const lastMonthExpenses = this.expenses.filter(e => {
