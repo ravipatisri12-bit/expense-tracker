@@ -1586,83 +1586,6 @@ class ExpenseTracker {
     }
 }
 
-// ====================================================================
-// GLOBAL FUNCTIONS FOR HTML ONCLICK EVENTS
-// ====================================================================
-
-function showPage(pageId) {
-    expenseTracker.showPage(pageId);
-}
-
-function clearForm() {
-    expenseTracker.clearForm();
-}
-
-function exportCSV() {
-    expenseTracker.exportCSV();
-}
-
-function saveSettings() {
-    expenseTracker.saveSettings();
-}
-
-function updateHistoryView() {
-    expenseTracker.updateHistoryView();
-}
-
-function togglePrivacyMode() {
-    expenseTracker.togglePrivacyMode();
-}
-
-function addCategory() {
-    expenseTracker.addCategory();
-}
-
-function editCategory(categoryName) {
-    expenseTracker.editCategory(categoryName);
-}
-
-function deleteCategory(categoryName) {
-    expenseTracker.deleteCategory(categoryName);
-}
-
-function updateDailyView(period) {
-    expenseTracker.updateDailySpending(period);
-}
-
-function updateWeeklyView(period) {
-    expenseTracker.updateWeeklySpending(period);
-}
-
-function closeEditModal() {
-    expenseTracker.closeEditModal();
-}
-
-// ====================================================================
-// APPLICATION INITIALIZATION
-// ====================================================================
-
-// Initialize the application
-const expenseTracker = new ExpenseTracker();
-window.expenseTracker = expenseTracker; // Expose to window for smart-input.js
-
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then((registration) => {
-                console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-                console.log('SW registration failed: ', registrationError);
-            });
-    });
-}
-
-
-// Enhanced Overview Page Functions
-// (Removed - merged into Home page)
-
 
 // ====================================================================
 // NEW: UNIFIED TRENDS TOGGLE
@@ -1884,3 +1807,80 @@ function updateDailyView(period) {
 function updateWeeklyView(period) {
     expenseTracker.updateWeeklySpending(period);
 }
+
+// ====================================================================
+// GLOBAL FUNCTIONS FOR HTML ONCLICK EVENTS
+// ====================================================================
+
+function showPage(pageId) {
+    expenseTracker.showPage(pageId);
+}
+
+function clearForm() {
+    expenseTracker.clearForm();
+}
+
+function exportCSV() {
+    expenseTracker.exportCSV();
+}
+
+function saveSettings() {
+    expenseTracker.saveSettings();
+}
+
+function updateHistoryView() {
+    expenseTracker.updateHistoryView();
+}
+
+function togglePrivacyMode() {
+    expenseTracker.togglePrivacyMode();
+}
+
+function addCategory() {
+    expenseTracker.addCategory();
+}
+
+function editCategory(categoryName) {
+    expenseTracker.editCategory(categoryName);
+}
+
+function deleteCategory(categoryName) {
+    expenseTracker.deleteCategory(categoryName);
+}
+
+function updateDailyView(period) {
+    expenseTracker.updateDailySpending(period);
+}
+
+function updateWeeklyView(period) {
+    expenseTracker.updateWeeklySpending(period);
+}
+
+function closeEditModal() {
+    expenseTracker.closeEditModal();
+}
+
+// ====================================================================
+// APPLICATION INITIALIZATION
+// ====================================================================
+
+// Initialize the application
+var expenseTracker = new ExpenseTracker();
+window.expenseTracker = expenseTracker;
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then((registration) => {
+                console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+                console.log('SW registration failed: ', registrationError);
+            });
+    });
+}
+
+
+// Enhanced Overview Page Functions
+// (Removed - merged into Home page)
