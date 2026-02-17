@@ -169,57 +169,75 @@
         </div>
     </div>
 
-    <!-- ADD EXPENSE PAGE (unchanged) -->
+    <!-- ADD EXPENSE PAGE -->
     <div id="add-expense-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6">
             <div class="mb-6">
-                <h2 class="text-xl font-bold text-gray-900">Add Expenses</h2>
-                <p class="text-gray-500 text-sm mt-1">Add single or multiple transactions</p>
+                <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">Add Expenses</h2>
+                <p class="text-sm mt-1" style="color:var(--md-sys-color-outline)">Type naturally or add manually</p>
             </div>
-            <div class="mb-6">
-                <div class="card p-5">
-                    <div class="flex items-center justify-between mb-3">
-                        <label class="block text-sm font-medium text-gray-900">Add Expenses</label>
-                        <span class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">AI Powered</span>
+
+            <!-- Smart Input -->
+            <div class="card p-5 mb-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded text-lg" style="color:var(--md-sys-color-primary)">auto_awesome</span>
+                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Smart Input</span>
                     </div>
-                    <textarea id="smart-input" rows="4" placeholder="Type naturally:&#10;5 at starbucks 10 at chipotle&#10;Coffee $5, Uber $23, lunch $12" class="w-full bg-gray-50 text-gray-900 text-base px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 placeholder-gray-400 resize-none"></textarea>
-                    <div class="flex items-center justify-between mt-4">
-                        <button type="button" id="toggle-manual-form" class="text-gray-500 text-sm font-medium flex items-center">
-                            <span class="material-symbols-rounded text-lg mr-1">add</span>
-                            Manual Entry
-                        </button>
-                        <button type="button" id="parse-smart-input" class="bg-primary-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">Add Expenses</button>
-                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">AI Powered</span>
                 </div>
-                <div id="processing-status" class="hidden mt-4 bg-blue-50 rounded-xl p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-blue-900 text-sm font-medium">Processing...</span>
-                        <span id="process-count" class="text-primary-600 text-sm font-semibold">0/0</span>
-                    </div>
-                    <div class="w-full bg-blue-200 rounded-full h-1.5">
-                        <div id="process-progress" class="bg-primary-600 h-1.5 rounded-full transition-all" style="width: 0%"></div>
-                    </div>
+                <textarea id="smart-input" rows="3" placeholder="Coffee $5, Uber $23, lunch $12" class="w-full resize-none text-sm" style="background:var(--md-sys-color-surface-container-high);border:none;border-radius:12px;padding:14px 16px;color:var(--md-sys-color-on-surface);border-bottom:none"></textarea>
+                <div class="flex items-center justify-between mt-4">
+                    <button type="button" id="toggle-manual-form" class="flex items-center gap-1 text-sm" style="color:var(--md-sys-color-outline)">
+                        <span class="material-symbols-rounded text-lg">edit_note</span>
+                        Manual
+                    </button>
+                    <button type="button" id="parse-smart-input" class="bg-primary-600 text-white font-medium px-6 py-2.5 rounded-full text-sm">Add Expenses</button>
                 </div>
             </div>
-            <div id="recent-added" class="hidden mb-6">
-                <h3 class="text-sm font-semibold text-gray-900 mb-3">Just Added</h3>
+
+            <!-- Processing Status -->
+            <div id="processing-status" class="hidden mb-5 card p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Processing...</span>
+                    <span id="process-count" class="text-sm font-medium" style="color:var(--md-sys-color-primary)">0/0</span>
+                </div>
+                <div class="w-full rounded-full h-1.5" style="background:var(--md-sys-color-surface-container-highest)">
+                    <div id="process-progress" class="h-1.5 rounded-full transition-all" style="background:var(--accent-gradient);width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Recently Added -->
+            <div id="recent-added" class="hidden mb-5">
+                <h3 class="text-sm font-medium mb-3" style="color:var(--md-sys-color-on-surface-variant)">Just Added</h3>
                 <div id="recent-added-list" class="space-y-2"></div>
             </div>
+
+            <!-- Manual Form -->
             <div id="manual-form-container" class="hidden">
                 <div class="card p-5">
                     <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-base font-semibold text-gray-900">Manual Entry</h3>
-                        <button type="button" id="close-manual-form" class="text-gray-400"><span class="material-symbols-rounded text-xl">close</span></button>
+                        <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Manual Entry</h3>
+                        <button type="button" id="close-manual-form" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
                     </div>
-                    <form id="expense-form" class="space-y-4">
+                    <form id="expense-form" class="space-y-5">
                         <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Amount</label>
-                            <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span><input type="number" id="amount" step="0.01" placeholder="0.00" required class="pl-8 block w-full rounded-xl border-gray-200 focus:border-primary-500 focus:ring-primary-500"></div>
+                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Amount</label>
+                            <div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="amount" step="0.01" placeholder="0.00" required class="pl-9 block w-full text-sm"></div>
                         </div>
-                        <div><label class="block text-sm font-medium text-gray-600 mb-1">Description</label><input type="text" id="description" placeholder="What did you spend on?" required class="block w-full rounded-xl border-gray-200 focus:border-primary-500 focus:ring-primary-500"></div>
-                        <div><label class="block text-sm font-medium text-gray-600 mb-1">Category</label><select id="category" required class="block w-full rounded-xl border-gray-200 focus:border-primary-500 focus:ring-primary-500"><option value="">Select</option></select></div>
-                        <div><label class="block text-sm font-medium text-gray-600 mb-1">Date</label><input type="date" id="expense-date" required class="block w-full rounded-xl border-gray-200 focus:border-primary-500 focus:ring-primary-500"></div>
-                        <button type="submit" class="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-xl text-sm">Add Expense</button>
+                        <div>
+                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Description</label>
+                            <input type="text" id="description" placeholder="What did you spend on?" required class="block w-full text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Category</label>
+                            <select id="category" required class="block w-full text-sm"><option value="">Select</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Date</label>
+                            <input type="date" id="expense-date" required class="block w-full text-sm">
+                        </div>
+                        <button type="submit" class="w-full bg-primary-600 text-white font-medium py-3 rounded-full text-sm">Add Expense</button>
                     </form>
                 </div>
             </div>
