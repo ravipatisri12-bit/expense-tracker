@@ -1462,19 +1462,13 @@ class ExpenseTracker {
     }
 
     updateCategoryDropdown() {
-        const categorySelect = document.getElementById('category');
-        if (!categorySelect) return;
-        
-        // Clear existing options except the default one
-        categorySelect.innerHTML = '<option value="">Select a category</option>';
-        
-        // Add dynamic categories
-        this.settings.categories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category;
-            categorySelect.appendChild(option);
-        });
+        const hidden = document.getElementById('category');
+        const container = document.getElementById('category-pills');
+        if (!hidden || !container) return;
+        hidden.value = '';
+        container.innerHTML = this.settings.categories.map(cat =>
+            `<button type="button" class="category-pill px-3 py-1.5 rounded-full text-xs font-medium" style="border:1px solid rgba(255,255,255,0.12);color:var(--md-sys-color-outline);background:transparent" onclick="selectCategoryPill(this,'${cat}')">${cat}</button>`
+        ).join('');
     }
 
     addCategory() {
@@ -1642,6 +1636,12 @@ class ExpenseTracker {
 // ====================================================================
 // NEW: UNIFIED TRENDS TOGGLE
 // ====================================================================
+
+function selectCategoryPill(el, value) {
+    document.querySelectorAll('.category-pill').forEach(p => { p.style.background = 'transparent'; p.style.color = 'var(--md-sys-color-outline)'; });
+    el.style.background = 'var(--accent-gradient)'; el.style.color = 'white';
+    document.getElementById('category').value = value;
+}
 
 function switchTrendsView(view) {
     expenseTracker.currentTrendsView = view;
