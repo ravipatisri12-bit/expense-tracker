@@ -1,26 +1,25 @@
-const CACHE_NAME = 'expense-tracker-v1';
-const urlsToCache = [
-    '.',
-    'index.html',
-    'script.js',
-    'manifest.json',
-    'https://cdn.tailwindcss.com'
-];
+const CACHE_NAME = 'expense-tracker-v2';
 
 self.addEventListener('install', event => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        )
     );
 });
 
 self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                // Return cached version or fetch from network
-                return response || fetch(event.request);
-            }
-        )
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return response;
+            })
+            .catch(() => caches.match(event.request))
     );
 });
