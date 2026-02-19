@@ -5,6 +5,12 @@
 .Spotlight-V100
 .Trashes
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
 # IDE
 .vscode/
 .idea/
