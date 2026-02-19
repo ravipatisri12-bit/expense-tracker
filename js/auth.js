@@ -188,6 +188,7 @@ function initAuth() {
         window.currentUser = user;
         
         updateAuthUI(user);
+        if (typeof updateGreeting === 'function') updateGreeting();
         
         // Load user data if signed in
         if (user && window.expenseTracker) {
