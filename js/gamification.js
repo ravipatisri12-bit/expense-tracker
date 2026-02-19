@@ -111,9 +111,9 @@ class Gamification {
     checkStreakAchievements() {
         const s = this.data.streak.current;
         const unlocks = [
-            [3, 'streak-3', '🔥 3-Day Streak'],
-            [7, 'streak-7', '🔥 Week Warrior'],
-            [30, 'streak-30', '🔥 Monthly Master'],
+            [3, 'streak-3', '3-Day Streak'],
+            [7, 'streak-7', 'Week Warrior'],
+            [30, 'streak-30', 'Monthly Master'],
         ];
         unlocks.forEach(([days, id, name]) => {
             if (s >= days && !this.data.achievements.includes(id)) {
@@ -127,9 +127,9 @@ class Gamification {
     checkSavingsAchievements() {
         const total = this.getTotalSavings();
         const unlocks = [
-            [100, 'saved-100', '💰 First $100 Saved'],
-            [500, 'saved-500', '💰 $500 Club'],
-            [1000, 'saved-1k', '💰 Thousand Dollar Saver'],
+            [100, 'saved-100', 'First $100 Saved'],
+            [500, 'saved-500', '$500 Club'],
+            [1000, 'saved-1k', 'Thousand Dollar Saver'],
         ];
         unlocks.forEach(([amount, id, name]) => {
             if (total >= amount && !this.data.achievements.includes(id)) {
@@ -143,11 +143,11 @@ class Gamification {
     // === CALLBACKS (override these) ===
 
     onLevelUp(level) {
-        console.log(`🎉 Level up! Now level ${level}`);
+        console.log(`Level up! Now level ${level}`);
     }
 
     onAchievement(id, name) {
-        console.log(`🏆 Achievement unlocked: ${name}`);
+        console.log(`Achievement unlocked: ${name}`);
     }
 
     // === STATS ===
