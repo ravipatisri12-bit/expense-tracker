@@ -1674,11 +1674,11 @@ ExpenseTracker.prototype.renderStreaks = function() {
     countEl.textContent = days;
 
     if (days === 0) {
-        labelEl.textContent = 'You ate out today — streak reset';
+        labelEl.textContent = 'Start your streak today';
     } else if (days === 1) {
-        labelEl.textContent = '1 day without eating out';
+        labelEl.textContent = '1 day cooking at home';
     } else {
-        labelEl.textContent = days + ' days without eating out';
+        labelEl.textContent = days + ' days cooking at home';
     }
 };
 
