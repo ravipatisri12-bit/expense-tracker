@@ -1659,7 +1659,7 @@ function switchTrendsView(view) {
 ExpenseTracker.prototype.renderStreaks = function() {
     const countEl = document.getElementById('streak-count');
     const labelEl = document.getElementById('streak-label');
-    if (!countEl) return;
+    if (!countEl || !labelEl) return;
 
     const days = this.calculateFoodStreak();
     countEl.textContent = days;
