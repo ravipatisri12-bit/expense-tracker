@@ -1675,10 +1675,8 @@ ExpenseTracker.prototype.renderStreaks = function() {
 
     if (days === 0) {
         labelEl.textContent = 'Start your streak today';
-    } else if (days === 1) {
-        labelEl.textContent = '1 day cooking at home';
     } else {
-        labelEl.textContent = days + ' days cooking at home';
+        labelEl.textContent = 'days without eating out';
     }
 };
 
