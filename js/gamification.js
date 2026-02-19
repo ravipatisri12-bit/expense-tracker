@@ -176,9 +176,14 @@ function updateGreeting() {
     const el = document.getElementById('greeting-text');
     if (!el) return;
     const h = new Date().getHours();
-    const time = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
     const name = window.currentUser?.displayName?.split(' ')[0] || '';
-    el.textContent = name ? `${time}, ${name}` : time;
+    let greet;
+    if (h < 5) greet = name ? `Burning midnight oil, ${name}?` : 'Burning midnight oil?';
+    else if (h < 12) greet = name ? `Rise and grind, ${name}` : 'Rise and grind';
+    else if (h < 17) greet = name ? `Hey ${name}, keep it going` : 'Keep it going';
+    else if (h < 21) greet = name ? `What's good, ${name}` : "What's good";
+    else greet = name ? `Winding down, ${name}?` : 'Winding down?';
+    el.textContent = greet;
 }
 
 function updateGamificationUI() {
