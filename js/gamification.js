@@ -206,9 +206,19 @@ function closeAntiPortfolio() {
 }
 
 function submitAntiPortfolio() {
-    const desc = document.getElementById('anti-desc').value.trim();
-    const amount = document.getElementById('anti-amount').value;
-    if (!desc || !amount || parseFloat(amount) <= 0) return;
+    const descEl = document.getElementById('anti-desc');
+    const amountEl = document.getElementById('anti-amount');
+    const desc = descEl.value.trim();
+    const amount = parseFloat(amountEl.value);
+
+    // Reset styles
+    descEl.style.borderColor = 'rgba(255,255,255,0.1)';
+    amountEl.style.borderColor = 'rgba(255,255,255,0.1)';
+
+    let valid = true;
+    if (!desc) { descEl.style.borderColor = '#ef4444'; valid = false; }
+    if (!amount || amount <= 0) { amountEl.style.borderColor = '#ef4444'; valid = false; }
+    if (!valid) return;
 
     const result = window.gamification.addAntiPortfolioEntry(desc, amount);
     window.gamification.checkSavingsAchievements();
