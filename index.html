@@ -95,7 +95,7 @@
                         <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
                         <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
                         <circle id="budget-ring-progress" cx="100" cy="100" r="85" fill="none" stroke="url(#ring-gradient)" stroke-width="10" stroke-linecap="round" stroke-dasharray="534.07" stroke-dashoffset="534.07" style="transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1),stroke 0.3s ease;filter:drop-shadow(0 0 6px rgba(102,126,234,0.4))"/>
-                        <defs><linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#764ba2"/></linearGradient></defs>
+                        <defs><linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#667eea"><animate attributeName="stop-color" values="#667eea;#764ba2;#667eea" dur="4s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#764ba2"><animate attributeName="stop-color" values="#764ba2;#667eea;#764ba2" dur="4s" repeatCount="indefinite"/></stop></linearGradient></defs>
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
                         <p class="text-4xl font-extrabold tracking-tight" style="color:var(--md-sys-color-on-surface)" id="big-spending-number">$0</p>
