@@ -184,9 +184,10 @@ function updateGamificationUI() {
     if (el('xp-progress')) el('xp-progress').style.width = `${stats.xpProgress * 100}%`;
     if (el('total-saved')) el('total-saved').textContent = `$${stats.totalSaved.toFixed(0)}`;
 
-    // Show FAB on dashboard
+    // Show FAB only on dashboard
     if (el('anti-portfolio-fab')) {
-        const onDashboard = document.getElementById('dashboard-page')?.style.display !== 'none';
+        const dashPage = document.getElementById('dashboard-page');
+        const onDashboard = dashPage && !dashPage.classList.contains('hidden') && dashPage.style.display !== 'none';
         el('anti-portfolio-fab').style.display = onDashboard ? 'flex' : 'none';
     }
 }

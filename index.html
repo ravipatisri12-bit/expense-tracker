@@ -74,7 +74,7 @@
     </nav>
 
     <!-- Anti-Portfolio FAB -->
-    <button id="anti-portfolio-fab" onclick="openAntiPortfolio()" class="fixed z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-transform active:scale-95" style="bottom:80px;right:16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;display:none">
+    <button id="anti-portfolio-fab" onclick="openAntiPortfolio()" class="fixed z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-transform active:scale-95" style="bottom:80px;right:16px;background:var(--accent-gradient);color:white;display:none">
         <span class="material-symbols-rounded" style="font-size:20px">block</span>
         <span class="text-sm font-semibold">I didn't buy...</span>
     </button>
@@ -88,7 +88,7 @@
             </div>
             <input type="text" id="anti-desc" placeholder="e.g. Coffee from Starbucks" class="w-full px-4 py-3 rounded-xl text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid rgba(255,255,255,0.1)">
             <input type="number" id="anti-amount" placeholder="Amount saved ($)" step="0.01" class="w-full px-4 py-3 rounded-xl text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid rgba(255,255,255,0.1)">
-            <button onclick="submitAntiPortfolio()" class="w-full py-3 rounded-xl text-sm font-semibold" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:white">Save Win 🎉</button>
+            <button onclick="submitAntiPortfolio()" class="w-full py-3 rounded-xl text-sm font-semibold" style="background:var(--accent-gradient);color:white">Save Win 🎉</button>
         </div>
     </div>
 
@@ -135,8 +135,8 @@
                         <span class="text-xs font-medium" style="color:var(--md-sys-color-on-surface)" id="xp-text">0 / 100 XP</span>
                     </div>
                     <div class="flex items-center gap-1">
-                        <span class="material-symbols-rounded" style="color:#22c55e;font-size:16px">savings</span>
-                        <span class="text-xs font-bold" style="color:#22c55e" id="total-saved">$0</span>
+                        <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
+                        <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
                     </div>
                 </div>
                 <div class="w-full h-1.5 rounded-full" style="background:rgba(255,255,255,0.08)">
