@@ -68,6 +68,30 @@ else
     echo "✅"
 fi
 
+# 6. JS getElementById calls in script.js must have null guards or exist in HTML
+echo -n "  Element ID safety... "
+HTML_IDS=$(grep -ohE 'id="[^"]*"' index.html | sed 's/id="//;s/"//' | sort -u)
+UNSAFE=""
+# Get all getElementById calls from script.js with line numbers
+while IFS=: read -r line content; do
+    ID=$(echo "$content" | grep -oE "getElementById\(['\"][^'\"]+['\"]\)" | head -1 | sed "s/getElementById('//;s/getElementById(\"//;s/['\"])//g")
+    [ -z "$ID" ] && continue
+    echo "$ID" | grep -q '\$' && continue
+    # Check if ID exists in HTML
+    if ! echo "$HTML_IDS" | grep -qx "$ID"; then
+        # Check if there's a null guard nearby (within 3 lines)
+        CONTEXT=$(sed -n "$((line-1)),$((line+2))p" script.js)
+        if ! echo "$CONTEXT" | grep -qE "if.*!|if.*==.*null|\?\.|return;"; then
+            UNSAFE="$UNSAFE $ID(L$line)"
+        fi
+    fi
+done < <(grep -n "getElementById" script.js)
+if [ -n "$UNSAFE" ]; then
+    echo "⚠️  WARN — unguarded missing IDs:$UNSAFE"
+else
+    echo "✅"
+fi
+
 echo ""
 if [ $ERRORS -gt 0 ]; then
     echo "💥 $ERRORS test(s) failed. DO NOT COMMIT."

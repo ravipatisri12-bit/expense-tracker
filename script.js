@@ -377,6 +377,7 @@ class ExpenseTracker {
 
         // Render variable expenses list
         const container = document.getElementById('variable-expenses-list');
+        if (!container) return;
         container.innerHTML = '';
 
         // Sort categories by spending amount (highest to lowest)
@@ -410,6 +411,7 @@ class ExpenseTracker {
 
     updateRecentTransactions() {
         const container = document.getElementById('recent-transactions');
+        if (!container) return;
         const recentExpenses = [...this.expenses]
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, 5);
