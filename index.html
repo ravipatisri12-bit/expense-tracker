@@ -190,16 +190,24 @@
 
 
             <!-- Spending Distribution -->
-            <div class="card p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-semibold " style="color:var(--md-sys-color-on-surface)">Spending Distribution</h3>
-                    <p class="text-xs " style="color:var(--md-sys-color-outline)" id="budget-ring-label"></p>
+            <details class="card">
+                <summary class="p-4 flex justify-between items-center cursor-pointer list-none">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">donut_small</span>
+                        <h3 class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Spending Distribution</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)" id="budget-ring-label"></p>
+                        <span class="material-symbols-rounded text-sm" style="color:var(--md-sys-color-outline)">expand_more</span>
+                    </div>
+                </summary>
+                <div class="px-4 pb-4">
+                    <div class="flex flex-col items-center mb-4">
+                        <svg id="category-pie-chart" viewBox="0 0 200 200" style="width:180px;height:180px;"></svg>
+                    </div>
+                    <div id="category-breakdown" class="space-y-2"></div>
                 </div>
-                <div class="flex flex-col items-center mb-4">
-                    <svg id="category-pie-chart" viewBox="0 0 200 200" style="width:180px;height:180px;"></svg>
-                </div>
-                <div id="category-breakdown" class="space-y-2"></div>
-            </div>
+            </details>
 
             <!-- Category Filter Modal (slide-up) -->
             <div id="category-filter-modal" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this)closeCategoryFilter()">
