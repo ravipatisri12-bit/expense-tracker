@@ -140,6 +140,13 @@ class ExpenseTracker {
         this.renderTransactions();
         this.clearForm();
         
+        // Award XP for logging an expense
+        if (window.gamification) {
+            window.gamification.addXP(5, 'expense-logged');
+            window.gamification.updateStreak();
+            if (typeof updateGamificationUI === 'function') updateGamificationUI();
+        }
+
         // Show success message
         showNotification('Expense added successfully!', 'success');
         
