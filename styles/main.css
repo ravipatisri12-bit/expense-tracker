@@ -302,3 +302,8 @@ body.privacy-mode #monthly-budget-display {
     pointer-events: none;
     opacity: 0.5;
 }
+
+/* Collapsible card */
+details summary::-webkit-details-marker { display: none; }
+details[open] summary .material-symbols-rounded:last-child { transform: rotate(180deg); }
+details summary .material-symbols-rounded:last-child { transition: transform 0.2s; }
