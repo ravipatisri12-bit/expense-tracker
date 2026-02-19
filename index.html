@@ -73,12 +73,6 @@
         </div>
     </nav>
 
-    <!-- Anti-Portfolio FAB -->
-    <button id="anti-portfolio-fab" onclick="openAntiPortfolio()" class="fixed z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-transform active:scale-95" style="bottom:80px;right:16px;background:var(--accent-gradient);color:white;display:none">
-        <span class="material-symbols-rounded" style="font-size:20px">savings</span>
-        <span class="text-sm font-semibold">Saved</span>
-    </button>
-
     <!-- Anti-Portfolio Modal -->
     <div id="anti-portfolio-modal" class="fixed inset-0 z-[60] flex items-end justify-center" style="display:none;background:rgba(0,0,0,0.5)">
         <div class="w-full max-w-lg rounded-t-2xl p-6 space-y-4" style="background:var(--md-sys-color-surface-container)">
@@ -97,7 +91,7 @@
         <div class="max-w-lg mx-auto px-4 py-6 space-y-6">
 
             <!-- Big Monthly Spending Number with Ring -->
-            <div class="card p-6 text-center hero-card">
+            <div class="card p-6 text-center hero-card" style="border:1px solid rgba(255,255,255,0.1);background:var(--md-sys-color-surface-container)">
                 <p class="text-sm mb-4" style="color:var(--md-sys-color-on-surface-variant)" id="month-label">February 2026</p>
                 <div class="relative inline-flex items-center justify-center">
                     <svg id="budget-ring" viewBox="0 0 200 200" style="width:260px;height:260px;transform:rotate(-90deg)">
@@ -111,6 +105,12 @@
                 <p class="text-sm mt-3" id="spending-trend-text"></p>
             </div>
 
+
+            <!-- Log a Save -->
+            <button onclick="openAntiPortfolio()" class="w-full card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
+                <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">add</span>
+                <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Log a save</span>
+            </button>
             <!-- Spending Trends (Daily/Weekly toggle) -->
             <div class="card p-5">
                 <div class="flex justify-between items-center mb-4">
@@ -127,37 +127,32 @@
                 </div>
             </div>
 
-            <!-- XP & Level Bar -->
+            <!-- XP / Streak / Saved — compact row -->
             <div id="gamification-bar" class="card p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
                         <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white" id="level-badge">LVL 1</span>
-                        <span class="text-xs font-medium" style="color:var(--md-sys-color-on-surface)" id="xp-text">0 / 100 XP</span>
+                        <div>
+                            <div class="text-xs font-medium" style="color:var(--md-sys-color-on-surface)" id="xp-text">0 / 100 XP</div>
+                            <div class="w-24 h-1 rounded-full mt-1" style="background:rgba(255,255,255,0.08)">
+                                <div id="xp-progress" class="h-1 rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg,#667eea,#764ba2)"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
-                        <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
-                    </div>
-                </div>
-                <div class="w-full h-1.5 rounded-full" style="background:rgba(255,255,255,0.08)">
-                    <div id="xp-progress" class="h-1.5 rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg,#667eea,#764ba2)"></div>
-                </div>
-            </div>
-
-            <!-- Streak Badge -->
-            <div id="streak-section" class="card p-5">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(102,126,234,0.15)">
-                        <span class="material-symbols-rounded" style="color:#667eea;font-size:22px">local_fire_department</span>
-                    </div>
-                    <div>
-                        <div id="streak-count" class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">0</div>
-                        <div id="streak-label" class="text-xs" style="color:var(--md-sys-color-outline)">days without eating out</div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">local_fire_department</span>
+                            <span class="text-xs font-bold" style="color:var(--md-sys-color-on-surface)" id="streak-count">0</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
+                            <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- AI Insights -->
+            <!-- Spending Trends (Daily/Weekly toggle) -->
             <div id="insights-section" class="card p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">auto_awesome</span>

@@ -183,13 +183,6 @@ function updateGamificationUI() {
     if (el('xp-text')) el('xp-text').textContent = `${stats.xp % 100} / 100 XP`;
     if (el('xp-progress')) el('xp-progress').style.width = `${stats.xpProgress * 100}%`;
     if (el('total-saved')) el('total-saved').textContent = `$${stats.totalSaved.toFixed(0)}`;
-
-    // Show FAB only on dashboard
-    if (el('anti-portfolio-fab')) {
-        const dashPage = document.getElementById('dashboard-page');
-        const onDashboard = dashPage && !dashPage.classList.contains('hidden') && dashPage.style.display !== 'none';
-        el('anti-portfolio-fab').style.display = onDashboard ? 'flex' : 'none';
-    }
 }
 
 // === ANTI-PORTFOLIO HANDLERS ===
