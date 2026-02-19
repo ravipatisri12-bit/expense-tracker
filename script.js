@@ -43,10 +43,10 @@ class ExpenseTracker {
 
     init() {
         this.setupEventListeners();
+        this.loadSettings();
         this.renderCategoryGoalsSettings();
         this.renderExistingCategories();
         this.updateCategoryDropdown();
-        this.loadSettings();
         this.updateDashboard();
         this.renderTransactions();
         this.initializeHistoryPage();
