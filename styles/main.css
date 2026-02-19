@@ -22,8 +22,8 @@
   --accent-mint: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
 }
 
-* { font-family: 'Roboto', sans-serif; }
-.material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+* { font-family: 'Roboto', system-ui, -apple-system, sans-serif; }
+.material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; width: 1em; height: 1em; overflow: hidden; vertical-align: middle; }
 
 /* Page visibility */
 .page-content.hidden { display: none !important; }
