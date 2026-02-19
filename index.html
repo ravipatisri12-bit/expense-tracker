@@ -114,9 +114,9 @@
                 </button>
             </div>
 
-            <!-- XP / Streak / Saved — compact row -->
+            <!-- XP & Saved -->
             <div id="gamification-bar" class="card p-4">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-3">
                         <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white" id="level-badge">LVL 1</span>
                         <div>
@@ -126,19 +126,23 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-1">
-                            <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">local_fire_department</span>
-                            <span class="text-xs font-bold" style="color:var(--md-sys-color-on-surface)" id="streak-count">0</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
-                            <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
-                        </div>
+                    <div class="flex items-center gap-1">
+                        <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
+                        <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
                     </div>
                 </div>
-                <p id="streak-label" class="text-xs mt-2" style="color:var(--md-sys-color-outline)"></p>
-                <p class="text-xs mt-1" style="color:var(--md-sys-color-outline)">Earn XP by adding expenses (+5), logging saves (+15), and staying under budget (+20)</p>
+                <div class="flex gap-2 flex-wrap">
+                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+5 add</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+15 save</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+20 under budget</span>
+                </div>
+            </div>
+
+            <!-- Streak -->
+            <div class="card p-4 flex items-center gap-3">
+                <span class="material-symbols-rounded" style="color:#667eea;font-size:20px">local_fire_department</span>
+                <span class="text-sm font-bold" style="color:var(--md-sys-color-on-surface)" id="streak-count">0</span>
+                <span id="streak-label" class="text-xs" style="color:var(--md-sys-color-outline)"></span>
             </div>
 
             <!-- Spending Trends (Daily/Weekly toggle) -->
