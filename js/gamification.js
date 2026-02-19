@@ -172,6 +172,15 @@ window.gamification = new Gamification();
 
 // === UI UPDATES ===
 
+function updateGreeting() {
+    const el = document.getElementById('greeting-text');
+    if (!el) return;
+    const h = new Date().getHours();
+    const time = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    const name = window.currentUser?.displayName?.split(' ')[0] || '';
+    el.textContent = name ? `${time}, ${name}` : time;
+}
+
 function updateGamificationUI() {
     const g = window.gamification;
     const stats = g.getStats();
@@ -222,6 +231,7 @@ function submitAntiPortfolio() {
 // Update UI when page loads and on page switches
 document.addEventListener('DOMContentLoaded', () => {
     updateGamificationUI();
+    updateGreeting();
     // Re-update when pages switch
     const origShowPage = window.showPage;
     if (origShowPage) {
