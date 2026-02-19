@@ -213,7 +213,7 @@ function submitAntiPortfolio() {
     if (!amount || amount <= 0) { amountEl.style.borderColor = '#ef4444'; valid = false; }
     if (!valid) return;
 
-    const result = window.gamification.addAntiPortfolioEntry(desc, amount);
+    const result = window.gamification.addAntiPortfolioEntry(desc, amount, document.getElementById('anti-category').value);
     window.gamification.checkSavingsAchievements();
     closeAntiPortfolio();
     updateGamificationUI();
