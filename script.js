@@ -52,17 +52,22 @@ class ExpenseTracker {
         this.initializeHistoryPage();
         this.initializeDateField();
         this.showPage('dashboard');
+        
+        // Initialize Quick Add component
+        if (typeof QuickAdd !== 'undefined') {
+            window.quickAddInstance = new QuickAdd(this);
+        }
     }
 
     setupEventListeners() {
-        // Form submission
-        document.getElementById('expense-form').addEventListener('submit', (e) => {
+        // Old form submission (if exists for backward compatibility)
+        safeAddEventListener('expense-form', 'submit', (e) => {
             e.preventDefault();
             this.addExpense();
         });
 
         // Edit form submission
-        document.getElementById('edit-expense-form').addEventListener('submit', (e) => {
+        safeAddEventListener('edit-expense-form', 'submit', (e) => {
             e.preventDefault();
             this.saveEditedExpense();
         });
@@ -2038,60 +2043,81 @@ function updateWeeklyView(period) {
 // ====================================================================
 
 function showPage(pageId) {
-    expenseTracker.showPage(pageId);
+    safeTrackerCall('showPage', pageId);
 }
 
 function clearForm() {
-    expenseTracker.clearForm();
+    safeTrackerCall('clearForm');
 }
 
 function exportCSV() {
-    expenseTracker.exportCSV();
+    safeTrackerCall('exportCSV');
 }
 
 function saveSettings() {
-    expenseTracker.saveSettings();
+    safeTrackerCall('saveSettings');
 }
 
 function updateHistoryView() {
-    expenseTracker.updateHistoryView();
+    safeTrackerCall('updateHistoryView');
 }
 
 function togglePrivacyMode() {
-    expenseTracker.togglePrivacyMode();
+    safeTrackerCall('togglePrivacyMode');
 }
 
 function addCategory() {
-    expenseTracker.addCategory();
+    safeTrackerCall('addCategory');
 }
 
 function editCategory(categoryName) {
-    expenseTracker.editCategory(categoryName);
+    safeTrackerCall('editCategory', categoryName);
 }
 
 function deleteCategory(categoryName) {
-    expenseTracker.deleteCategory(categoryName);
+    safeTrackerCall('deleteCategory', categoryName);
 }
 
 function updateDailyView(period) {
-    expenseTracker.updateDailySpending(period);
+    safeTrackerCall('updateDailySpending', period);
 }
 
 function updateWeeklyView(period) {
-    expenseTracker.updateWeeklySpending(period);
+    safeTrackerCall('updateWeeklySpending', period);
 }
 
 function closeEditModal() {
-    expenseTracker.closeEditModal();
+    safeTrackerCall('closeEditModal');
 }
 
 // ====================================================================
 // APPLICATION INITIALIZATION
 // ====================================================================
 
-// Initialize the application
-var expenseTracker = new ExpenseTracker();
-window.expenseTracker = expenseTracker;
+// Initialize the application when DOM is ready
+let expenseTracker = null;
+
+function initializeApp() {
+    try {
+        expenseTracker = new ExpenseTracker();
+        window.expenseTracker = expenseTracker;
+        
+        // Mark as loaded
+        document.body.classList.add('loaded');
+        
+        console.log('✓ ExpenseTracker initialized');
+    } catch (error) {
+        console.error('Failed to initialize ExpenseTracker:', error);
+        document.body.classList.add('loaded');
+    }
+}
+
+// Wait for DOM to be fully loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
