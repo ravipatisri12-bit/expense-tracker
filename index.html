@@ -106,11 +106,17 @@
             </div>
 
 
-            <!-- Log a Save -->
-            <button onclick="openAntiPortfolio()" class="w-full card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
-                <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">add</span>
-                <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Log a save</span>
-            </button>
+            <!-- Quick Actions -->
+            <div class="flex gap-3">
+                <button onclick="showPage('add-expense')" class="flex-1 card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
+                    <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">add</span>
+                    <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Add expense</span>
+                </button>
+                <button onclick="openAntiPortfolio()" class="flex-1 card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
+                    <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">savings</span>
+                    <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Log a save</span>
+                </button>
+            </div>
 
             <!-- XP / Streak / Saved — compact row -->
             <div id="gamification-bar" class="card p-4">
