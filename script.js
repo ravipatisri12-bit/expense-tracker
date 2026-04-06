@@ -1335,7 +1335,7 @@ class ExpenseTracker {
         if (savedEl) savedEl.textContent = formatCurrency(yearData.totalSaved);
         if (activeMonthsEl) activeMonthsEl.textContent = `${yearData.activeMonths} mos`;
 
-        // Update monthly breakdown
+        // Update monthly breakdown - only show months up to current month
         const container = document.getElementById('year-monthly-breakdown');
         if (!container) return;
 
@@ -1343,9 +1343,11 @@ class ExpenseTracker {
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const currentMonth = new Date().getMonth();
 
-        container.innerHTML = yearData.months.map((monthData, index) => {
+        // Only show months from January up to current month
+        const monthsToShow = yearData.months.slice(0, currentMonth + 1);
+
+        container.innerHTML = monthsToShow.map((monthData, index) => {
             const isCurrentMonth = index === currentMonth;
-            const isFutureMonth = index > currentMonth;
             const barWidth = yearData.maxAmount > 0 ? (monthData.amount / yearData.maxAmount) * 100 : 0;
 
             return `
@@ -1354,11 +1356,11 @@ class ExpenseTracker {
                     <div class="flex-1 mx-3">
                         <div class="w-full h-2 rounded-full" style="background:rgba(255,255,255,0.08)">
                             <div class="h-2 rounded-full transition-all duration-300" 
-                                 style="width:${barWidth}%;background:${isFutureMonth ? 'rgba(255,255,255,0.2)' : 'var(--md-sys-color-primary)'}"></div>
+                                 style="width:${barWidth}%;background:var(--md-sys-color-primary)"></div>
                         </div>
                     </div>
                     <span class="text-sm font-medium w-12 text-right" style="color:var(--md-sys-color-on-surface)">
-                        ${isFutureMonth ? '—' : formatCurrency(monthData.amount)}
+                        ${formatCurrency(monthData.amount)}
                     </span>
                 </div>
             `;
@@ -1366,6 +1368,9 @@ class ExpenseTracker {
     }
 
     getYearData(year) {
+        const currentMonth = new Date().getMonth();
+        
+        // Only calculate data for months up to current month
         const months = Array.from({length: 12}, (_, i) => {
             const monthExpenses = this.expenses.filter(expense => {
                 const d = this.parseLocalDate(expense.date);
@@ -1376,10 +1381,14 @@ class ExpenseTracker {
             return { amount, count: regularExpenses.length };
         });
 
-        const totalSpent = months.reduce((sum, m) => sum + m.amount, 0);
-        const activeMonths = months.filter(m => m.amount > 0).length;
+        // Only consider reached months for calculations
+        const reachedMonths = months.slice(0, currentMonth + 1);
+        const totalSpent = reachedMonths.reduce((sum, m) => sum + m.amount, 0);
+        const activeMonths = reachedMonths.filter(m => m.amount > 0).length;
         const avgPerMonth = activeMonths > 0 ? totalSpent / activeMonths : 0;
-        const maxAmount = Math.max(...months.map(m => m.amount));
+        
+        // Max amount only from reached months for proper bar scaling
+        const maxAmount = Math.max(...reachedMonths.map(m => m.amount), 0);
 
         // Calculate total saved (simplified - income * active months - total spent)
         const totalSaved = Math.max(0, (this.settings.income * activeMonths) - totalSpent);
