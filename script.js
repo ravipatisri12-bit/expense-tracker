@@ -29,7 +29,7 @@ class ExpenseTracker {
         }
         
         // Temporary sample data removal function
-        window.removeSampleData = () => {
+        window.removeSampleData = async () => {
             const sampleData = [
                 {date: '2026-04-05', description: 'Starbucks Coffee', amount: 6.50},
                 {date: '2026-04-04', description: 'Whole Foods Market', amount: 125.30},
@@ -63,6 +63,9 @@ class ExpenseTracker {
             ];
             
             const original = expenseTracker.expenses.length;
+            console.log(`Starting with ${original} expenses`);
+            
+            // Filter out sample data
             expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
                 return !sampleData.some(sample => 
                     expense.date === sample.date && 
@@ -81,19 +84,34 @@ class ExpenseTracker {
             });
             
             const removed = original - expenseTracker.expenses.length;
+            console.log(`Filtered to ${expenseTracker.expenses.length} expenses (removed ${removed})`);
+            
+            // Save to localStorage
             localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
             
+            // Save to Firebase - REPLACE the entire expenses array
             if (firebaseAuth?.currentUser) {
-                firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
-                    expenses: expenseTracker.expenses,
-                    settings: expenseTracker.settings
-                }).then(() => {
-                    console.log('✅ Data saved to Firebase');
-                }).catch(error => {
-                    console.error('❌ Firebase save error:', error);
-                });
+                try {
+                    await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).update({
+                        expenses: expenseTracker.expenses
+                    });
+                    console.log('✅ Firebase updated with clean data');
+                } catch (error) {
+                    console.error('❌ Firebase update error:', error);
+                    // Try set instead of update
+                    try {
+                        await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
+                            expenses: expenseTracker.expenses,
+                            settings: expenseTracker.settings
+                        });
+                        console.log('✅ Firebase set with clean data');
+                    } catch (setError) {
+                        console.error('❌ Firebase set error:', setError);
+                    }
+                }
             }
             
+            // Update UI
             expenseTracker.updateDashboard();
             expenseTracker.renderTransactions();
             
