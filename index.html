@@ -425,34 +425,41 @@
                 </div>
             </div>
             <!-- Year Overview -->
-            <div class="card p-4 mb-6">
-                <h3 class="text-base font-semibold mb-4" style="color:var(--md-sys-color-on-surface)">2026 Overview</h3>
-                
-                <!-- 4-Pill Summary -->
-                <div class="grid grid-cols-4 gap-2 mb-4">
-                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="year-total-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Total</p>
+            <details class="card">
+                <summary class="p-4 flex justify-between items-center cursor-pointer list-none">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">calendar_today</span>
+                        <h3 class="text-base font-semibold" style="color:var(--md-sys-color-on-surface)">2026 Overview</h3>
                     </div>
-                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="year-avg-month" style="color:var(--md-sys-color-on-surface)">$0</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Avg/Mo</p>
+                    <span class="material-symbols-rounded text-sm" style="color:var(--md-sys-color-outline)">expand_more</span>
+                </summary>
+                <div class="px-4 pb-4">
+                    <!-- 4-Pill Summary -->
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                            <p class="text-sm font-bold" id="year-total-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Total</p>
+                        </div>
+                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                            <p class="text-sm font-bold" id="year-avg-month" style="color:var(--md-sys-color-on-surface)">$0</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Avg/Mo</p>
+                        </div>
+                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                            <p class="text-sm font-bold" id="year-saved" style="color:var(--md-sys-color-on-surface)">$0</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Saved</p>
+                        </div>
+                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                            <p class="text-sm font-bold" id="year-active-months" style="color:var(--md-sys-color-on-surface)">0 mos</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
+                        </div>
                     </div>
-                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="year-saved" style="color:var(--md-sys-color-on-surface)">$0</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Saved</p>
-                    </div>
-                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="year-active-months" style="color:var(--md-sys-color-on-surface)">0 mos</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
-                    </div>
-                </div>
 
-                <!-- Monthly Breakdown -->
-                <div id="year-monthly-breakdown" class="space-y-2">
-                    <div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
+                    <!-- Monthly Breakdown -->
+                    <div id="year-monthly-breakdown" class="space-y-2">
+                        <div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
+                    </div>
                 </div>
-            </div>
+            </details>
 
             <!-- Category Distribution with Toggle -->
             <div class="card p-4">
