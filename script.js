@@ -19,10 +19,11 @@ class ExpenseTracker {
         this.currentHistoryOffset = 0; // For history month navigation
         this.categoryDistributionView = 'month'; // 'month' or 'year'
         
-        // Add sample data if no expenses exist
+        // DISABLE sample data generation in production
+        // Sample data should only be for development, never production
         if (this.expenses.length === 0) {
-            console.log('No expenses found, adding sample data...');
-            this.addSampleData();
+            console.log('No expenses found - waiting for Firebase sync instead of adding sample data');
+            // Don't add sample data - let Firebase sync handle it
         } else {
             console.log('Found existing expenses:', this.expenses.length);
         }
@@ -79,14 +80,46 @@ class ExpenseTracker {
                 }
             },
             
-            // Clear sample data
-            clearSampleData: () => {
-                console.log('Clearing sample data...');
-                expenseTracker.expenses = [];
-                localStorage.setItem('expenses', JSON.stringify([]));
+            // Clean up duplicate sample data
+            cleanSampleData: () => {
+                console.log('Cleaning duplicate sample data...');
+                const sampleDescriptions = [
+                    'Starbucks Coffee', 'Whole Foods Market', 'Shell Gas Station', 
+                    'Netflix Subscription', 'Amazon Prime Order', 'Chipotle Lunch',
+                    'Uber Ride', 'Target Shopping', 'Movie Theater', 'Grocery Store',
+                    'Car Repair Service', 'Medical Copay', 'Safeway Groceries',
+                    'Gas Station Fill-up', 'Spotify Premium', 'Best Buy Electronics',
+                    'Pizza Delivery', 'Dunkin Coffee', 'Lyft Ride', 'Costco Shopping',
+                    'Restaurant Dinner', 'Coffee Shop', 'Trader Joes', 'Metro Card Refill',
+                    'Disney+ Subscription', 'Online Shopping', 'Sushi Restaurant'
+                ];
+                
+                const originalCount = expenseTracker.expenses.length;
+                expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                    return !sampleDescriptions.includes(expense.description);
+                });
+                
+                const removedCount = originalCount - expenseTracker.expenses.length;
+                console.log(`Removed ${removedCount} sample data entries`);
+                
+                // Save cleaned data
+                localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
+                
+                // Update Firebase with cleaned data
+                if (firebaseAuth?.currentUser) {
+                    firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
+                        expenses: expenseTracker.expenses,
+                        settings: expenseTracker.settings
+                    }).then(() => {
+                        console.log('✅ Cleaned data saved to Firebase');
+                    });
+                }
+                
+                // Refresh UI
                 expenseTracker.updateDashboard();
                 expenseTracker.renderTransactions();
-                console.log('✅ Sample data cleared');
+                
+                return `Removed ${removedCount} duplicate sample entries`;
             },
             
             // Show raw data
@@ -113,7 +146,7 @@ class ExpenseTracker {
         console.log('🔧 Debug tools loaded! Use:');
         console.log('debugData.checkState() - Check current data state');
         console.log('debugData.forceFirebaseLoad() - Force load from Firebase');
-        console.log('debugData.clearSampleData() - Remove sample data');
+        console.log('debugData.cleanSampleData() - Remove duplicate sample data');
         console.log('debugData.showRawData() - Show all raw data');
         console.log('debugData.backupData() - Backup current data');
         
