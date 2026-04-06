@@ -30,6 +30,11 @@ class ExpenseTracker {
         
         // Temporary sample data removal function
         window.removeSampleData = async () => {
+            if (!firebaseAuth?.currentUser) {
+                console.error('Must be signed in to remove from Firebase');
+                return;
+            }
+
             const sampleData = [
                 {date: '2026-04-05', description: 'Starbucks Coffee', amount: 6.50},
                 {date: '2026-04-04', description: 'Whole Foods Market', amount: 125.30},
@@ -62,63 +67,60 @@ class ExpenseTracker {
                 {date: '2026-02-23', description: 'Sushi Restaurant', amount: 45.60}
             ];
             
-            const original = expenseTracker.expenses.length;
-            console.log(`Starting with ${original} expenses`);
+            console.log('🗑️ Deleting sample data from Firebase subcollection...');
             
-            // Filter out sample data
-            expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
-                return !sampleData.some(sample => 
-                    expense.date === sample.date && 
-                    expense.description === sample.description && 
-                    expense.amount === sample.amount
-                );
-            });
-            
-            // Remove duplicates
-            const seen = new Set();
-            expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
-                const key = `${expense.description}|${expense.amount}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-            
-            const removed = original - expenseTracker.expenses.length;
-            console.log(`Filtered to ${expenseTracker.expenses.length} expenses (removed ${removed})`);
-            
-            // Save to localStorage
-            localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
-            
-            // Save to Firebase - REPLACE the entire expenses array
-            if (firebaseAuth?.currentUser) {
-                try {
-                    await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).update({
-                        expenses: expenseTracker.expenses
-                    });
-                    console.log('✅ Firebase updated with clean data');
-                } catch (error) {
-                    console.error('❌ Firebase update error:', error);
-                    // Try set instead of update
-                    try {
-                        await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
-                            expenses: expenseTracker.expenses,
-                            settings: expenseTracker.settings
-                        });
-                        console.log('✅ Firebase set with clean data');
-                    } catch (setError) {
-                        console.error('❌ Firebase set error:', setError);
+            try {
+                // Get all expenses from Firebase subcollection
+                const snapshot = await firebaseDb.collection('users')
+                    .doc(firebaseAuth.currentUser.uid)
+                    .collection('expenses')
+                    .get();
+                
+                console.log(`Found ${snapshot.docs.length} expenses in Firebase`);
+                
+                let deletedCount = 0;
+                const batch = firebaseDb.batch();
+                
+                // Check each Firebase document against sample data
+                snapshot.docs.forEach(doc => {
+                    const expense = doc.data();
+                    const isSample = sampleData.some(sample => 
+                        expense.date === sample.date && 
+                        expense.description === sample.description && 
+                        expense.amount === sample.amount
+                    );
+                    
+                    if (isSample) {
+                        console.log(`Deleting: ${expense.description} - $${expense.amount} (${expense.date})`);
+                        batch.delete(doc.ref);
+                        deletedCount++;
                     }
-                }
+                });
+                
+                // Execute batch delete
+                await batch.commit();
+                console.log(`✅ Deleted ${deletedCount} sample expenses from Firebase`);
+                
+                // Also clean localStorage
+                const original = expenseTracker.expenses.length;
+                expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                    return !sampleData.some(sample => 
+                        expense.date === sample.date && 
+                        expense.description === sample.description && 
+                        expense.amount === sample.amount
+                    );
+                });
+                
+                localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
+                const localRemoved = original - expenseTracker.expenses.length;
+                console.log(`✅ Removed ${localRemoved} from localStorage`);
+                
+                return `Deleted ${deletedCount} from Firebase, ${localRemoved} from localStorage`;
+                
+            } catch (error) {
+                console.error('❌ Error deleting from Firebase:', error);
+                return 'Error: ' + error.message;
             }
-            
-            // Update UI
-            expenseTracker.updateDashboard();
-            expenseTracker.renderTransactions();
-            
-            // Set flag to prevent re-migration
-            localStorage.setItem('data_cleaned', 'true');
-            
-            return `Removed ${removed} entries (${original} → ${expenseTracker.expenses.length})`;
         };
         
         this.init();
