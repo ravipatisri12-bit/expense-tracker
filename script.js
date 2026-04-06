@@ -14,6 +14,8 @@ class ExpenseTracker {
         this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
         this.settings = JSON.parse(localStorage.getItem('settings')) || this.getDefaultSettings();
         this.currentPage = 'dashboard';
+        this.currentTrendsOffset = 0; // For navigating through time periods
+        this.currentTrendsView = 'daily'; // 'daily' or 'weekly'
         this.init();
     }
 
@@ -122,7 +124,8 @@ class ExpenseTracker {
             description: description,
             category: category,
             date: expenseDate,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            excludeFromBudget: false
         };
 
         // Add to local array
@@ -171,6 +174,34 @@ class ExpenseTracker {
             this.renderTransactions();
             showNotification('Transaction deleted successfully!', 'success');
         }
+    }
+
+    toggleExcludeExpense(expenseId) {
+        const expense = this.expenses.find(e => e.id === expenseId);
+        if (!expense) return;
+
+        expense.excludeFromBudget = !expense.excludeFromBudget;
+        
+        // Add smooth transition effect
+        const transactionRow = document.querySelector(`[data-expense-id="${expenseId}"]`);
+        if (transactionRow) {
+            transactionRow.style.transition = 'opacity 0.3s ease';
+            transactionRow.style.opacity = expense.excludeFromBudget ? '0.5' : '1';
+        }
+        
+        // Save to localStorage
+        this.saveExpenses();
+        
+        // Update Firebase if user is signed in
+        if (currentUser) {
+            this.saveExpenseToFirebase(expense);
+        }
+
+        this.updateDashboard();
+        
+        // Show feedback
+        const status = expense.excludeFromBudget ? 'excluded from' : 'included in';
+        showNotification(`Transaction ${status} budget`, 'success');
     }
 
     // ====================================================================
@@ -297,7 +328,9 @@ class ExpenseTracker {
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
 
-        const totalVariableExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+        // Separate regular and essential expenses
+        const regularExpenses = monthlyExpenses.filter(e => !e.excludeFromBudget);
+        const totalVariableExpenses = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
         const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
 
         // Big spending number + budget ring
@@ -360,14 +393,27 @@ class ExpenseTracker {
         this.renderPieChart(monthlyExpenses);
 
         // Monthly report
-        const spent = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
+        const essentialExpenses = monthlyExpenses.filter(e => e.excludeFromBudget);
+        
+        const spent = regularExpenses.reduce((s, e) => s + e.amount, 0);
+        const essential = essentialExpenses.reduce((s, e) => s + e.amount, 0);
         const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
         const income = this.settings.income || 0;
-        const overall = spent + fixed;
+        const overall = spent + essential + fixed;
         const saved = income - overall;
+        
         const _el = id => document.getElementById(id);
-        if (_el('report-spent')) { _el('report-spent').textContent = formatCurrency(spent); _el('report-spent').style.color = (income && spent <= income) ? '#43e97b' : '#cf6679'; }
-        if (_el('report-saved')) { _el('report-saved').textContent = formatCurrency(Math.abs(saved)); _el('report-saved').style.color = saved >= 0 ? '#43e97b' : '#cf6679'; }
+        if (_el('report-spent')) { 
+            _el('report-spent').textContent = formatCurrency(spent); 
+            _el('report-spent').style.color = (income && spent <= income) ? '#43e97b' : '#cf6679'; 
+        }
+        if (_el('report-essential')) { 
+            _el('report-essential').textContent = formatCurrency(essential); 
+        }
+        if (_el('report-saved')) { 
+            _el('report-saved').textContent = formatCurrency(Math.abs(saved)); 
+            _el('report-saved').style.color = saved >= 0 ? '#43e97b' : '#cf6679'; 
+        }
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
     }
 
@@ -471,8 +517,16 @@ class ExpenseTracker {
         container.innerHTML = groupedByDate.map(dateGroup => {
             const transactionsHtml = dateGroup.transactions.map(expense => {
                 const c = catColors[expense.category] || '#a18cd1';
+                const isExcluded = expense.excludeFromBudget;
+                const transactionStyle = isExcluded ? 'opacity:0.5' : '';
+                
                 return `
-                <div class="flex items-center justify-between px-4 py-3.5" style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <div class="transaction-row flex items-center justify-between px-4 py-3.5" 
+                     style="border-bottom:1px solid rgba(255,255,255,0.04);${transactionStyle};cursor:pointer" 
+                     data-expense-id="${expense.id}"
+                     ontouchstart="handleTouchStart(event)" 
+                     ontouchmove="handleTouchMove(event)" 
+                     ontouchend="handleTouchEnd(event)">
                     <div class="flex items-center space-x-3">
                         <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}30">
                             <span style="color:${c};font-weight:600" class="text-xs">${expense.category.charAt(0)}</span>
@@ -1112,10 +1166,20 @@ class ExpenseTracker {
         const average = dailyData.days.length > 0 ? totalAmount / dailyData.days.length : 0;
         averageElement.textContent = formatCurrency(average);
 
-        // Update title
-        const titleElement = container.previousElementSibling.querySelector('h3');
+        // Update title with correct period
+        const titleElement = document.getElementById('trends-title');
         if (titleElement) {
-            titleElement.textContent = `Daily Spending (${period === 'week' ? 'This Week' : 'This Month'})`;
+            if (period === 'week') {
+                const weekLabel = this.currentTrendsOffset === 0 ? 'This Week' : 
+                                 this.currentTrendsOffset === 1 ? 'Last Week' : 
+                                 `${this.currentTrendsOffset} weeks ago`;
+                titleElement.textContent = `Daily Spending (${weekLabel})`;
+            } else {
+                const monthLabel = this.currentTrendsOffset === 0 ? 'This Month' : 
+                                  this.currentTrendsOffset === 1 ? 'Last Month' : 
+                                  `${this.currentTrendsOffset} months ago`;
+                titleElement.textContent = `Daily Spending (${monthLabel})`;
+            }
         }
 
         // Render daily spending items
@@ -1148,10 +1212,10 @@ class ExpenseTracker {
         let startDate, endDate;
 
         if (period === 'week') {
-            // Get current week (Sunday to Saturday)
+            // Calculate week based on offset (0 = current week, 1 = last week, etc.)
             const dayOfWeek = today.getDay();
             startDate = new Date(today);
-            startDate.setDate(today.getDate() - dayOfWeek);
+            startDate.setDate(today.getDate() - dayOfWeek - (this.currentTrendsOffset * 7));
             endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             
@@ -1162,14 +1226,18 @@ class ExpenseTracker {
                 days.push(this.getDaySpendingData(date));
             }
         } else {
-            // Get current month
-            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            // Calculate month based on offset (0 = current month, 1 = last month, etc.)
+            const targetMonth = today.getMonth() - this.currentTrendsOffset;
+            const targetYear = today.getFullYear() + Math.floor(targetMonth / 12);
+            const adjustedMonth = ((targetMonth % 12) + 12) % 12;
             
-            // Generate all days in the current month
+            startDate = new Date(targetYear, adjustedMonth, 1);
+            endDate = new Date(targetYear, adjustedMonth + 1, 0);
+            
+            // Generate all days in the target month
             const daysInMonth = endDate.getDate();
             for (let i = 1; i <= daysInMonth; i++) {
-                const date = new Date(today.getFullYear(), today.getMonth(), i);
+                const date = new Date(targetYear, adjustedMonth, i);
                 days.push(this.getDaySpendingData(date));
             }
         }
@@ -1177,7 +1245,7 @@ class ExpenseTracker {
         // Find max amount for percentage calculation
         const maxAmount = Math.max(...days.map(day => day.amount), 0);
 
-        return { days, maxAmount };
+        return { days, maxAmount, startDate, endDate };
     }
 
     getDaySpendingData(date) {
@@ -1314,40 +1382,42 @@ class ExpenseTracker {
         const weeks = [];
 
         if (period === 'recent') {
-            // Get last 4 weeks including current week
+            // Get 4 weeks based on offset (0 = current 4 weeks, 1 = previous 4 weeks, etc.)
+            const baseOffset = this.currentTrendsOffset * 4;
             for (let i = 3; i >= 0; i--) {
                 const weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - (today.getDay()) - (i * 7));
+                weekStart.setDate(today.getDate() - (today.getDay()) - ((i + baseOffset) * 7));
                 const weekEnd = new Date(weekStart);
                 weekEnd.setDate(weekStart.getDate() + 6);
                 
                 weeks.push(this.getWeekSpendingData(weekStart, weekEnd));
             }
         } else {
-            // Get all weeks in current month
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
+            // Get all weeks in target month based on offset
+            const targetMonth = today.getMonth() - this.currentTrendsOffset;
+            const targetYear = today.getFullYear() + Math.floor(targetMonth / 12);
+            const adjustedMonth = ((targetMonth % 12) + 12) % 12;
             
-            // Start from the first day of the month
-            let weekStart = new Date(currentYear, currentMonth, 1);
+            // Start from the first day of the target month
+            let weekStart = new Date(targetYear, adjustedMonth, 1);
             
             // Adjust to start from Sunday
             weekStart.setDate(weekStart.getDate() - weekStart.getDay());
             
-            while (weekStart.getMonth() <= currentMonth || weekStart.getDate() === 1) {
+            while (weekStart.getMonth() <= adjustedMonth || weekStart.getDate() === 1) {
                 const weekEnd = new Date(weekStart);
                 weekEnd.setDate(weekStart.getDate() + 6);
                 
-                // Only include weeks that have days in current month
-                if (weekStart.getMonth() === currentMonth || weekEnd.getMonth() === currentMonth) {
+                // Only include weeks that have days in target month
+                if (weekStart.getMonth() === adjustedMonth || weekEnd.getMonth() === adjustedMonth) {
                     weeks.push(this.getWeekSpendingData(weekStart, weekEnd));
                 }
                 
                 // Move to next week
                 weekStart.setDate(weekStart.getDate() + 7);
                 
-                // Break if we've moved beyond current month
-                if (weekStart.getMonth() > currentMonth && weekStart.getFullYear() >= currentYear) {
+                // Break if we've moved beyond target month
+                if (weekStart.getMonth() > adjustedMonth && weekStart.getFullYear() >= targetYear) {
                     break;
                 }
             }
@@ -1645,18 +1715,18 @@ function selectCategoryPill(el, value) {
 
 function switchTrendsView(view) {
     expenseTracker.currentTrendsView = view;
+    expenseTracker.currentTrendsOffset = 0; // Reset to current period when switching views
+    
     const dailyBtn = document.getElementById('trends-daily-btn');
     const weeklyBtn = document.getElementById('trends-weekly-btn');
-    const title = document.getElementById('trends-title');
+    
     if (view === 'daily') {
         dailyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
         weeklyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
-        if (title) title.textContent = 'Daily Spending (This Week)';
         expenseTracker.updateDailySpending('week');
     } else {
         weeklyBtn.className = 'trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md';
         dailyBtn.className = 'trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md';
-        if (title) title.textContent = 'Weekly Spending (Recent)';
         expenseTracker.updateWeeklySpending('recent');
     }
 }
@@ -2116,3 +2186,62 @@ if ('serviceWorker' in navigator) {
 
 // Enhanced Overview Page Functions
 // (Removed - merged into Home page)
+
+// Swipe gesture handling for transaction exclude/include
+let touchStartX = 0;
+let touchStartY = 0;
+let isSwiping = false;
+
+function handleTouchStart(event) {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+    isSwiping = false;
+}
+
+function handleTouchMove(event) {
+    if (!touchStartX || !touchStartY) return;
+    
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+    const diffX = Math.abs(touchX - touchStartX);
+    const diffY = Math.abs(touchY - touchStartY);
+    
+    // Only detect swipe if it's clearly horizontal and significant
+    if (diffX > 50 && diffX > diffY * 2) {
+        isSwiping = true;
+        // Only prevent default if the event is cancelable
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    }
+}
+
+function handleTouchEnd(event) {
+    if (!isSwiping) return;
+    
+    const expenseId = parseInt(event.currentTarget.dataset.expenseId);
+    if (expenseId) {
+        expenseTracker.toggleExcludeExpense(expenseId);
+    }
+    
+    // Reset
+    touchStartX = 0;
+    touchStartY = 0;
+    isSwiping = false;
+}
+
+// Trends navigation
+function navigateTrends(direction) {
+    if (direction === 'prev') {
+        expenseTracker.currentTrendsOffset++;
+    } else if (direction === 'next') {
+        expenseTracker.currentTrendsOffset = Math.max(0, expenseTracker.currentTrendsOffset - 1);
+    }
+    
+    // Update trends based on current view
+    if (expenseTracker.currentTrendsView === 'daily') {
+        expenseTracker.updateDailySpending('week');
+    } else {
+        expenseTracker.updateWeeklySpending('recent');
+    }
+}
