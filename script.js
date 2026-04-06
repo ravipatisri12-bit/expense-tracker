@@ -1460,7 +1460,6 @@ class ExpenseTracker {
             .sort((a, b) => b.amount - a.amount)
             .slice(0, 4);
     }
-    }
 
     // ====================================================================
     // PRIVACY MODE FUNCTIONALITY
