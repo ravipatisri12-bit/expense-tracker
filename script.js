@@ -2678,30 +2678,56 @@ function showCategoryDetail(category) {
                        'July', 'August', 'September', 'October', 'November', 'December'];
     
     const modalHtml = `
-        <div id="category-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this) closeCategoryDetail()">
-            <div class="w-full max-w-md mx-4 rounded-2xl p-6" style="background:var(--md-sys-color-surface-container-high)">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">${category} - ${monthNames[adjustedMonth]}</h3>
-                    <button onclick="closeCategoryDetail()" class="p-1 rounded-full" style="color:var(--md-sys-color-outline)">
-                        <span class="material-symbols-rounded text-xl">close</span>
-                    </button>
+        <div id="category-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.7)" onclick="if(event.target===this) closeCategoryDetail()">
+            <div class="w-full max-w-md rounded-3xl overflow-hidden" style="background:var(--md-sys-color-surface-container-high);box-shadow:0 24px 38px 3px rgba(0,0,0,0.14),0 9px 46px 8px rgba(0,0,0,0.12),0 11px 15px -7px rgba(0,0,0,0.2)">
+                <!-- Header -->
+                <div class="p-6 pb-4" style="background:linear-gradient(135deg,#667eea,#764ba2)">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">${category}</h3>
+                            <p class="text-white text-opacity-90 text-sm">${monthNames[adjustedMonth]} ${currentYear}</p>
+                        </div>
+                        <button onclick="closeCategoryDetail()" class="p-2 rounded-full text-white hover:bg-white hover:bg-opacity-20 transition-colors">
+                            <span class="material-symbols-rounded text-xl">close</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="mb-4">
-                    <p class="text-sm" style="color:var(--md-sys-color-outline)">${categoryExpenses.length} transactions • ${formatCurrency(categoryExpenses.reduce((sum, e) => sum + e.amount, 0))} total</p>
+                
+                <!-- Summary -->
+                <div class="px-6 py-4" style="background:var(--md-sys-color-surface-container)">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(categoryExpenses.reduce((sum, e) => sum + e.amount, 0))}</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Total Spent</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold" style="color:var(--md-sys-color-on-surface)">${categoryExpenses.length}</p>
+                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Transaction${categoryExpenses.length !== 1 ? 's' : ''}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="space-y-2 max-h-64 overflow-y-auto">
-                    ${categoryExpenses.length === 0 ? 
-                        '<div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No transactions in this category</div>' :
-                        categoryExpenses.map(expense => `
-                            <div class="flex justify-between items-center p-3 rounded-lg" style="background:var(--md-sys-color-surface-container)">
-                                <div>
-                                    <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                                    <p class="text-xs" style="color:var(--md-sys-color-outline)">${expense.date}</p>
+                
+                <!-- Transactions -->
+                <div class="px-6 pb-6">
+                    <h4 class="font-semibold mb-3 text-sm" style="color:var(--md-sys-color-on-surface)">Recent Transactions</h4>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        ${categoryExpenses.length === 0 ? 
+                            '<div class="text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No transactions in this category</div>' :
+                            categoryExpenses.slice(0, 10).map(expense => `
+                                <div class="flex justify-between items-center p-3 rounded-xl" style="background:var(--md-sys-color-surface-container)">
+                                    <div class="flex-1">
+                                        <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                                        <p class="text-xs" style="color:var(--md-sys-color-outline)">${new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                    </div>
+                                    <span class="font-bold text-sm ml-3" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
                                 </div>
-                                <span class="font-semibold text-sm" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
-                            </div>
-                        `).join('')
-                    }
+                            `).join('')
+                        }
+                        ${categoryExpenses.length > 10 ? 
+                            `<div class="text-center py-2 text-xs" style="color:var(--md-sys-color-outline)">Showing 10 of ${categoryExpenses.length} transactions</div>` : 
+                            ''
+                        }
+                    </div>
                 </div>
             </div>
         </div>
