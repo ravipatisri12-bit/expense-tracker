@@ -115,6 +115,9 @@ class ExpenseTracker {
             expenseTracker.updateDashboard();
             expenseTracker.renderTransactions();
             
+            // Set flag to prevent re-migration
+            localStorage.setItem('data_cleaned', 'true');
+            
             return `Removed ${removed} entries (${original} → ${expenseTracker.expenses.length})`;
         };
         
@@ -916,10 +919,14 @@ class ExpenseTracker {
             // Set up real-time listener
             this.setupRealtimeListeners();
             
-            // Check for local data to migrate
+            // Check for local data to migrate (but not if data was just cleaned)
             const localExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
-            if (localExpenses.length > 0) {
+            const dataCleaned = localStorage.getItem('data_cleaned');
+            if (localExpenses.length > 0 && !dataCleaned) {
                 this.migrateLocalDataToFirebase(localExpenses);
+            } else if (dataCleaned) {
+                console.log('Skipping migration - data was recently cleaned');
+                localStorage.removeItem('data_cleaned'); // Remove flag after use
             }
 
         } catch (error) {
