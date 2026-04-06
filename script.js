@@ -1295,26 +1295,38 @@ class ExpenseTracker {
         console.log('Categories for month', month, ':', sortedCategories.map(([cat, data]) => `${cat}: ${formatCurrency(data.amount)}`));
 
         if (sortedCategories.length === 0) {
-            container.innerHTML = '<div class="col-span-2 text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
+            container.innerHTML = '<div class="text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
             return;
         }
 
         container.innerHTML = sortedCategories.map(([category, data]) => {
             const color = categoryColors[category] || '#a18cd1';
-            const topMerchant = Object.entries(data.merchants)
-                .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Various';
+            
+            // Get top 2 merchants for this category
+            const topMerchants = Object.entries(data.merchants)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 2)
+                .map(([merchant]) => merchant);
+            
+            const merchantText = topMerchants.length > 0 ? topMerchants.join(', ') : 'Various merchants';
 
             return `
-                <div class="card p-3 cursor-pointer transition-all hover:scale-105" onclick="showCategoryDetail('${category}')">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:${color}30">
-                            <span style="color:${color};font-weight:600" class="text-xs">${category.charAt(0)}</span>
+                <div class="card p-4 cursor-pointer transition-all hover:bg-opacity-80" onclick="showCategoryDetail('${category}')" style="border-left: 4px solid ${color}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:${color}30">
+                                <span style="color:${color};font-weight:600" class="text-sm">${category.charAt(0)}</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-base" style="color:var(--md-sys-color-on-surface)">${category}</h4>
+                            </div>
                         </div>
-                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">${category}</span>
+                        <span class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</span>
                     </div>
-                    <p class="text-lg font-bold mb-1" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</p>
-                    <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transactions</p>
-                    <p class="text-xs" style="color:${color}">@ ${topMerchant.length > 12 ? topMerchant.substring(0, 12) + '...' : topMerchant}</p>
+                    <div class="flex justify-between items-center text-sm" style="color:var(--md-sys-color-outline)">
+                        <span>${data.count} transaction${data.count !== 1 ? 's' : ''}</span>
+                        <span class="truncate ml-2">${merchantText}</span>
+                    </div>
                 </div>
             `;
         }).join('');
