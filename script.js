@@ -53,7 +53,6 @@ class ExpenseTracker {
         this.updateCategoryDropdown();
         this.updateDashboard();
         this.renderTransactions();
-        this.initializeHistoryPage();
         this.initializeDateField();
         this.showPage('dashboard');
     }
@@ -899,33 +898,11 @@ class ExpenseTracker {
     // HISTORY PAGE FUNCTIONALITY
     // ====================================================================
 
-    initializeHistoryPage() {
-        this.populateHistoryYearSelector();
-        this.setDefaultHistoryDate();
-    }
 
-    populateHistoryYearSelector() {
-        const yearSelect = document.getElementById('history-year');
-        const currentYear = new Date().getFullYear();
-        const startYear = 2020; // Reasonable start year
 
-        yearSelect.innerHTML = '';
-        for (let year = currentYear; year >= startYear; year--) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            if (year === currentYear) {
-                option.selected = true;
-            }
-            yearSelect.appendChild(option);
-        }
-    }
 
-    setDefaultHistoryDate() {
-        const monthSelect = document.getElementById('history-month');
-        const currentMonth = new Date().getMonth();
-        monthSelect.value = currentMonth;
-    }
+
+
 
     getHistoricalData(month, year) {
         // Filter expenses for the selected month and year
