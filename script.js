@@ -1292,6 +1292,8 @@ class ExpenseTracker {
             .sort(([,a], [,b]) => b.amount - a.amount)
             .slice(0, 6); // Show top 6 categories
 
+        console.log('Categories for month', adjustedMonth, ':', sortedCategories.map(([cat, data]) => `${cat}: ${formatCurrency(data.amount)}`));
+
         if (sortedCategories.length === 0) {
             container.innerHTML = '<div class="col-span-2 text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
             return;
@@ -2636,8 +2638,64 @@ function toggleCategoryView(view) {
     expenseTracker.updateCategoryDistribution();
 }
 
-// Category detail view (placeholder for future implementation)
+// Category detail view - show transactions for selected category
 function showCategoryDetail(category) {
     console.log('Show detail for category:', category);
-    // TODO: Implement category drill-down view
+    
+    // Get current month expenses for this category
+    const today = new Date();
+    const currentMonth = today.getMonth() - expenseTracker.currentHistoryOffset;
+    const currentYear = today.getFullYear() + Math.floor(currentMonth / 12);
+    const adjustedMonth = ((currentMonth % 12) + 12) % 12;
+    
+    const categoryExpenses = expenseTracker.expenses.filter(expense => {
+        const d = expenseTracker.parseLocalDate(expense.date);
+        return d.getMonth() === adjustedMonth && 
+               d.getFullYear() === currentYear && 
+               expense.category === category;
+    });
+    
+    // Create a simple modal to show transactions
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const modalHtml = `
+        <div id="category-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this) closeCategoryDetail()">
+            <div class="w-full max-w-md mx-4 rounded-2xl p-6" style="background:var(--md-sys-color-surface-container-high)">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">${category} - ${monthNames[adjustedMonth]}</h3>
+                    <button onclick="closeCategoryDetail()" class="p-1 rounded-full" style="color:var(--md-sys-color-outline)">
+                        <span class="material-symbols-rounded text-xl">close</span>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm" style="color:var(--md-sys-color-outline)">${categoryExpenses.length} transactions • ${formatCurrency(categoryExpenses.reduce((sum, e) => sum + e.amount, 0))} total</p>
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    ${categoryExpenses.length === 0 ? 
+                        '<div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No transactions in this category</div>' :
+                        categoryExpenses.map(expense => `
+                            <div class="flex justify-between items-center p-3 rounded-lg" style="background:var(--md-sys-color-surface-container)">
+                                <div>
+                                    <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
+                                    <p class="text-xs" style="color:var(--md-sys-color-outline)">${expense.date}</p>
+                                </div>
+                                <span class="font-semibold text-sm" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeCategoryDetail() {
+    const modal = document.getElementById('category-detail-modal');
+    if (modal) {
+        modal.remove();
+    }
 }
