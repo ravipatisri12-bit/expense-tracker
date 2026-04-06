@@ -87,6 +87,10 @@ class ExpenseTracker {
                 firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
                     expenses: expenseTracker.expenses,
                     settings: expenseTracker.settings
+                }).then(() => {
+                    console.log('✅ Data saved to Firebase');
+                }).catch(error => {
+                    console.error('❌ Firebase save error:', error);
                 });
             }
             
