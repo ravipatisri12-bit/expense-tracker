@@ -18,7 +18,25 @@ else
     echo "✅"
 fi
 
-# 2. All script tags in index.html must point to files that exist
+# 2. JavaScript syntax validation
+echo -n "  JavaScript syntax... "
+JS_SYNTAX=""
+for f in script.js js/*.js; do
+    if [ -f "$f" ]; then
+        SYNTAX_CHECK=$(node -c "$f" 2>&1)
+        if [ $? -ne 0 ]; then
+            JS_SYNTAX="$JS_SYNTAX $f"
+        fi
+    fi
+done
+if [ -n "$JS_SYNTAX" ]; then
+    echo "❌ FAIL — syntax errors in:$JS_SYNTAX"
+    ERRORS=$((ERRORS + 1))
+else
+    echo "✅"
+fi
+
+# 3. All script tags in index.html must point to files that exist
 echo -n "  Script files exist... "
 MISSING=""
 for f in $(grep -oE 'src="(js/[^"]+|script\.js)"' index.html | sed 's/src="//;s/"//'); do
@@ -31,7 +49,20 @@ else
     echo "✅"
 fi
 
-# 3. Functions called in index.html onclick handlers must exist in JS
+# 3. All script tags in index.html must point to files that exist
+echo -n "  Script files exist... "
+MISSING=""
+for f in $(grep -oE 'src="(js/[^"]+|script\.js)"' index.html | sed 's/src="//;s/"//'); do
+    [ ! -f "$f" ] && MISSING="$MISSING $f"
+done
+if [ -n "$MISSING" ]; then
+    echo "❌ FAIL — missing:$MISSING"
+    ERRORS=$((ERRORS + 1))
+else
+    echo "✅"
+fi
+
+# 4. Functions called in index.html onclick handlers must exist in JS
 echo -n "  onclick handlers... "
 MISSING_FN=""
 for fn in $(grep -oE 'onclick="[a-zA-Z]+\(' index.html | sed 's/onclick="//;s/(//' | sort -u | grep -vE '^(if|return|this|event|new)$'); do
@@ -46,7 +77,7 @@ else
     echo "✅"
 fi
 
-# 4. Global functions in script.js that index.html calls must not be wrapped in conditions
+# 5. Global functions in script.js that index.html calls must not be wrapped in conditions
 echo -n "  ExpenseTracker class... "
 if grep -q "class ExpenseTracker" script.js; then
     echo "✅"
@@ -55,7 +86,7 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# 5. CSS files referenced must exist
+# 6. CSS files referenced must exist
 echo -n "  CSS files exist... "
 MISSING_CSS=""
 for f in $(grep -oE 'href="styles/[^"]+\.css"' index.html | sed 's/href="//;s/"//'); do
@@ -68,7 +99,7 @@ else
     echo "✅"
 fi
 
-# 6. JS getElementById calls in script.js must have null guards or exist in HTML
+# 7. JS getElementById calls in script.js must have null guards or exist in HTML
 echo -n "  Element ID safety... "
 HTML_IDS=$(grep -ohE 'id="[^"]*"' index.html | sed 's/id="//;s/"//' | sort -u)
 UNSAFE=""
