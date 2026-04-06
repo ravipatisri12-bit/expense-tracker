@@ -370,32 +370,99 @@
     <div id="history-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6">
             <div class="mb-6">
-                <h2 class="text-xl font-bold " style="color:var(--md-sys-color-on-surface)">Monthly History</h2>
-                <p class="text-sm" style="color:var(--md-sys-color-outline)">Compare your monthly expenses</p>
+                <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">History Analytics</h2>
+                <p class="text-sm" style="color:var(--md-sys-color-outline)">Spending insights and trends</p>
             </div>
-            <div class="card p-5 mb-6">
-                <div class="flex gap-3 items-end">
-                    <div class="flex-1"><label class="block text-xs font-medium mb-1" style="color:var(--md-sys-color-outline)">Month</label><select id="history-month" onchange="updateHistoryView()" class="block w-full rounded-xl text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid rgba(255,255,255,0.1);padding:10px 12px"><option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option></select></div>
-                    <div class="flex-1"><label class="block text-xs font-medium mb-1" style="color:var(--md-sys-color-outline)">Year</label><select id="history-year" onchange="updateHistoryView()" class="block w-full rounded-xl text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid rgba(255,255,255,0.1);padding:10px 12px"></select></div>
+            <!-- Month Navigation & Comparison -->
+            <div class="card p-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateHistoryMonth('prev')" class="p-2 rounded-full" style="color:var(--md-sys-color-primary)">
+                        <span class="material-symbols-rounded text-lg">chevron_left</span>
+                    </button>
+                    <h3 id="history-current-month" class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">April 2026</h3>
+                    <button onclick="navigateHistoryMonth('next')" class="p-2 rounded-full" style="color:var(--md-sys-color-primary)">
+                        <span class="material-symbols-rounded text-lg">chevron_right</span>
+                    </button>
+                </div>
+                
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="history-current-total" style="color:var(--md-sys-color-on-surface)">$0</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">This Month</p>
+                    </div>
+                    <div class="text-center" style="color:var(--md-sys-color-outline)">
+                        <span class="text-sm">vs</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="history-prev-total" style="color:var(--md-sys-color-on-surface)">$0</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Last Month</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="history-change-percent" style="color:var(--md-sys-color-on-surface)">—</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Change</p>
+                    </div>
+                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="history-active-days" style="color:var(--md-sys-color-on-surface)">0 days</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
+                    </div>
+                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="history-daily-avg" style="color:var(--md-sys-color-on-surface)">$0/day</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Average</p>
+                    </div>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="card p-4 text-center"><p class="text-xs" style="color:var(--md-sys-color-outline)">Total Expenses</p><p class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)" id="history-total-expenses">$0</p></div>
-                <div class="card p-4 text-center"><p class="text-xs" style="color:var(--md-sys-color-outline)">Variable Only</p><p class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)" id="history-variable-only">$0</p></div>
-                <div class="card p-4 text-center"><p class="text-xs" style="color:var(--md-sys-color-outline)">Income</p><p class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)" id="history-income">$0</p></div>
-                <div class="card p-4 text-center"><p class="text-xs" style="color:var(--md-sys-color-outline)">Savings</p><p class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)" id="history-savings">$0</p></div>
+            <!-- Category Breakdown Grid -->
+            <div class="mb-6">
+                <h3 class="text-base font-semibold mb-3" style="color:var(--md-sys-color-on-surface)">Categories</h3>
+                <div id="history-category-grid" class="grid grid-cols-2 gap-3">
+                    <div class="text-center py-8 text-sm col-span-2" style="color:var(--md-sys-color-outline)">No expenses this month</div>
+                </div>
             </div>
-            <div class="card p-5 mb-6">
-                <h3 class="text-base font-semibold mb-3" style="color:var(--md-sys-color-on-surface)">Category Breakdown</h3>
-                <div id="history-category-breakdown" class="space-y-2"><div class="text-center py-6 text-sm" style="color:var(--md-sys-color-outline)">Select a month</div></div>
+            <!-- Year Overview -->
+            <div class="card p-4 mb-6">
+                <h3 class="text-base font-semibold mb-4" style="color:var(--md-sys-color-on-surface)">2026 Overview</h3>
+                
+                <!-- 4-Pill Summary -->
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="year-total-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Total</p>
+                    </div>
+                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="year-avg-month" style="color:var(--md-sys-color-on-surface)">$0</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Avg/Mo</p>
+                    </div>
+                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="year-saved" style="color:var(--md-sys-color-on-surface)">$0</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Saved</p>
+                    </div>
+                    <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
+                        <p class="text-sm font-bold" id="year-active-months" style="color:var(--md-sys-color-on-surface)">0 mos</p>
+                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
+                    </div>
+                </div>
+
+                <!-- Monthly Breakdown -->
+                <div id="year-monthly-breakdown" class="space-y-2">
+                    <div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
+                </div>
             </div>
-            <div class="card p-5 mb-6">
-                <h3 class="text-base font-semibold mb-3" style="color:var(--md-sys-color-on-surface)">vs Current Month</h3>
-                <div id="history-comparison" class="space-y-3"><div class="text-center py-6 text-sm" style="color:var(--md-sys-color-outline)">Comparison data</div></div>
-            </div>
-            <div class="card">
-                <h3 class="text-base font-semibold p-5 pb-3" style="color:var(--md-sys-color-on-surface)">Transactions</h3>
-                <div id="history-transactions" class=""><div class="p-6 text-center text-sm" style="color:var(--md-sys-color-outline)">Select a month</div></div>
+
+            <!-- Category Distribution with Toggle -->
+            <div class="card p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-semibold" style="color:var(--md-sys-color-on-surface)">Top Categories</h3>
+                    <div class="flex rounded-lg p-0.5" style="background:var(--md-sys-color-surface-container-high)">
+                        <button onclick="toggleCategoryView('month')" id="category-month-btn" class="category-toggle-btn active px-3 py-1 text-xs font-medium rounded-md" style="background:var(--md-sys-color-primary);color:white">Month</button>
+                        <button onclick="toggleCategoryView('year')" id="category-year-btn" class="category-toggle-btn px-3 py-1 text-xs font-medium rounded-md" style="color:var(--md-sys-color-outline)">Year</button>
+                    </div>
+                </div>
+                <div id="category-distribution" class="space-y-3">
+                    <div class="text-center py-6 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
+                </div>
             </div>
         </div>
     </div>

@@ -16,6 +16,8 @@ class ExpenseTracker {
         this.currentPage = 'dashboard';
         this.currentTrendsOffset = 0; // For navigating through time periods
         this.currentTrendsView = 'daily'; // 'daily' or 'weekly'
+        this.currentHistoryOffset = 0; // For history month navigation
+        this.categoryDistributionView = 'month'; // 'month' or 'year'
         this.init();
     }
 
@@ -101,6 +103,11 @@ class ExpenseTracker {
         }
         
         this.currentPage = pageId;
+        
+        // Initialize page-specific content
+        if (pageId === 'history') {
+            this.updateHistoryAnalytics();
+        }
     }
 
     // ====================================================================
@@ -1101,6 +1108,77 @@ class ExpenseTracker {
                 </div>
             `}).join('')}
         `;
+    }
+
+    // ====================================================================
+    // PRIVACY MODE FUNCTIONALITY
+    // ====================================================================
+
+    updateHistoryAnalytics() {
+        // Simple implementation for now
+        const today = new Date();
+        const currentMonth = today.getMonth() - this.currentHistoryOffset;
+        const currentYear = today.getFullYear() + Math.floor(currentMonth / 12);
+        const adjustedMonth = ((currentMonth % 12) + 12) % 12;
+
+        // Update month navigation header
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        const currentMonthEl = document.getElementById('history-current-month');
+        if (currentMonthEl) {
+            currentMonthEl.textContent = `${monthNames[adjustedMonth]} ${currentYear}`;
+        }
+
+        // Get current month expenses
+        const monthExpenses = this.expenses.filter(expense => {
+            const d = this.parseLocalDate(expense.date);
+            return d.getMonth() === adjustedMonth && d.getFullYear() === currentYear;
+        });
+
+        const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
+        const totalSpent = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const activeDays = new Set(regularExpenses.map(e => e.date)).size;
+        const dailyAvg = activeDays > 0 ? totalSpent / activeDays : 0;
+
+        // Update current month display
+        const currentTotalEl = document.getElementById('history-current-total');
+        const activeDaysEl = document.getElementById('history-active-days');
+        const dailyAvgEl = document.getElementById('history-daily-avg');
+
+        if (currentTotalEl) currentTotalEl.textContent = formatCurrency(totalSpent);
+        if (activeDaysEl) activeDaysEl.textContent = `${activeDays} days`;
+        if (dailyAvgEl) dailyAvgEl.textContent = `${formatCurrency(dailyAvg)}/day`;
+
+        // Get previous month for comparison
+        const prevMonth = adjustedMonth - 1;
+        const prevYear = prevMonth < 0 ? currentYear - 1 : currentYear;
+        const adjustedPrevMonth = prevMonth < 0 ? 11 : prevMonth;
+
+        const prevMonthExpenses = this.expenses.filter(expense => {
+            const d = this.parseLocalDate(expense.date);
+            return d.getMonth() === adjustedPrevMonth && d.getFullYear() === prevYear;
+        });
+
+        const prevRegularExpenses = prevMonthExpenses.filter(e => !e.excludeFromBudget);
+        const prevTotalSpent = prevRegularExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+        // Update previous month display
+        const prevTotalEl = document.getElementById('history-prev-total');
+        const changePercentEl = document.getElementById('history-change-percent');
+
+        if (prevTotalEl) prevTotalEl.textContent = formatCurrency(prevTotalSpent);
+        
+        if (changePercentEl && prevTotalSpent > 0) {
+            const change = ((totalSpent - prevTotalSpent) / prevTotalSpent) * 100;
+            const isPositive = change >= 0;
+            changePercentEl.textContent = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
+            changePercentEl.style.color = isPositive ? '#cf6679' : '#43e97b'; // Red for increase, green for decrease
+        } else if (changePercentEl) {
+            changePercentEl.textContent = '—';
+            changePercentEl.style.color = 'var(--md-sys-color-on-surface)';
+        }
+
+        console.log('History analytics updated for', monthNames[adjustedMonth], currentYear);
     }
 
     // ====================================================================
@@ -2244,4 +2322,36 @@ function navigateTrends(direction) {
     } else {
         expenseTracker.updateWeeklySpending('recent');
     }
+}
+// History navigation
+function navigateHistoryMonth(direction) {
+    if (direction === 'prev') {
+        expenseTracker.currentHistoryOffset++;
+    } else if (direction === 'next') {
+        expenseTracker.currentHistoryOffset = Math.max(0, expenseTracker.currentHistoryOffset - 1);
+    }
+    
+    expenseTracker.updateHistoryAnalytics();
+}
+
+// Category distribution toggle
+function toggleCategoryView(view) {
+    expenseTracker.categoryDistributionView = view;
+    
+    const monthBtn = document.getElementById('category-month-btn');
+    const yearBtn = document.getElementById('category-year-btn');
+    
+    if (view === 'month') {
+        monthBtn.style.background = 'var(--md-sys-color-primary)';
+        monthBtn.style.color = 'white';
+        yearBtn.style.background = 'transparent';
+        yearBtn.style.color = 'var(--md-sys-color-outline)';
+    } else {
+        yearBtn.style.background = 'var(--md-sys-color-primary)';
+        yearBtn.style.color = 'white';
+        monthBtn.style.background = 'transparent';
+        monthBtn.style.color = 'var(--md-sys-color-outline)';
+    }
+    
+    console.log('Category view toggled to:', view);
 }
