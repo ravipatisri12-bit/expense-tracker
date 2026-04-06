@@ -1319,7 +1319,7 @@ class ExpenseTracker {
                             </div>
                             <div>
                                 <h4 class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${category}</h4>
-                                <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transactions • ${merchantText}</p>
+                                <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transaction${data.count !== 1 ? 's' : ''}</p>
                             </div>
                         </div>
                         <span class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</span>
