@@ -30,10 +30,19 @@ class ExpenseTracker {
         
         // Temporary sample data removal function
         window.removeSampleData = async () => {
-            if (!firebaseAuth?.currentUser) {
-                console.error('Must be signed in to remove from Firebase');
-                return;
+            console.log('🔍 Checking Firebase connection...');
+            
+            if (!window.firebaseDb) {
+                console.error('❌ Firebase not initialized');
+                return 'Error: Firebase not available';
             }
+            
+            if (!firebaseAuth?.currentUser) {
+                console.error('❌ Not signed in');
+                return 'Error: Must be signed in';
+            }
+            
+            console.log('✅ Firebase available, user signed in');
 
             const sampleData = [
                 {date: '2026-04-05', description: 'Starbucks Coffee', amount: 6.50},
@@ -67,59 +76,67 @@ class ExpenseTracker {
                 {date: '2026-02-23', description: 'Sushi Restaurant', amount: 45.60}
             ];
             
-            console.log('🗑️ Deleting sample data from Firebase subcollection...');
+            // Clean localStorage first (always works)
+            const original = expenseTracker.expenses.length;
+            expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                return !sampleData.some(sample => 
+                    expense.date === sample.date && 
+                    expense.description === sample.description && 
+                    expense.amount === sample.amount
+                );
+            });
             
+            const localRemoved = original - expenseTracker.expenses.length;
+            localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
+            console.log(`✅ Removed ${localRemoved} from localStorage`);
+            
+            // Try Firebase deletion with timeout
             try {
-                // Get all expenses from Firebase subcollection
-                const snapshot = await firebaseDb.collection('users')
-                    .doc(firebaseAuth.currentUser.uid)
-                    .collection('expenses')
-                    .get();
+                console.log('🗑️ Attempting Firebase deletion...');
                 
-                console.log(`Found ${snapshot.docs.length} expenses in Firebase`);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 10000)
+                );
                 
-                let deletedCount = 0;
-                const batch = firebaseDb.batch();
-                
-                // Check each Firebase document against sample data
-                snapshot.docs.forEach(doc => {
-                    const expense = doc.data();
-                    const isSample = sampleData.some(sample => 
-                        expense.date === sample.date && 
-                        expense.description === sample.description && 
-                        expense.amount === sample.amount
-                    );
+                const deletePromise = (async () => {
+                    const snapshot = await window.firebaseDb.collection('users')
+                        .doc(firebaseAuth.currentUser.uid)
+                        .collection('expenses')
+                        .get();
                     
-                    if (isSample) {
-                        console.log(`Deleting: ${expense.description} - $${expense.amount} (${expense.date})`);
-                        batch.delete(doc.ref);
-                        deletedCount++;
-                    }
-                });
+                    console.log(`Found ${snapshot.docs.length} expenses in Firebase`);
+                    
+                    let deletedCount = 0;
+                    const batch = window.firebaseDb.batch();
+                    
+                    snapshot.docs.forEach(doc => {
+                        const expense = doc.data();
+                        const isSample = sampleData.some(sample => 
+                            expense.date === sample.date && 
+                            expense.description === sample.description && 
+                            expense.amount === sample.amount
+                        );
+                        
+                        if (isSample) {
+                            console.log(`Deleting: ${expense.description} - $${expense.amount}`);
+                            batch.delete(doc.ref);
+                            deletedCount++;
+                        }
+                    });
+                    
+                    await batch.commit();
+                    return deletedCount;
+                })();
                 
-                // Execute batch delete
-                await batch.commit();
-                console.log(`✅ Deleted ${deletedCount} sample expenses from Firebase`);
+                const deletedCount = await Promise.race([deletePromise, timeoutPromise]);
+                console.log(`✅ Deleted ${deletedCount} from Firebase`);
                 
-                // Also clean localStorage
-                const original = expenseTracker.expenses.length;
-                expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
-                    return !sampleData.some(sample => 
-                        expense.date === sample.date && 
-                        expense.description === sample.description && 
-                        expense.amount === sample.amount
-                    );
-                });
-                
-                localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
-                const localRemoved = original - expenseTracker.expenses.length;
-                console.log(`✅ Removed ${localRemoved} from localStorage`);
-                
-                return `Deleted ${deletedCount} from Firebase, ${localRemoved} from localStorage`;
+                return `Success: ${localRemoved} from localStorage, ${deletedCount} from Firebase`;
                 
             } catch (error) {
-                console.error('❌ Error deleting from Firebase:', error);
-                return 'Error: ' + error.message;
+                console.warn(`⚠️ Firebase deletion failed: ${error.message}`);
+                console.log('✅ Local cleanup completed successfully');
+                return `Partial success: ${localRemoved} from localStorage (Firebase failed: ${error.message})`;
             }
         };
         
