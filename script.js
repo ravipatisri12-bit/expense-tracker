@@ -27,6 +27,96 @@ class ExpenseTracker {
             console.log('Found existing expenses:', this.expenses.length);
         }
         
+        // Add data recovery helper
+        window.recoverData = () => {
+            console.log('Attempting data recovery...');
+            if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                console.log('User signed in, attempting Firebase sync...');
+                this.loadExpensesFromFirebase();
+            } else {
+                console.log('No user signed in, cannot recover from Firebase');
+            }
+        };
+        
+        // Add comprehensive debugging tools
+        window.debugData = {
+            // Check current state
+            checkState: () => {
+                console.log('=== DATA DEBUG INFO ===');
+                console.log('LocalStorage expenses:', JSON.parse(localStorage.getItem('expenses') || '[]').length);
+                console.log('Memory expenses:', expenseTracker.expenses.length);
+                console.log('Firebase user:', firebaseAuth?.currentUser?.email || 'Not signed in');
+                console.log('Firebase app:', !!firebaseApp);
+                console.log('Firebase db:', !!firebaseDb);
+            },
+            
+            // Force Firebase load
+            forceFirebaseLoad: async () => {
+                console.log('Force loading from Firebase...');
+                if (!firebaseAuth?.currentUser) {
+                    console.error('No user signed in!');
+                    return;
+                }
+                try {
+                    const doc = await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        console.log('Firebase data found:', data.expenses?.length || 0, 'expenses');
+                        if (data.expenses) {
+                            expenseTracker.expenses = data.expenses;
+                            localStorage.setItem('expenses', JSON.stringify(data.expenses));
+                            expenseTracker.updateDashboard();
+                            expenseTracker.renderTransactions();
+                            console.log('✅ Data restored from Firebase!');
+                        } else {
+                            console.log('❌ No expenses in Firebase');
+                        }
+                    } else {
+                        console.log('❌ No Firebase document found');
+                    }
+                } catch (error) {
+                    console.error('Firebase load error:', error);
+                }
+            },
+            
+            // Clear sample data
+            clearSampleData: () => {
+                console.log('Clearing sample data...');
+                expenseTracker.expenses = [];
+                localStorage.setItem('expenses', JSON.stringify([]));
+                expenseTracker.updateDashboard();
+                expenseTracker.renderTransactions();
+                console.log('✅ Sample data cleared');
+            },
+            
+            // Show raw data
+            showRawData: () => {
+                console.log('=== RAW DATA ===');
+                console.log('Expenses in memory:', expenseTracker.expenses);
+                console.log('LocalStorage raw:', localStorage.getItem('expenses'));
+            },
+            
+            // Backup current data
+            backupData: () => {
+                const backup = {
+                    expenses: expenseTracker.expenses,
+                    settings: expenseTracker.settings,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('=== BACKUP DATA ===');
+                console.log('Copy this to save your current data:');
+                console.log(JSON.stringify(backup, null, 2));
+                return backup;
+            }
+        };
+        
+        console.log('🔧 Debug tools loaded! Use:');
+        console.log('debugData.checkState() - Check current data state');
+        console.log('debugData.forceFirebaseLoad() - Force load from Firebase');
+        console.log('debugData.clearSampleData() - Remove sample data');
+        console.log('debugData.showRawData() - Show all raw data');
+        console.log('debugData.backupData() - Backup current data');
+        
         this.init();
     }
 
