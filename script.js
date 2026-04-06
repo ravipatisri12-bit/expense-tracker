@@ -140,6 +140,27 @@ class ExpenseTracker {
             }
         };
         
+        // Backup function to download all transactions
+        window.downloadBackup = () => {
+            const backup = {
+                expenses: expenseTracker.expenses,
+                settings: expenseTracker.settings,
+                exportDate: new Date().toISOString(),
+                totalTransactions: expenseTracker.expenses.length
+            };
+            
+            const dataStr = JSON.stringify(backup, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `ledgr-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            console.log(`✅ Downloaded backup with ${backup.totalTransactions} transactions`);
+            return `Backup downloaded: ${backup.totalTransactions} transactions`;
+        };
+        
         this.init();
     }
 
