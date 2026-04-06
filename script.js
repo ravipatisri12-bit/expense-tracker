@@ -18,15 +18,63 @@ class ExpenseTracker {
         this.currentTrendsView = 'daily'; // 'daily' or 'weekly'
         this.currentHistoryOffset = 0; // For history month navigation
         this.categoryDistributionView = 'month'; // 'month' or 'year'
+        
+        // Add sample data if no expenses exist
+        if (this.expenses.length === 0) {
+            this.addSampleData();
+        }
+        
         this.init();
+    }
+
+    addSampleData() {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        
+        // Sample data for current month
+        const currentMonthSamples = [
+            { description: 'Starbucks Coffee', amount: 6.50, category: 'Coffee', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-05` },
+            { description: 'Grocery Store', amount: 85.30, category: 'Food', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-04` },
+            { description: 'Gas Station', amount: 45.00, category: 'Transportation', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-03` },
+            { description: 'Netflix Subscription', amount: 15.99, category: 'Entertainment', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-02` },
+            { description: 'Amazon Purchase', amount: 67.89, category: 'Shopping', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01` },
+            { description: 'Pizza Delivery', amount: 28.50, category: 'Food', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-06` },
+        ];
+
+        // Sample data for previous month
+        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        const prevMonthSamples = [
+            { description: 'Starbucks Coffee', amount: 5.75, category: 'Coffee', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-15` },
+            { description: 'Whole Foods', amount: 92.45, category: 'Food', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-14` },
+            { description: 'Uber Ride', amount: 18.50, category: 'Transportation', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-13` },
+            { description: 'Movie Theater', amount: 24.00, category: 'Entertainment', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-12` },
+            { description: 'Target Shopping', amount: 45.67, category: 'Shopping', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-11` },
+            { description: 'Car Repair', amount: 350.00, category: 'Other', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-10`, excludeFromBudget: true },
+        ];
+
+        // Add sample expenses with IDs and timestamps
+        [...currentMonthSamples, ...prevMonthSamples].forEach((sample, index) => {
+            this.expenses.push({
+                id: Date.now() + index,
+                ...sample,
+                timestamp: Date.now() + index,
+                excludeFromBudget: sample.excludeFromBudget || false
+            });
+        });
+
+        // Save sample data to localStorage
+        localStorage.setItem('expenses', JSON.stringify(this.expenses));
+        console.log('Added sample data for testing History Analytics');
     }
 
     getDefaultSettings() {
         return {
-            income: 0,
-            rent: 0,
-            utilities: 0,
-            insurance: 0,
+            income: 4000, // Sample monthly income for testing
+            rent: 1200,
+            utilities: 150,
+            insurance: 200,
             privacyMode: false,
             categories: ['Food', 'Transportation', 'Entertainment', 'Coffee', 'Shopping', 'Bills', 'Other'],
             goals: {
