@@ -1251,6 +1251,215 @@ class ExpenseTracker {
         }
 
         console.log('History analytics update completed');
+        
+        // Update category grid
+        this.updateCategoryGrid(monthExpenses);
+        
+        // Update year overview
+        this.updateYearOverview();
+        
+        // Update category distribution
+        this.updateCategoryDistribution();
+    }
+
+    updateCategoryGrid(monthExpenses) {
+        const container = document.getElementById('history-category-grid');
+        if (!container) return;
+
+        const categoryColors = {
+            Food: '#f5576c', Coffee: '#f093fb', Transportation: '#4facfe',
+            Entertainment: '#667eea', Shopping: '#43e97b', Bills: '#fccb90', Other: '#a18cd1'
+        };
+
+        // Group expenses by category (only regular expenses)
+        const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
+        const categories = {};
+        
+        regularExpenses.forEach(expense => {
+            if (!categories[expense.category]) {
+                categories[expense.category] = { amount: 0, count: 0, merchants: {} };
+            }
+            categories[expense.category].amount += expense.amount;
+            categories[expense.category].count++;
+            
+            if (!categories[expense.category].merchants[expense.description]) {
+                categories[expense.category].merchants[expense.description] = 0;
+            }
+            categories[expense.category].merchants[expense.description]++;
+        });
+
+        const sortedCategories = Object.entries(categories)
+            .sort(([,a], [,b]) => b.amount - a.amount)
+            .slice(0, 6); // Show top 6 categories
+
+        if (sortedCategories.length === 0) {
+            container.innerHTML = '<div class="col-span-2 text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
+            return;
+        }
+
+        container.innerHTML = sortedCategories.map(([category, data]) => {
+            const color = categoryColors[category] || '#a18cd1';
+            const topMerchant = Object.entries(data.merchants)
+                .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Various';
+
+            return `
+                <div class="card p-3 cursor-pointer transition-all hover:scale-105" onclick="showCategoryDetail('${category}')">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:${color}30">
+                            <span style="color:${color};font-weight:600" class="text-xs">${category.charAt(0)}</span>
+                        </div>
+                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">${category}</span>
+                    </div>
+                    <p class="text-lg font-bold mb-1" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</p>
+                    <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transactions</p>
+                    <p class="text-xs" style="color:${color}">@ ${topMerchant.length > 12 ? topMerchant.substring(0, 12) + '...' : topMerchant}</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateYearOverview() {
+        const currentYear = new Date().getFullYear();
+        const yearData = this.getYearData(currentYear);
+
+        // Update 4-pill summary
+        const totalSpentEl = document.getElementById('year-total-spent');
+        const avgMonthEl = document.getElementById('year-avg-month');
+        const savedEl = document.getElementById('year-saved');
+        const activeMonthsEl = document.getElementById('year-active-months');
+
+        if (totalSpentEl) totalSpentEl.textContent = formatCurrency(yearData.totalSpent);
+        if (avgMonthEl) avgMonthEl.textContent = formatCurrency(yearData.avgPerMonth);
+        if (savedEl) savedEl.textContent = formatCurrency(yearData.totalSaved);
+        if (activeMonthsEl) activeMonthsEl.textContent = `${yearData.activeMonths} mos`;
+
+        // Update monthly breakdown
+        const container = document.getElementById('year-monthly-breakdown');
+        if (!container) return;
+
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = new Date().getMonth();
+
+        container.innerHTML = yearData.months.map((monthData, index) => {
+            const isCurrentMonth = index === currentMonth;
+            const isFutureMonth = index > currentMonth;
+            const barWidth = yearData.maxAmount > 0 ? (monthData.amount / yearData.maxAmount) * 100 : 0;
+
+            return `
+                <div class="flex items-center justify-between py-2">
+                    <span class="text-sm font-medium w-8" style="color:var(--md-sys-color-on-surface)">${monthNames[index]}${isCurrentMonth ? '*' : ''}</span>
+                    <div class="flex-1 mx-3">
+                        <div class="w-full h-2 rounded-full" style="background:rgba(255,255,255,0.08)">
+                            <div class="h-2 rounded-full transition-all duration-300" 
+                                 style="width:${barWidth}%;background:${isFutureMonth ? 'rgba(255,255,255,0.2)' : 'var(--md-sys-color-primary)'}"></div>
+                        </div>
+                    </div>
+                    <span class="text-sm font-medium w-12 text-right" style="color:var(--md-sys-color-on-surface)">
+                        ${isFutureMonth ? '—' : formatCurrency(monthData.amount)}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getYearData(year) {
+        const months = Array.from({length: 12}, (_, i) => {
+            const monthExpenses = this.expenses.filter(expense => {
+                const d = this.parseLocalDate(expense.date);
+                return d.getMonth() === i && d.getFullYear() === year;
+            });
+            const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
+            const amount = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
+            return { amount, count: regularExpenses.length };
+        });
+
+        const totalSpent = months.reduce((sum, m) => sum + m.amount, 0);
+        const activeMonths = months.filter(m => m.amount > 0).length;
+        const avgPerMonth = activeMonths > 0 ? totalSpent / activeMonths : 0;
+        const maxAmount = Math.max(...months.map(m => m.amount));
+
+        // Calculate total saved (simplified - income * active months - total spent)
+        const totalSaved = Math.max(0, (this.settings.income * activeMonths) - totalSpent);
+
+        return { months, totalSpent, activeMonths, avgPerMonth, maxAmount, totalSaved };
+    }
+
+    updateCategoryDistribution() {
+        const container = document.getElementById('category-distribution');
+        if (!container) return;
+
+        const isMonthView = this.categoryDistributionView === 'month';
+        const data = isMonthView ? this.getCurrentMonthCategories() : this.getYearCategories();
+
+        if (data.length === 0) {
+            container.innerHTML = '<div class="text-center py-6 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>';
+            return;
+        }
+
+        const maxAmount = Math.max(...data.map(d => d.amount));
+
+        container.innerHTML = data.map(category => {
+            const percentage = maxAmount > 0 ? (category.amount / maxAmount) * 100 : 0;
+            return `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 flex-1">
+                        <span class="text-sm font-medium w-16" style="color:var(--md-sys-color-on-surface)">${category.name}</span>
+                        <div class="flex-1">
+                            <div class="w-full h-2 rounded-full" style="background:rgba(255,255,255,0.08)">
+                                <div class="h-2 rounded-full transition-all duration-300" 
+                                     style="width:${percentage}%;background:var(--md-sys-color-primary)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="text-sm font-medium ml-3" style="color:var(--md-sys-color-on-surface)">${formatCurrency(category.amount)}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getCurrentMonthCategories() {
+        const today = new Date();
+        const currentMonth = today.getMonth() - this.currentHistoryOffset;
+        const currentYear = today.getFullYear() + Math.floor(currentMonth / 12);
+        const adjustedMonth = ((currentMonth % 12) + 12) % 12;
+        
+        const monthExpenses = this.expenses.filter(expense => {
+            const d = this.parseLocalDate(expense.date);
+            return d.getMonth() === adjustedMonth && d.getFullYear() === currentYear;
+        });
+
+        const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
+        const categories = {};
+        
+        regularExpenses.forEach(expense => {
+            if (!categories[expense.category]) categories[expense.category] = 0;
+            categories[expense.category] += expense.amount;
+        });
+
+        return Object.entries(categories)
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 4);
+    }
+
+    getYearCategories() {
+        const currentYear = new Date().getFullYear();
+        const categories = {};
+
+        this.expenses.forEach(expense => {
+            const d = this.parseLocalDate(expense.date);
+            if (d.getFullYear() === currentYear && !expense.excludeFromBudget) {
+                if (!categories[expense.category]) categories[expense.category] = 0;
+                categories[expense.category] += expense.amount;
+            }
+        });
+
+        return Object.entries(categories)
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 4);
+    }
     }
 
     // ====================================================================
@@ -2425,5 +2634,11 @@ function toggleCategoryView(view) {
         monthBtn.style.color = 'var(--md-sys-color-outline)';
     }
     
-    console.log('Category view toggled to:', view);
+    expenseTracker.updateCategoryDistribution();
+}
+
+// Category detail view (placeholder for future implementation)
+function showCategoryDetail(category) {
+    console.log('Show detail for category:', category);
+    // TODO: Implement category drill-down view
 }
