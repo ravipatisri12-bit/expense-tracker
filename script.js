@@ -129,6 +129,102 @@ class ExpenseTracker {
                 console.log('LocalStorage raw:', localStorage.getItem('expenses'));
             },
             
+            // Precise sample data remover - removes exact matches and duplicates
+            removeSampleDataPrecise: () => {
+                console.log('🧹 Removing exact sample data matches and duplicates...');
+                
+                // Exact sample data to remove
+                const sampleData = [
+                    // April 2026
+                    {date: '2026-04-05', description: 'Starbucks Coffee', amount: 6.50},
+                    {date: '2026-04-04', description: 'Whole Foods Market', amount: 125.30},
+                    {date: '2026-04-03', description: 'Shell Gas Station', amount: 52.00},
+                    {date: '2026-04-02', description: 'Netflix Subscription', amount: 15.99},
+                    {date: '2026-04-01', description: 'Amazon Prime Order', amount: 89.99},
+                    {date: '2026-04-06', description: 'Chipotle Lunch', amount: 12.50},
+                    {date: '2026-04-05', description: 'Uber Ride', amount: 18.75},
+                    {date: '2026-04-04', description: 'Starbucks Coffee', amount: 5.25},
+                    {date: '2026-04-03', description: 'Target Shopping', amount: 67.45},
+                    {date: '2026-04-02', description: 'Movie Theater', amount: 28.00},
+                    {date: '2026-04-01', description: 'Grocery Store', amount: 78.90},
+                    
+                    // March 2026
+                    {date: '2026-03-28', description: 'Starbucks Coffee', amount: 5.75},
+                    {date: '2026-03-27', description: 'Safeway Groceries', amount: 98.45},
+                    {date: '2026-03-26', description: 'Gas Station Fill-up', amount: 48.50},
+                    {date: '2026-03-25', description: 'Spotify Premium', amount: 9.99},
+                    {date: '2026-03-24', description: 'Best Buy Electronics', amount: 156.78},
+                    {date: '2026-03-23', description: 'Pizza Delivery', amount: 32.50},
+                    {date: '2026-03-22', description: 'Car Repair Service', amount: 420.00},
+                    {date: '2026-03-21', description: 'Dunkin Coffee', amount: 4.25},
+                    {date: '2026-03-20', description: 'Lyft Ride', amount: 22.30},
+                    {date: '2026-03-19', description: 'Costco Shopping', amount: 145.67},
+                    {date: '2026-03-18', description: 'Restaurant Dinner', amount: 65.80},
+                    {date: '2026-03-17', description: 'Medical Copay', amount: 35.00},
+                    
+                    // February 2026
+                    {date: '2026-02-28', description: 'Coffee Shop', amount: 7.50},
+                    {date: '2026-02-27', description: 'Trader Joes', amount: 87.25},
+                    {date: '2026-02-26', description: 'Metro Card Refill', amount: 30.00},
+                    {date: '2026-02-25', description: 'Disney+ Subscription', amount: 7.99},
+                    {date: '2026-02-24', description: 'Online Shopping', amount: 78.90},
+                    {date: '2026-02-23', description: 'Sushi Restaurant', amount: 45.60}
+                ];
+                
+                const originalCount = expenseTracker.expenses.length;
+                console.log(`Original expense count: ${originalCount}`);
+                
+                // Remove exact matches
+                expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                    const isExactMatch = sampleData.some(sample => 
+                        expense.date === sample.date && 
+                        expense.description === sample.description && 
+                        expense.amount === sample.amount
+                    );
+                    return !isExactMatch;
+                });
+                
+                const afterExactRemoval = expenseTracker.expenses.length;
+                console.log(`After exact matches removed: ${afterExactRemoval} (removed ${originalCount - afterExactRemoval})`);
+                
+                // Remove duplicates (same description + amount, keep only first occurrence)
+                const seen = new Set();
+                expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                    const key = `${expense.description}|${expense.amount}`;
+                    if (seen.has(key)) {
+                        console.log(`Removing duplicate: ${expense.description} - $${expense.amount}`);
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+                
+                const finalCount = expenseTracker.expenses.length;
+                const totalRemoved = originalCount - finalCount;
+                
+                console.log(`✅ Final count: ${finalCount} (total removed: ${totalRemoved})`);
+                
+                // Save to localStorage and Firebase
+                localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
+                
+                if (firebaseAuth?.currentUser) {
+                    firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
+                        expenses: expenseTracker.expenses,
+                        settings: expenseTracker.settings
+                    }).then(() => {
+                        console.log('✅ Cleaned data saved to Firebase');
+                    }).catch(error => {
+                        console.error('❌ Firebase save error:', error);
+                    });
+                }
+                
+                // Refresh UI
+                expenseTracker.updateDashboard();
+                expenseTracker.renderTransactions();
+                
+                return `Removed ${totalRemoved} sample/duplicate entries (${originalCount} → ${finalCount})`;
+            },
+            
             // Backup current data
             backupData: () => {
                 const backup = {
@@ -146,7 +242,7 @@ class ExpenseTracker {
         console.log('🔧 Debug tools loaded! Use:');
         console.log('debugData.checkState() - Check current data state');
         console.log('debugData.forceFirebaseLoad() - Force load from Firebase');
-        console.log('debugData.cleanSampleData() - Remove duplicate sample data');
+        console.log('debugData.removeSampleDataPrecise() - Remove exact sample data + duplicates');
         console.log('debugData.showRawData() - Show all raw data');
         console.log('debugData.backupData() - Backup current data');
         
