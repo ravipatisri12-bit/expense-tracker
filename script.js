@@ -28,6 +28,74 @@ class ExpenseTracker {
             console.log('Found existing expenses:', this.expenses.length);
         }
         
+        // Temporary sample data removal function
+        window.removeSampleData = () => {
+            const sampleData = [
+                {date: '2026-04-05', description: 'Starbucks Coffee', amount: 6.50},
+                {date: '2026-04-04', description: 'Whole Foods Market', amount: 125.30},
+                {date: '2026-04-03', description: 'Shell Gas Station', amount: 52.00},
+                {date: '2026-04-02', description: 'Netflix Subscription', amount: 15.99},
+                {date: '2026-04-01', description: 'Amazon Prime Order', amount: 89.99},
+                {date: '2026-04-06', description: 'Chipotle Lunch', amount: 12.50},
+                {date: '2026-04-05', description: 'Uber Ride', amount: 18.75},
+                {date: '2026-04-04', description: 'Starbucks Coffee', amount: 5.25},
+                {date: '2026-04-03', description: 'Target Shopping', amount: 67.45},
+                {date: '2026-04-02', description: 'Movie Theater', amount: 28.00},
+                {date: '2026-04-01', description: 'Grocery Store', amount: 78.90},
+                {date: '2026-03-28', description: 'Starbucks Coffee', amount: 5.75},
+                {date: '2026-03-27', description: 'Safeway Groceries', amount: 98.45},
+                {date: '2026-03-26', description: 'Gas Station Fill-up', amount: 48.50},
+                {date: '2026-03-25', description: 'Spotify Premium', amount: 9.99},
+                {date: '2026-03-24', description: 'Best Buy Electronics', amount: 156.78},
+                {date: '2026-03-23', description: 'Pizza Delivery', amount: 32.50},
+                {date: '2026-03-22', description: 'Car Repair Service', amount: 420.00},
+                {date: '2026-03-21', description: 'Dunkin Coffee', amount: 4.25},
+                {date: '2026-03-20', description: 'Lyft Ride', amount: 22.30},
+                {date: '2026-03-19', description: 'Costco Shopping', amount: 145.67},
+                {date: '2026-03-18', description: 'Restaurant Dinner', amount: 65.80},
+                {date: '2026-03-17', description: 'Medical Copay', amount: 35.00},
+                {date: '2026-02-28', description: 'Coffee Shop', amount: 7.50},
+                {date: '2026-02-27', description: 'Trader Joes', amount: 87.25},
+                {date: '2026-02-26', description: 'Metro Card Refill', amount: 30.00},
+                {date: '2026-02-25', description: 'Disney+ Subscription', amount: 7.99},
+                {date: '2026-02-24', description: 'Online Shopping', amount: 78.90},
+                {date: '2026-02-23', description: 'Sushi Restaurant', amount: 45.60}
+            ];
+            
+            const original = expenseTracker.expenses.length;
+            expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                return !sampleData.some(sample => 
+                    expense.date === sample.date && 
+                    expense.description === sample.description && 
+                    expense.amount === sample.amount
+                );
+            });
+            
+            // Remove duplicates
+            const seen = new Set();
+            expenseTracker.expenses = expenseTracker.expenses.filter(expense => {
+                const key = `${expense.description}|${expense.amount}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+            
+            const removed = original - expenseTracker.expenses.length;
+            localStorage.setItem('expenses', JSON.stringify(expenseTracker.expenses));
+            
+            if (firebaseAuth?.currentUser) {
+                firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).set({
+                    expenses: expenseTracker.expenses,
+                    settings: expenseTracker.settings
+                });
+            }
+            
+            expenseTracker.updateDashboard();
+            expenseTracker.renderTransactions();
+            
+            return `Removed ${removed} entries (${original} → ${expenseTracker.expenses.length})`;
+        };
+        
         this.init();
     }
 
