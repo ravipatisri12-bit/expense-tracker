@@ -21,7 +21,10 @@ class ExpenseTracker {
         
         // Add sample data if no expenses exist
         if (this.expenses.length === 0) {
+            console.log('No expenses found, adding sample data...');
             this.addSampleData();
+        } else {
+            console.log('Found existing expenses:', this.expenses.length);
         }
         
         this.init();
@@ -32,30 +35,49 @@ class ExpenseTracker {
         const currentMonth = today.getMonth();
         const currentYear = today.getFullYear();
         
-        // Sample data for current month
-        const currentMonthSamples = [
-            { description: 'Starbucks Coffee', amount: 6.50, category: 'Coffee', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-05` },
-            { description: 'Grocery Store', amount: 85.30, category: 'Food', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-04` },
-            { description: 'Gas Station', amount: 45.00, category: 'Transportation', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-03` },
-            { description: 'Netflix Subscription', amount: 15.99, category: 'Entertainment', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-02` },
-            { description: 'Amazon Purchase', amount: 67.89, category: 'Shopping', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01` },
-            { description: 'Pizza Delivery', amount: 28.50, category: 'Food', date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-06` },
+        // Sample data for April 2026 (current month)
+        const aprilSamples = [
+            { description: 'Starbucks Coffee', amount: 6.50, category: 'Coffee', date: '2026-04-05' },
+            { description: 'Whole Foods Market', amount: 125.30, category: 'Food', date: '2026-04-04' },
+            { description: 'Shell Gas Station', amount: 52.00, category: 'Transportation', date: '2026-04-03' },
+            { description: 'Netflix Subscription', amount: 15.99, category: 'Entertainment', date: '2026-04-02' },
+            { description: 'Amazon Prime Order', amount: 89.99, category: 'Shopping', date: '2026-04-01' },
+            { description: 'Chipotle Lunch', amount: 12.50, category: 'Food', date: '2026-04-06' },
+            { description: 'Uber Ride', amount: 18.75, category: 'Transportation', date: '2026-04-05' },
+            { description: 'Starbucks Coffee', amount: 5.25, category: 'Coffee', date: '2026-04-04' },
+            { description: 'Target Shopping', amount: 67.45, category: 'Shopping', date: '2026-04-03' },
+            { description: 'Movie Theater', amount: 28.00, category: 'Entertainment', date: '2026-04-02' },
+            { description: 'Grocery Store', amount: 78.90, category: 'Food', date: '2026-04-01' },
         ];
 
-        // Sample data for previous month
-        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-        const prevMonthSamples = [
-            { description: 'Starbucks Coffee', amount: 5.75, category: 'Coffee', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-15` },
-            { description: 'Whole Foods', amount: 92.45, category: 'Food', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-14` },
-            { description: 'Uber Ride', amount: 18.50, category: 'Transportation', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-13` },
-            { description: 'Movie Theater', amount: 24.00, category: 'Entertainment', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-12` },
-            { description: 'Target Shopping', amount: 45.67, category: 'Shopping', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-11` },
-            { description: 'Car Repair', amount: 350.00, category: 'Other', date: `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-10`, excludeFromBudget: true },
+        // Sample data for March 2026 (previous month)
+        const marchSamples = [
+            { description: 'Starbucks Coffee', amount: 5.75, category: 'Coffee', date: '2026-03-28' },
+            { description: 'Safeway Groceries', amount: 98.45, category: 'Food', date: '2026-03-27' },
+            { description: 'Gas Station Fill-up', amount: 48.50, category: 'Transportation', date: '2026-03-26' },
+            { description: 'Spotify Premium', amount: 9.99, category: 'Entertainment', date: '2026-03-25' },
+            { description: 'Best Buy Electronics', amount: 156.78, category: 'Shopping', date: '2026-03-24' },
+            { description: 'Pizza Delivery', amount: 32.50, category: 'Food', date: '2026-03-23' },
+            { description: 'Car Repair Service', amount: 420.00, category: 'Other', date: '2026-03-22', excludeFromBudget: true },
+            { description: 'Dunkin Coffee', amount: 4.25, category: 'Coffee', date: '2026-03-21' },
+            { description: 'Lyft Ride', amount: 22.30, category: 'Transportation', date: '2026-03-20' },
+            { description: 'Costco Shopping', amount: 145.67, category: 'Shopping', date: '2026-03-19' },
+            { description: 'Restaurant Dinner', amount: 65.80, category: 'Food', date: '2026-03-18' },
+            { description: 'Medical Copay', amount: 35.00, category: 'Other', date: '2026-03-17', excludeFromBudget: true },
+        ];
+
+        // Sample data for February 2026 (two months ago)
+        const februarySamples = [
+            { description: 'Coffee Shop', amount: 7.50, category: 'Coffee', date: '2026-02-28' },
+            { description: 'Trader Joes', amount: 87.25, category: 'Food', date: '2026-02-27' },
+            { description: 'Metro Card Refill', amount: 30.00, category: 'Transportation', date: '2026-02-26' },
+            { description: 'Disney+ Subscription', amount: 7.99, category: 'Entertainment', date: '2026-02-25' },
+            { description: 'Online Shopping', amount: 78.90, category: 'Shopping', date: '2026-02-24' },
+            { description: 'Sushi Restaurant', amount: 45.60, category: 'Food', date: '2026-02-23' },
         ];
 
         // Add sample expenses with IDs and timestamps
-        [...currentMonthSamples, ...prevMonthSamples].forEach((sample, index) => {
+        [...aprilSamples, ...marchSamples, ...februarySamples].forEach((sample, index) => {
             this.expenses.push({
                 id: Date.now() + index,
                 ...sample,
@@ -66,7 +88,7 @@ class ExpenseTracker {
 
         // Save sample data to localStorage
         localStorage.setItem('expenses', JSON.stringify(this.expenses));
-        console.log('Added sample data for testing History Analytics');
+        console.log('Added comprehensive sample data for April, March, and February 2026');
     }
 
     getDefaultSettings() {
@@ -153,6 +175,7 @@ class ExpenseTracker {
         
         // Initialize page-specific content
         if (pageId === 'history') {
+            console.log('Showing history page, initializing analytics...');
             this.updateHistoryAnalytics();
         }
     }
@@ -1140,11 +1163,15 @@ class ExpenseTracker {
     // ====================================================================
 
     updateHistoryAnalytics() {
+        console.log('updateHistoryAnalytics called');
+        
         // Simple implementation for now
         const today = new Date();
         const currentMonth = today.getMonth() - this.currentHistoryOffset;
         const currentYear = today.getFullYear() + Math.floor(currentMonth / 12);
         const adjustedMonth = ((currentMonth % 12) + 12) % 12;
+
+        console.log('Analyzing month:', adjustedMonth, 'year:', currentYear);
 
         // Update month navigation header
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -1152,6 +1179,7 @@ class ExpenseTracker {
         const currentMonthEl = document.getElementById('history-current-month');
         if (currentMonthEl) {
             currentMonthEl.textContent = `${monthNames[adjustedMonth]} ${currentYear}`;
+            console.log('Updated month header to:', monthNames[adjustedMonth], currentYear);
         }
 
         // Get current month expenses
@@ -1160,19 +1188,32 @@ class ExpenseTracker {
             return d.getMonth() === adjustedMonth && d.getFullYear() === currentYear;
         });
 
+        console.log('Found expenses for current month:', monthExpenses.length, monthExpenses);
+
         const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
         const totalSpent = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
         const activeDays = new Set(regularExpenses.map(e => e.date)).size;
         const dailyAvg = activeDays > 0 ? totalSpent / activeDays : 0;
+
+        console.log('Regular expenses:', regularExpenses.length, 'Total:', totalSpent, 'Active days:', activeDays);
 
         // Update current month display
         const currentTotalEl = document.getElementById('history-current-total');
         const activeDaysEl = document.getElementById('history-active-days');
         const dailyAvgEl = document.getElementById('history-daily-avg');
 
-        if (currentTotalEl) currentTotalEl.textContent = formatCurrency(totalSpent);
-        if (activeDaysEl) activeDaysEl.textContent = `${activeDays} days`;
-        if (dailyAvgEl) dailyAvgEl.textContent = `${formatCurrency(dailyAvg)}/day`;
+        if (currentTotalEl) {
+            currentTotalEl.textContent = formatCurrency(totalSpent);
+            console.log('Updated current total to:', formatCurrency(totalSpent));
+        }
+        if (activeDaysEl) {
+            activeDaysEl.textContent = `${activeDays} days`;
+            console.log('Updated active days to:', activeDays);
+        }
+        if (dailyAvgEl) {
+            dailyAvgEl.textContent = `${formatCurrency(dailyAvg)}/day`;
+            console.log('Updated daily avg to:', formatCurrency(dailyAvg));
+        }
 
         // Get previous month for comparison
         const prevMonth = adjustedMonth - 1;
@@ -1184,6 +1225,8 @@ class ExpenseTracker {
             return d.getMonth() === adjustedPrevMonth && d.getFullYear() === prevYear;
         });
 
+        console.log('Found expenses for previous month:', prevMonthExpenses.length, prevMonthExpenses);
+
         const prevRegularExpenses = prevMonthExpenses.filter(e => !e.excludeFromBudget);
         const prevTotalSpent = prevRegularExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -1191,19 +1234,23 @@ class ExpenseTracker {
         const prevTotalEl = document.getElementById('history-prev-total');
         const changePercentEl = document.getElementById('history-change-percent');
 
-        if (prevTotalEl) prevTotalEl.textContent = formatCurrency(prevTotalSpent);
+        if (prevTotalEl) {
+            prevTotalEl.textContent = formatCurrency(prevTotalSpent);
+            console.log('Updated prev total to:', formatCurrency(prevTotalSpent));
+        }
         
         if (changePercentEl && prevTotalSpent > 0) {
             const change = ((totalSpent - prevTotalSpent) / prevTotalSpent) * 100;
             const isPositive = change >= 0;
             changePercentEl.textContent = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
             changePercentEl.style.color = isPositive ? '#cf6679' : '#43e97b'; // Red for increase, green for decrease
+            console.log('Updated change percent to:', change.toFixed(1) + '%');
         } else if (changePercentEl) {
             changePercentEl.textContent = '—';
             changePercentEl.style.color = 'var(--md-sys-color-on-surface)';
         }
 
-        console.log('History analytics updated for', monthNames[adjustedMonth], currentYear);
+        console.log('History analytics update completed');
     }
 
     // ====================================================================
