@@ -1253,7 +1253,7 @@ class ExpenseTracker {
         console.log('History analytics update completed');
         
         // Update category grid
-        this.updateCategoryGrid(monthExpenses);
+        this.updateCategoryGrid(monthExpenses, adjustedMonth, currentYear);
         
         // Update year overview
         this.updateYearOverview();
@@ -1262,7 +1262,7 @@ class ExpenseTracker {
         this.updateCategoryDistribution();
     }
 
-    updateCategoryGrid(monthExpenses) {
+    updateCategoryGrid(monthExpenses, month, year) {
         const container = document.getElementById('history-category-grid');
         if (!container) return;
 
@@ -1292,7 +1292,7 @@ class ExpenseTracker {
             .sort(([,a], [,b]) => b.amount - a.amount)
             .slice(0, 6); // Show top 6 categories
 
-        console.log('Categories for month', adjustedMonth, ':', sortedCategories.map(([cat, data]) => `${cat}: ${formatCurrency(data.amount)}`));
+        console.log('Categories for month', month, ':', sortedCategories.map(([cat, data]) => `${cat}: ${formatCurrency(data.amount)}`));
 
         if (sortedCategories.length === 0) {
             container.innerHTML = '<div class="col-span-2 text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
