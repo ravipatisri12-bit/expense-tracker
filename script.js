@@ -1311,21 +1311,18 @@ class ExpenseTracker {
             const merchantText = topMerchants.length > 0 ? topMerchants.join(', ') : 'Various merchants';
 
             return `
-                <div class="card p-4 cursor-pointer transition-all hover:bg-opacity-80" onclick="showCategoryDetail('${category}')" style="border-left: 4px solid ${color}">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:${color}30">
-                                <span style="color:${color};font-weight:600" class="text-sm">${category.charAt(0)}</span>
+                <div class="card p-3 cursor-pointer transition-all hover:bg-opacity-80" onclick="showCategoryDetail('${category}')" style="border-left: 3px solid ${color}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:${color}30">
+                                <span style="color:${color};font-weight:600" class="text-xs">${category.charAt(0)}</span>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-base" style="color:var(--md-sys-color-on-surface)">${category}</h4>
+                                <h4 class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${category}</h4>
+                                <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transactions • ${merchantText}</p>
                             </div>
                         </div>
-                        <span class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm" style="color:var(--md-sys-color-outline)">
-                        <span>${data.count} transaction${data.count !== 1 ? 's' : ''}</span>
-                        <span class="truncate ml-2">${merchantText}</span>
+                        <span class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</span>
                     </div>
                 </div>
             `;
