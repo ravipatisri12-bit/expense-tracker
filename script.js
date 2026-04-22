@@ -2437,24 +2437,34 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
     console.log('API key resolved:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE');
     if (!apiKey) throw new Error('No API key available');
 
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
-        })
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+            })
+        });
 
-    if (!resp.ok) {
-        const errBody = await resp.text();
-        console.error('Gemini API response:', resp.status, errBody);
-        throw new Error(`API error ${resp.status}`);
+        if (resp.status === 429 && attempt < 2) {
+            const wait = Math.pow(2, attempt + 1) * 1000;
+            console.warn(`Gemini 429 — retrying in ${wait/1000}s (attempt ${attempt + 1}/3)`);
+            await new Promise(r => setTimeout(r, wait));
+            continue;
+        }
+
+        if (!resp.ok) {
+            const errBody = await resp.text();
+            console.error('Gemini API response:', resp.status, errBody);
+            throw new Error(`API error ${resp.status}`);
+        }
+        const data = await resp.json();
+        const text = data.candidates[0].content.parts[0].text.trim();
+        const match = text.match(/\[[\s\S]*\]/);
+        return match ? JSON.parse(match[0]) : this.templateInsights(summary);
     }
-    const data = await resp.json();
-    const text = data.candidates[0].content.parts[0].text.trim();
-    const match = text.match(/\[[\s\S]*\]/);
-    return match ? JSON.parse(match[0]) : this.templateInsights(summary);
+    throw new Error('API error 429 after 3 retries');
 };
 
 ExpenseTracker.prototype.templateInsights = function(s) {
