@@ -2427,7 +2427,7 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
     console.log('API key resolved:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE');
     if (!apiKey) throw new Error('No API key available');
 
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
