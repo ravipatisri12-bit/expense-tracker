@@ -2455,11 +2455,10 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
             })
         });
 
-        if (resp.status === 429 && attempt < 2) {
-            const wait = Math.pow(2, attempt + 1) * 1000;
-            console.warn(`Gemini 429 — retrying in ${wait/1000}s (attempt ${attempt + 1}/3)`);
-            await new Promise(r => setTimeout(r, wait));
-            continue;
+        if (resp.status === 429) {
+            usage.count = 15; // Block further calls today
+            localStorage.setItem('gemini_usage', JSON.stringify(usage));
+            throw new Error('Rate limited (429) — paused for today');
         }
 
         if (!resp.ok) {
