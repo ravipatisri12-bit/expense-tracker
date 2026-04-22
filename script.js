@@ -980,6 +980,16 @@ class ExpenseTracker {
                 localStorage.removeItem('data_cleaned'); // Remove flag after use
             }
 
+            // Auto-sync Gmail if last sync was more than 4 hours ago
+            if (window.emailParser && localStorage.getItem('gmail_access_token')) {
+                const lastSync = localStorage.getItem('gmail_last_synced');
+                const hoursSince = lastSync ? (Date.now() - new Date(lastSync).getTime()) / 3600000 : Infinity;
+                if (hoursSince >= 4) {
+                    console.log('Auto-syncing Gmail (last sync:', lastSync || 'never', ')');
+                    window.emailParser.sync();
+                }
+            }
+
         } catch (error) {
             console.error('Error loading user data:', error);
             showNotification('Failed to load data from cloud', 'error');
