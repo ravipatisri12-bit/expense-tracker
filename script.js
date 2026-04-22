@@ -2309,17 +2309,17 @@ ExpenseTracker.prototype.calculateFoodStreak = function() {
 
 ExpenseTracker.prototype.buildSpendingSummary = function() {
     const now = new Date();
-    const fourWeeksAgo = new Date(now); fourWeeksAgo.setDate(now.getDate() - 28);
-    const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
+    const fourWeeksAgo = new Date(now); fourWeeksAgo.setDate(now.getDate() - 14);
+    const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 7);
 
-    // Rolling 4-week window
+    // Rolling 2-week window
     const last4Weeks = this.expenses.filter(e => {
         const d = this.parseLocalDate(e.date);
         return d >= fourWeeksAgo && d <= now;
     });
 
     const totalSpent = last4Weeks.reduce((s, e) => s + e.amount, 0);
-    const dailyAvg = totalSpent / 28;
+    const dailyAvg = totalSpent / 14;
 
     // Week-over-week: recent 2 weeks vs prior 2 weeks
     const recentHalf = last4Weeks.filter(e => this.parseLocalDate(e.date) >= twoWeeksAgo);
@@ -2356,7 +2356,7 @@ ExpenseTracker.prototype.buildSpendingSummary = function() {
     return {
         totalSpent: Math.round(totalSpent),
         dailyAvg: Math.round(dailyAvg),
-        weeklyAvg: Math.round(totalSpent / 4),
+        weeklyAvg: Math.round(totalSpent / 2),
         recentTwoWeeks: Math.round(recentTotal),
         priorTwoWeeks: Math.round(priorTotal),
         topSpendingDay: topDay.avg > 0 ? { day: topDay.day, avg: Math.round(topDay.avg) } : null,
@@ -2409,9 +2409,9 @@ ExpenseTracker.prototype.renderInsights = function() {
 };
 
 ExpenseTracker.prototype.fetchGeminiInsights = async function(summary) {
-    const prompt = `You're a supportive but honest personal spending coach. Based on this rolling 4-week spending data, give exactly 3 short behavioral insights (1-2 sentences each). Be specific with dollar amounts. Focus on patterns the user can act on. No generic advice. No bullet points or numbering — just 3 separate observations.
+    const prompt = `You're a supportive but honest personal spending coach. Based on this rolling 2-week spending data, give exactly 3 short behavioral insights (1-2 sentences each). Be specific with dollar amounts. Focus on patterns the user can act on. No generic advice. No bullet points or numbering — just 3 separate observations.
 
-Data (last 4 weeks):
+Data (last 2 weeks):
 - Total spent: $${summary.totalSpent} across ${summary.transactionCount} transactions
 - Daily average: $${summary.dailyAvg}, Weekly average: $${summary.weeklyAvg}
 - Recent 2 weeks: $${summary.recentTwoWeeks}, Prior 2 weeks: $${summary.priorTwoWeeks}
@@ -2467,9 +2467,9 @@ ExpenseTracker.prototype.templateInsights = function(s) {
             ? `Your recent 2 weeks ($${s.recentTwoWeeks}) are ${pct}% higher than the prior 2 weeks. Worth checking where the extra is going.`
             : pct < -5
             ? `Spending dropped ${Math.abs(pct)}% in the recent 2 weeks ($${s.recentTwoWeeks} vs $${s.priorTwoWeeks}) — real progress.`
-            : `Spending is steady across the last 4 weeks at ~$${s.weeklyAvg}/week.`);
+            : `Spending is steady across the last 2 weeks at ~$${s.weeklyAvg}/week.`);
     } else if (s.totalSpent > 0) {
-        insights.push(`You've spent $${s.totalSpent} over the last 4 weeks — averaging $${s.dailyAvg}/day.`);
+        insights.push(`You've spent $${s.totalSpent} over the last 2 weeks — averaging $${s.dailyAvg}/day.`);
     }
 
     // Budget check

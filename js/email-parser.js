@@ -350,10 +350,7 @@ ${truncated}`;
                     const subject = subjectHeader?.value || '';
                     const bodyText = this.extractTextFromPayload(fullMsg.payload);
 
-                    let parsed = await this.parseEmailWithGemini(bodyText, subject);
-
-                    // Fallback to regex if Gemini is unavailable
-                    if (!parsed) parsed = this.parseChaseRegex(bodyText, subject);
+                    let parsed = this.parseChaseRegex(bodyText, subject);
 
                     this.markProcessed(msg.id);
 
