@@ -372,11 +372,20 @@ class ExpenseTracker {
     }
 
     addExpenseProgrammatically(expense) {
+        // Dedup: skip if same amount + description + date already exists
+        const isDupe = this.expenses.some(e =>
+            e.amount === expense.amount &&
+            e.description === expense.description &&
+            e.date === expense.date
+        );
+        if (isDupe) return false;
+
         this.expenses.push(expense);
         this.saveExpenses();
         if (currentUser) this.saveExpenseToFirebase(expense);
         this.updateDashboard();
         this.renderTransactions();
+        return true;
     }
 
     async deleteExpense(expenseId) {

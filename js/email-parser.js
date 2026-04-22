@@ -342,9 +342,9 @@ ${truncated}`;
                     };
 
                     if (window.expenseTracker) {
-                        window.expenseTracker.addExpenseProgrammatically(expense);
+                        const added = window.expenseTracker.addExpenseProgrammatically(expense);
+                        if (added) imported++;
                     }
-                    imported++;
 
                     // Small delay to avoid Gmail API rate limits
                     await new Promise(r => setTimeout(r, 300));
