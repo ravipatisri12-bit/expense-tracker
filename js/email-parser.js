@@ -27,7 +27,7 @@ class EmailParser {
     }
 
     async searchMessages(token) {
-        const url = `${GMAIL_API}/messages?q=${encodeURIComponent(GMAIL_QUERY)}&maxResults=25`;
+        const url = `${GMAIL_API}/messages?q=${encodeURIComponent(GMAIL_QUERY)}&maxResults=50`;
         const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (resp.status === 401) throw new Error('TOKEN_EXPIRED');
         if (!resp.ok) throw new Error(`Gmail search failed: ${resp.status}`);
