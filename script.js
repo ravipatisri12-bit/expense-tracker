@@ -2379,6 +2379,10 @@ ExpenseTracker.prototype.renderInsights = function() {
 
     const summary = this.buildSpendingSummary();
 
+    // Only fetch once per session — cache or fetch on first call, skip all subsequent
+    if (this._insightsDone) return;
+    this._insightsDone = true;
+
     // Cache: refresh only once per day (stored in localStorage to survive reloads)
     const today = new Date().toDateString();
     const cached = localStorage.getItem('insights_cache');
@@ -2395,14 +2399,11 @@ ExpenseTracker.prototype.renderInsights = function() {
     }
 
     const badge = document.getElementById('insights-badge');
-    if (this._insightsFetching) return;
-    this._insightsFetching = true;
     this.fetchGeminiInsights(summary).then(insights => {
         const html = this.formatInsights(insights);
         container.innerHTML = html;
         localStorage.setItem('insights_cache', JSON.stringify({ date: today, html }));
         if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
-        this._insightsFetching = false;
     }).catch((err) => {
         console.warn('Gemini insights failed:', err.message);
         const html = this.formatInsights(this.templateInsights(summary));
