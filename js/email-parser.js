@@ -4,10 +4,10 @@
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent`;
 
-// TEST MODE: from: filter removed so forwarded/mock emails work.
-// Switch back to the line below before production use:
+// TEST MODE: all filters removed — searches any email from the last day.
+// Restore this line before production use:
 // const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:7d';
-const GMAIL_QUERY = 'label:"Chase Transactions" newer_than:7d';
+const GMAIL_QUERY = 'newer_than:1d';
 
 class EmailParser {
     isTokenValid() {
