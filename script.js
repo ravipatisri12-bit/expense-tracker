@@ -2437,7 +2437,15 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
     console.log('API key resolved:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE');
     if (!apiKey) throw new Error('No API key available');
 
+    // Daily call limit (max 15)
+    const today = new Date().toDateString();
+    const usage = JSON.parse(localStorage.getItem('gemini_usage') || '{}');
+    if (usage.date !== today) { usage.date = today; usage.count = 0; }
+    if (usage.count >= 15) throw new Error('Daily API limit reached (15)');
+
     for (let attempt = 0; attempt < 3; attempt++) {
+        usage.count++;
+        localStorage.setItem('gemini_usage', JSON.stringify(usage));
         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
