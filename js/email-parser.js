@@ -4,9 +4,10 @@
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent`;
 
-// Only process emails from Chase's alert sender inside the user's curated label.
-// This dual filter eliminates promotional emails and ensures only real alerts are parsed.
-const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:7d';
+// TEST MODE: from: filter removed so forwarded/mock emails work.
+// Switch back to the line below before production use:
+// const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:7d';
+const GMAIL_QUERY = 'label:"Chase Transactions" newer_than:7d';
 
 class EmailParser {
     isTokenValid() {
