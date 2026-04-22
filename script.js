@@ -312,6 +312,9 @@ class ExpenseTracker {
             console.log('Showing history page, initializing analytics...');
             this.updateHistoryAnalytics();
         }
+        if (pageId === 'add-expense' && window.emailParser) {
+            window.emailParser.updateLastSyncedUI();
+        }
     }
 
     // ====================================================================
@@ -366,6 +369,14 @@ class ExpenseTracker {
         
         // Redirect to dashboard
         this.showPage('dashboard');
+    }
+
+    addExpenseProgrammatically(expense) {
+        this.expenses.push(expense);
+        this.saveExpenses();
+        if (currentUser) this.saveExpenseToFirebase(expense);
+        this.updateDashboard();
+        this.renderTransactions();
     }
 
     async deleteExpense(expenseId) {

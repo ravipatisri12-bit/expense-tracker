@@ -22,6 +22,7 @@
     <script src="js/smart-input.js"></script>
     <script src="js/quick-add.js"></script>
     <script src="js/gamification.js"></script>
+    <script src="js/email-parser.js"></script>
     <script>document.fonts.ready.then(()=>document.documentElement.classList.add('fonts-loaded'))</script>
 </head>
 <body class="min-h-screen pb-20 pt-14">
@@ -315,6 +316,32 @@
             <div id="recent-added" class="hidden mb-5">
                 <h3 class="text-sm font-medium mb-3" style="color:var(--md-sys-color-on-surface-variant)">Just Added</h3>
                 <div id="recent-added-list" class="space-y-2"></div>
+            </div>
+
+            <!-- Gmail Pull -->
+            <div class="card p-5 mb-5" id="gmail-pull-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded text-lg" style="color:var(--md-sys-color-primary)">mark_email_read</span>
+                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Gmail Import</span>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">Chase Alerts</span>
+                </div>
+                <p class="text-xs mb-4" style="color:var(--md-sys-color-outline)">Pull transactions from your Chase credit card alert emails.</p>
+                <div class="flex items-center justify-between">
+                    <span id="gmail-last-synced" class="text-xs" style="color:var(--md-sys-color-outline)">Never synced</span>
+                    <button id="gmail-sync-btn" onclick="window.emailParser && window.emailParser.sync()"
+                        class="px-5 py-2 rounded-full text-sm font-medium"
+                        style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">
+                        Pull from Gmail
+                    </button>
+                </div>
+                <button id="gmail-reconnect-btn"
+                    onclick="window.refreshGmailToken && window.refreshGmailToken().then(() => window.emailParser && window.emailParser.sync())"
+                    class="hidden w-full mt-3 py-2.5 rounded-full text-sm font-medium"
+                    style="background:rgba(255,180,171,0.1);color:#ffb4ab;border:1px solid rgba(255,180,171,0.2)">
+                    Reconnect Gmail
+                </button>
             </div>
 
             <!-- Manual Form -->

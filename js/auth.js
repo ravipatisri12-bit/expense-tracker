@@ -25,17 +25,25 @@ async function signInWithGoogle() {
 
         // Create Google Auth Provider
         const provider = new firebase.auth.GoogleAuthProvider();
-        
+        provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+
         // Sign in with popup
         const result = await window.firebaseAuth.signInWithPopup(provider);
-        
+
+        // Store Gmail OAuth token (expires in ~59 min)
+        const accessToken = result.credential && result.credential.accessToken;
+        if (accessToken) {
+            localStorage.setItem('gmail_access_token', accessToken);
+            localStorage.setItem('gmail_token_expiry', String(Date.now() + 3540000));
+        }
+
         console.log('Successfully signed in:', result.user.displayName);
-        
+
         // Show success notification if available
         if (typeof showNotification === 'function') {
             showNotification('Successfully signed in!', 'success');
         }
-        
+
         return result;
     } catch (error) {
         console.error('Error signing in with Google:', error);
@@ -70,7 +78,10 @@ async function signOut() {
         }
 
         await window.firebaseAuth.signOut();
-        
+
+        localStorage.removeItem('gmail_access_token');
+        localStorage.removeItem('gmail_token_expiry');
+
         console.log('Successfully signed out');
     } catch (error) {
         console.error('Error signing out:', error);
@@ -197,7 +208,25 @@ function initAuth() {
     });
 }
 
+async function refreshGmailToken() {
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+        const result = await window.firebaseAuth.signInWithPopup(provider);
+        const token = result.credential && result.credential.accessToken;
+        if (token) {
+            localStorage.setItem('gmail_access_token', token);
+            localStorage.setItem('gmail_token_expiry', String(Date.now() + 3540000));
+        }
+        return token || null;
+    } catch (err) {
+        console.error('Gmail token refresh failed:', err);
+        return null;
+    }
+}
+
 // Export functions for use in other modules
+window.refreshGmailToken = refreshGmailToken;
 window.signInWithGoogle = signInWithGoogle;
 window.signOut = signOut;
 window.onAuthStateChanged = onAuthStateChanged;
