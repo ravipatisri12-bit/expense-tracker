@@ -174,7 +174,7 @@ ${truncated}`;
         if (/starbucks|coffee|dunkin|espresso|latte|cafe/.test(m)) return 'Coffee';
         if (/restaurant|pizza|burger|sushi|bakery|diner|mcdonald|chipotle|subway|taco|kfc|popeye|wendy|grub|doordash|uber\s*eat/.test(m)) return 'Food';
         if (/uber|lyft|gas|shell|bp|chevron|exxon|transit|metro|parking|toll/.test(m)) return 'Transportation';
-        if (/amazon|walmart|target|costco|best\s*buy|ebay|etsy|shop|store|market/.test(m)) return 'Shopping';
+        if (/amazon|walmart|target|costco|best\s*buy|ebay|etsy|\bshop\b|grocery|supermarket|clothing|apparel/.test(m)) return 'Shopping';
         if (/netflix|spotify|hulu|disney|apple|cinema|movie|theater|game|xbox|playstation/.test(m)) return 'Entertainment';
         if (/insurance|electric|water|internet|att|verizon|comcast|t-mobile|phone|utility|bill/.test(m)) return 'Bills';
         return 'Other';
