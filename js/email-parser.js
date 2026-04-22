@@ -220,13 +220,40 @@ ${truncated}`;
 
     guessCategory(merchant) {
         const m = merchant.toLowerCase();
-        if (/starbucks|coffee|dunkin|espresso|latte|cafe/.test(m)) return 'Coffee';
-        if (/restaurant|pizza|burger|sushi|bakery|diner|mcdonald|chipotle|subway|taco|kfc|popeye|wendy|grub|doordash|uber\s*eat/.test(m)) return 'Food';
-        if (/uber|lyft|gas|shell|bp|chevron|exxon|transit|metro|parking|toll/.test(m)) return 'Transportation';
-        if (/amazon|walmart|target|costco|best\s*buy|ebay|etsy|\bshop\b|grocery|supermarket|clothing|apparel/.test(m)) return 'Shopping';
-        if (/netflix|spotify|hulu|disney|apple|cinema|movie|theater|game|xbox|playstation/.test(m)) return 'Entertainment';
+        if (/starbucks|coffee|dunkin|espresso|latte|\bcafe\b|dutch bros|woods coffee/.test(m)) return 'Coffee';
+        if (/restaurant|pizza|burger|sushi|bakery|diner|mcdonald|chipotle|subway|taco|kfc|popeye|wendy|grub|doordash|uber\s*eat|gyro|shawarma|molly moon|sweet alchemy|beecher|mendocino farm|desi adda|canteen|vending|tst\*/.test(m)) return 'Food';
+        if (/uber|lyft|gas|shell|bp|chevron|exxon|transit|metro|parking|toll|\borca\b|bmw|audi|mercedes|jiffy lube|autozone|auto\s*(dealer|repair|service)/.test(m)) return 'Transportation';
+        if (/amazon|walmart|target|costco|best\s*buy|ebay|etsy|\bshop\b|grocery|supermarket|clothing|apparel|zara|h&m|uniqlo|gap|nordstrom|macy|wholefds|whole\s*foods|trader\s*joe|safeway|kroger/.test(m)) return 'Shopping';
+        if (/netflix|spotify|hulu|disney|apple|cinema|movie|theater|game|xbox|playstation|leetcode|twitch/.test(m)) return 'Entertainment';
         if (/insurance|electric|water|internet|att|verizon|comcast|t-mobile|phone|utility|bill/.test(m)) return 'Bills';
         return 'Other';
+    }
+
+    // Run from browser console to fix categories on already-imported transactions:
+    // window.emailParser.recategorizeGmailImports()
+    recategorizeGmailImports() {
+        const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+        let fixed = 0;
+        const updated = expenses.map(e => {
+            if (e.source !== 'gmail') return e;
+            const correct = this.guessCategory(e.description);
+            if (correct !== 'Other' && correct !== e.category) {
+                fixed++;
+                return { ...e, category: correct };
+            }
+            return e;
+        });
+        localStorage.setItem('expenses', JSON.stringify(updated));
+        if (window.expenseTracker) {
+            window.expenseTracker.expenses = updated;
+            window.expenseTracker.updateDashboard();
+            window.expenseTracker.renderTransactions();
+        }
+        if (window.currentUser && window.expenseTracker) {
+            updated.filter(e => e.source === 'gmail').forEach(e => window.expenseTracker.saveExpenseToFirebase(e));
+        }
+        console.log(`Re-categorized ${fixed} Gmail transactions`);
+        return fixed;
     }
 
     isValidTransaction(t) {
