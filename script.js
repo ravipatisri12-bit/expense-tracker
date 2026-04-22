@@ -2417,12 +2417,14 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
     if (!apiKey && window.firebaseDb) {
         try {
             const doc = await window.firebaseDb.collection('users').doc('config').get();
+            console.log('Firestore config doc:', doc.exists, doc.exists ? doc.data() : 'N/A');
             if (doc.exists && doc.data().geminiKey) {
                 apiKey = doc.data().geminiKey;
                 this._geminiKey = apiKey;
             }
         } catch (e) { console.warn('Failed to fetch API key from Firestore:', e.message); }
     }
+    console.log('API key resolved:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE');
     if (!apiKey) throw new Error('No API key available');
 
     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
@@ -2434,7 +2436,11 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
         })
     });
 
-    if (!resp.ok) throw new Error('API error');
+    if (!resp.ok) {
+        const errBody = await resp.text();
+        console.error('Gemini API response:', resp.status, errBody);
+        throw new Error(`API error ${resp.status}`);
+    }
     const data = await resp.json();
     const text = data.candidates[0].content.parts[0].text.trim();
     const match = text.match(/\[[\s\S]*\]/);
