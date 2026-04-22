@@ -126,11 +126,19 @@ Return ONLY a JSON object or null:
 
 Rules:
 - amount must be a positive number (no $ or commas)
-- If no clear transaction amount exists, return null
-- merchant is the business name only
+- merchant is the business name only (e.g. "CHIPOTLE 0469", not "Chase Transaction")
 - category: Food=restaurants/grocery, Coffee=cafes, Transportation=gas/uber/transit, Entertainment=streaming/movies, Shopping=retail/amazon, Bills=utilities/insurance/subscriptions
 - Use ${today} if date not found
 - Return ONLY the JSON or null, no other text
+
+CRITICAL — return null if the email is ANY of these:
+- A promotional email, advertisement, offer, or discount ("get $50 off", "earn rewards")
+- A newsletter, marketing email, or account statement
+- A payment reminder, bill announcement, or balance notification
+- A rewards/cashback/points notification
+- Anything where YOU are not the one spending money on a specific purchase
+
+Only return JSON if this email is a real-time purchase alert confirming a specific card transaction you just made.
 
 Email subject: "${emailSubject}"
 Email:
@@ -147,27 +155,70 @@ ${truncated}`;
         }
     }
 
-    // Regex fallback for when Gemini is unavailable — Chase alerts have a consistent format
-    parseChaseRegex(emailText) {
+    // Regex fallback for when Gemini is unavailable.
+    // Priority: Chase structured table → subject line → free-form text.
+    parseChaseRegex(emailText, emailSubject = '') {
+        // 1. Chase structured table format:
+        //    "Merchant  CHIPOTLE 0469"
+        //    "Date      Apr 21, 2026 at 5:43 PM ET"
+        //    "Amount    $11.14"
+        const structuredAmount = emailText.match(/Amount\s+\$([0-9,]+\.?\d{0,2})/i);
+        const structuredMerchant = emailText.match(/Merchant\s+([A-Z0-9][^\n\t]+?)(?:\s{2,}|\t|\n|$)/i);
+        const structuredDate = emailText.match(/Date\s+((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})/i);
+
+        if (structuredAmount && structuredMerchant) {
+            const amount = parseFloat(structuredAmount[1].replace(/,/g, ''));
+            const merchant = structuredMerchant[1].trim();
+            const date = this._parseDate(structuredDate ? structuredDate[1] : '', emailText);
+            if (amount > 0 && merchant.length > 0) {
+                return { amount, merchant, date, category: this.guessCategory(merchant) };
+            }
+        }
+
+        // 2. Subject line: "You made a $11.14 transaction with CHIPOTLE 0469"
+        const subjectMatch = emailSubject.match(/\$([0-9,]+\.?\d{0,2})\s+transaction\s+with\s+(.+?)(?:\s*$)/i);
+        if (subjectMatch) {
+            const amount = parseFloat(subjectMatch[1].replace(/,/g, ''));
+            const merchant = subjectMatch[2].trim();
+            if (amount > 0 && merchant.length > 0) {
+                return { amount, merchant, date: this._parseDate('', emailText), category: this.guessCategory(merchant) };
+            }
+        }
+
+        // 3. Free-form — only proceed if email signals a real transaction (not a promo)
+        const transactionSignals = /\b(charge|charged|transaction|purchase|debit|payment made|you spent|was made)\b/i;
+        if (!transactionSignals.test(emailText) && !transactionSignals.test(emailSubject)) return null;
+
         const amountMatch = emailText.match(/\$([0-9,]+\.?\d{0,2})/);
         if (!amountMatch) return null;
-
         const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
         if (!amount || amount <= 0) return null;
 
         const merchantMatch = emailText.match(
             /(?:at|to|with)\s+([A-Z][A-Za-z0-9 &'.,*#-]+?)(?:\s+on\s+\d|\s+for\s|\.|,|\n)/
         );
-        const merchant = merchantMatch ? merchantMatch[1].trim() : 'Chase Transaction';
+        const merchant = merchantMatch ? merchantMatch[1].trim() : null;
+        if (!merchant) return null;
 
-        const dateMatch = emailText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-        let date = new Date().toISOString().split('T')[0];
-        if (dateMatch) {
-            const d = new Date(dateMatch[1]);
-            if (!isNaN(d)) date = d.toISOString().split('T')[0];
+        return { amount, merchant, date: this._parseDate('', emailText), category: this.guessCategory(merchant) };
+    }
+
+    _parseDate(dateStr, fallbackText = '') {
+        // "Apr 21, 2026" or "April 21, 2026"
+        const monthMatch = (dateStr || fallbackText).match(
+            /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i
+        );
+        if (monthMatch) {
+            const d = new Date(`${monthMatch[1]} ${monthMatch[2]}, ${monthMatch[3]}`);
+            if (!isNaN(d)) return d.toISOString().split('T')[0];
         }
-
-        return { amount, merchant, date, category: this.guessCategory(merchant) };
+        // MM/DD/YYYY
+        const slashMatch = fallbackText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+        if (slashMatch) {
+            const d = new Date(slashMatch[1]);
+            if (!isNaN(d)) return d.toISOString().split('T')[0];
+        }
+        return new Date().toISOString().split('T')[0];
     }
 
     guessCategory(merchant) {
@@ -276,7 +327,7 @@ ${truncated}`;
                     let parsed = await this.parseEmailWithGemini(bodyText, subject);
 
                     // Fallback to regex if Gemini is unavailable
-                    if (!parsed) parsed = this.parseChaseRegex(bodyText);
+                    if (!parsed) parsed = this.parseChaseRegex(bodyText, subject);
 
                     this.markProcessed(msg.id);
 
