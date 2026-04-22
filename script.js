@@ -372,13 +372,10 @@ class ExpenseTracker {
     }
 
     addExpenseProgrammatically(expense) {
-        // Dedup: skip if same amount + description + date already exists
-        const isDupe = this.expenses.some(e =>
-            e.amount === expense.amount &&
-            e.description === expense.description &&
-            e.date === expense.date
-        );
-        if (isDupe) return false;
+        // Dedup Gmail imports by message ID
+        if (expense.gmailMsgId && this.expenses.some(e => e.gmailMsgId === expense.gmailMsgId)) {
+            return false;
+        }
 
         this.expenses.push(expense);
         this.saveExpenses();

@@ -338,7 +338,8 @@ ${truncated}`;
                         date: parsed.date,
                         timestamp: Date.now(),
                         excludeFromBudget: false,
-                        source: 'gmail'
+                        source: 'gmail',
+                        gmailMsgId: msg.id
                     };
 
                     if (window.expenseTracker) {
