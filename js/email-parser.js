@@ -4,7 +4,7 @@
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent`;
 
-const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:7d';
+const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:30d';
 
 class EmailParser {
     isTokenValid() {
