@@ -2395,16 +2395,20 @@ ExpenseTracker.prototype.renderInsights = function() {
     }
 
     const badge = document.getElementById('insights-badge');
+    if (this._insightsFetching) return;
+    this._insightsFetching = true;
     this.fetchGeminiInsights(summary).then(insights => {
         const html = this.formatInsights(insights);
         container.innerHTML = html;
         localStorage.setItem('insights_cache', JSON.stringify({ date: today, html }));
         if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
+        this._insightsFetching = false;
     }).catch((err) => {
         console.warn('Gemini insights failed:', err.message);
         const html = this.formatInsights(this.templateInsights(summary));
         container.innerHTML = html;
         if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
+        this._insightsFetching = false;
     });
 };
 
