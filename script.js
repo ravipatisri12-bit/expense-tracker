@@ -372,32 +372,11 @@ class ExpenseTracker {
     }
 
     addExpenseProgrammatically(expense) {
-        // Dedup Gmail imports
-        if (expense.gmailMsgId) {
-            // First check by message ID
-            if (this.expenses.some(e => e.gmailMsgId === expense.gmailMsgId)) return false;
-
-            // Backfill: match old imports missing gmailMsgId by amount+merchant+date
-            const match = this.expenses.find(e =>
-                e.source === 'gmail' && !e.gmailMsgId &&
-                e.amount === expense.amount &&
-                e.description === expense.description &&
-                e.date === expense.date
-            );
-            if (match) {
-                match.gmailMsgId = expense.gmailMsgId;
-                this.saveExpenses();
-                if (currentUser) this.saveExpenseToFirebase(match);
-                return false;
-            }
-        }
-
         this.expenses.push(expense);
         this.saveExpenses();
         if (currentUser) this.saveExpenseToFirebase(expense);
         this.updateDashboard();
         this.renderTransactions();
-        return true;
     }
 
     async deleteExpense(expenseId) {
