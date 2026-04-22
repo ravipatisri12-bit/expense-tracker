@@ -755,7 +755,7 @@ class ExpenseTracker {
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                            <p class="text-xs" style="color:${c}">${expense.category}</p>
+                            <p class="text-xs" style="color:${c}">${expense.category}${expense.source === 'gmail' ? ' <span class="material-symbols-rounded" style="font-size:12px;color:var(--md-sys-color-outline);vertical-align:middle">mail</span>' : ''}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
