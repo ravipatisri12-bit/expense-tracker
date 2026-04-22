@@ -36,7 +36,7 @@ class LLMTransactionParser {
      */
     loadConfig() {
         // Use hardcoded key, but allow override from localStorage
-        const savedKey = localStorage.getItem('llm_api_key');
+        const savedKey = localStorage.getItem('gemini_api_key');
         
         if (savedKey) {
             this.configure(savedKey);

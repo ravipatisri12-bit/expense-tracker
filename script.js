@@ -2299,31 +2299,27 @@ ExpenseTracker.prototype.calculateFoodStreak = function() {
 
 ExpenseTracker.prototype.buildSpendingSummary = function() {
     const now = new Date();
-    const year = now.getFullYear(), month = now.getMonth();
-    const dayOfMonth = now.getDate();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const fourWeeksAgo = new Date(now); fourWeeksAgo.setDate(now.getDate() - 28);
+    const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
 
-    const thisMonth = this.expenses.filter(e => {
+    // Rolling 4-week window
+    const last4Weeks = this.expenses.filter(e => {
         const d = this.parseLocalDate(e.date);
-        return d.getMonth() === month && d.getFullYear() === year;
+        return d >= fourWeeksAgo && d <= now;
     });
 
-    // Last month same point
-    const lastMonth = this.expenses.filter(e => {
-        const d = this.parseLocalDate(e.date);
-        return d.getMonth() === (month === 0 ? 11 : month - 1) &&
-               d.getFullYear() === (month === 0 ? year - 1 : year) &&
-               d.getDate() <= dayOfMonth;
-    });
+    const totalSpent = last4Weeks.reduce((s, e) => s + e.amount, 0);
+    const dailyAvg = totalSpent / 28;
 
-    const thisMonthTotal = thisMonth.reduce((s, e) => s + e.amount, 0);
-    const lastMonthSamePoint = lastMonth.reduce((s, e) => s + e.amount, 0);
-    const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
-    const projection = dailyAvg * daysInMonth;
+    // Week-over-week: recent 2 weeks vs prior 2 weeks
+    const recentHalf = last4Weeks.filter(e => this.parseLocalDate(e.date) >= twoWeeksAgo);
+    const priorHalf = last4Weeks.filter(e => this.parseLocalDate(e.date) < twoWeeksAgo);
+    const recentTotal = recentHalf.reduce((s, e) => s + e.amount, 0);
+    const priorTotal = priorHalf.reduce((s, e) => s + e.amount, 0);
 
     // Day of week breakdown
     const dayTotals = [0,0,0,0,0,0,0], dayCounts = [0,0,0,0,0,0,0];
-    thisMonth.forEach(e => {
+    last4Weeks.forEach(e => {
         const dow = this.parseLocalDate(e.date).getDay();
         dayTotals[dow] += e.amount;
         dayCounts[dow]++;
@@ -2334,33 +2330,32 @@ ExpenseTracker.prototype.buildSpendingSummary = function() {
 
     // Top categories
     const catTotals = {};
-    thisMonth.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
+    last4Weeks.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
     const topCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([name, amount]) => ({ name, amount: Math.round(amount) }));
 
     // This week vs last week
-    const todayStart = new Date(year, month, dayOfMonth);
-    const weekStart = new Date(todayStart); weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
     const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(weekStart.getDate() - 7);
-    const thisWeek = thisMonth.filter(e => this.parseLocalDate(e.date) >= weekStart).reduce((s, e) => s + e.amount, 0);
-    const lastWeek = thisMonth.filter(e => { const d = this.parseLocalDate(e.date); return d >= lastWeekStart && d < weekStart; }).reduce((s, e) => s + e.amount, 0);
+    const thisWeek = last4Weeks.filter(e => this.parseLocalDate(e.date) >= weekStart).reduce((s, e) => s + e.amount, 0);
+    const lastWeek = last4Weeks.filter(e => { const d = this.parseLocalDate(e.date); return d >= lastWeekStart && d < weekStart; }).reduce((s, e) => s + e.amount, 0);
 
     const budget = this.settings.monthlyBudget || 0;
     const streak = this.calculateFoodStreak();
 
     return {
-        thisMonthTotal: Math.round(thisMonthTotal),
-        lastMonthSamePoint: Math.round(lastMonthSamePoint),
+        totalSpent: Math.round(totalSpent),
         dailyAvg: Math.round(dailyAvg),
-        projection: Math.round(projection),
-        dayOfMonth, daysInMonth,
+        weeklyAvg: Math.round(totalSpent / 4),
+        recentTwoWeeks: Math.round(recentTotal),
+        priorTwoWeeks: Math.round(priorTotal),
         topSpendingDay: topDay.avg > 0 ? { day: topDay.day, avg: Math.round(topDay.avg) } : null,
         topCategories: topCats,
         thisWeek: Math.round(thisWeek),
         lastWeek: Math.round(lastWeek),
         budget,
         noEatOutStreak: streak,
-        transactionCount: thisMonth.length
+        transactionCount: last4Weeks.length
     };
 };
 
@@ -2374,50 +2369,61 @@ ExpenseTracker.prototype.renderInsights = function() {
 
     const summary = this.buildSpendingSummary();
 
-    // Check cache — refresh once per day or when expense count changes
-    const cacheKey = `insights_${summary.dayOfMonth}_${summary.transactionCount}`;
-    if (this._insightsCache === cacheKey && this._insightsHtml) {
-        container.innerHTML = this._insightsHtml;
-        return;
+    // Cache: refresh only once per day (stored in localStorage to survive reloads)
+    const today = new Date().toDateString();
+    const cached = localStorage.getItem('insights_cache');
+    if (cached) {
+        try {
+            const { date, html } = JSON.parse(cached);
+            if (date === today) {
+                container.innerHTML = html;
+                const badge = document.getElementById('insights-badge');
+                if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
+                return;
+            }
+        } catch (e) {}
     }
 
-    // Try Gemini, fall back to templates
-    const apiKey = localStorage.getItem('gemini_api_key') || '';
     const badge = document.getElementById('insights-badge');
-    if (apiKey) {
-        this.fetchGeminiInsights(summary, apiKey).then(insights => {
-            this._insightsCache = cacheKey;
-            this._insightsHtml = this.formatInsights(insights);
-            container.innerHTML = this._insightsHtml;
-            if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
-        }).catch(() => {
-            this._insightsCache = cacheKey;
-            this._insightsHtml = this.formatInsights(this.templateInsights(summary));
-            container.innerHTML = this._insightsHtml;
-            if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
-        });
-    } else {
-        this._insightsCache = cacheKey;
-        this._insightsHtml = this.formatInsights(this.templateInsights(summary));
-        container.innerHTML = this._insightsHtml;
+    this.fetchGeminiInsights(summary).then(insights => {
+        const html = this.formatInsights(insights);
+        container.innerHTML = html;
+        localStorage.setItem('insights_cache', JSON.stringify({ date: today, html }));
+        if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
+    }).catch((err) => {
+        console.warn('Gemini insights failed:', err.message);
+        const html = this.formatInsights(this.templateInsights(summary));
+        container.innerHTML = html;
         if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
-    }
+    });
 };
 
-ExpenseTracker.prototype.fetchGeminiInsights = async function(summary, apiKey) {
-    const prompt = `You're a supportive but honest personal spending coach. Based on this spending data, give exactly 3 short behavioral insights (1-2 sentences each). Be specific with dollar amounts. Focus on patterns the user can act on. No generic advice. No bullet points or numbering — just 3 separate observations.
+ExpenseTracker.prototype.fetchGeminiInsights = async function(summary) {
+    const prompt = `You're a supportive but honest personal spending coach. Based on this rolling 4-week spending data, give exactly 3 short behavioral insights (1-2 sentences each). Be specific with dollar amounts. Focus on patterns the user can act on. No generic advice. No bullet points or numbering — just 3 separate observations.
 
-Data:
-- This month so far: $${summary.thisMonthTotal} over ${summary.dayOfMonth} days (${summary.transactionCount} transactions)
-- Daily average: $${summary.dailyAvg}
-- Projected month total: $${summary.projection}${summary.budget ? ` (budget: $${summary.budget})` : ''}
-- Same point last month: $${summary.lastMonthSamePoint}
-- This week: $${summary.thisWeek}, last week: $${summary.lastWeek}
+Data (last 4 weeks):
+- Total spent: $${summary.totalSpent} across ${summary.transactionCount} transactions
+- Daily average: $${summary.dailyAvg}, Weekly average: $${summary.weeklyAvg}
+- Recent 2 weeks: $${summary.recentTwoWeeks}, Prior 2 weeks: $${summary.priorTwoWeeks}
+- This week: $${summary.thisWeek}, Last week: $${summary.lastWeek}${summary.budget ? `\n- Monthly budget: $${summary.budget}` : ''}
 - Top categories: ${summary.topCategories.map(c => c.name + ' $' + c.amount).join(', ')}
 ${summary.topSpendingDay ? `- Highest spending day: ${summary.topSpendingDay.day} (avg $${summary.topSpendingDay.avg})` : ''}
 - Days without eating out: ${summary.noEatOutStreak}
 
 Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insight 3"]`;
+
+    // Get API key: memory cache → localStorage → Firestore
+    let apiKey = this._geminiKey || localStorage.getItem('gemini_api_key') || '';
+    if (!apiKey && window.firebaseDb) {
+        try {
+            const doc = await window.firebaseDb.collection('users').doc('config').get();
+            if (doc.exists && doc.data().geminiKey) {
+                apiKey = doc.data().geminiKey;
+                this._geminiKey = apiKey;
+            }
+        } catch (e) { console.warn('Failed to fetch API key from Firestore:', e.message); }
+    }
+    if (!apiKey) throw new Error('No API key available');
 
     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -2438,27 +2444,28 @@ Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insi
 ExpenseTracker.prototype.templateInsights = function(s) {
     const insights = [];
 
-    // Projection vs budget
-    if (s.budget && s.projection > 0) {
-        const diff = s.projection - s.budget;
-        insights.push(diff > 0
-            ? `At your current pace, you'll hit $${s.projection} this month — about $${Math.abs(diff)} over budget. A few lighter days could close that gap.`
-            : `You're on track to spend $${s.projection} this month — $${Math.abs(diff)} under budget. Whatever you're doing, keep it up.`);
-    } else if (s.projection > 0) {
-        insights.push(`At $${s.dailyAvg}/day, you're on track to spend $${s.projection} this month.`);
-    }
-
-    // vs last month
-    if (s.lastMonthSamePoint > 0) {
-        const pct = Math.round(((s.thisMonthTotal - s.lastMonthSamePoint) / s.lastMonthSamePoint) * 100);
+    // Weekly trend
+    if (s.recentTwoWeeks > 0 && s.priorTwoWeeks > 0) {
+        const pct = Math.round(((s.recentTwoWeeks - s.priorTwoWeeks) / s.priorTwoWeeks) * 100);
         insights.push(pct > 5
-            ? `You're spending ${pct}% more than this point last month. Might be worth checking where the extra is going.`
+            ? `Your recent 2 weeks ($${s.recentTwoWeeks}) are ${pct}% higher than the prior 2 weeks. Worth checking where the extra is going.`
             : pct < -5
-            ? `You're ${Math.abs(pct)}% under where you were last month at this point — real progress.`
-            : `Spending is about the same as last month at this point.`);
+            ? `Spending dropped ${Math.abs(pct)}% in the recent 2 weeks ($${s.recentTwoWeeks} vs $${s.priorTwoWeeks}) — real progress.`
+            : `Spending is steady across the last 4 weeks at ~$${s.weeklyAvg}/week.`);
+    } else if (s.totalSpent > 0) {
+        insights.push(`You've spent $${s.totalSpent} over the last 4 weeks — averaging $${s.dailyAvg}/day.`);
     }
 
-    // Top spending day
+    // Budget check
+    if (s.budget && s.weeklyAvg > 0) {
+        const monthProjection = s.weeklyAvg * 4.3;
+        const diff = Math.round(monthProjection - s.budget);
+        insights.push(diff > 0
+            ? `At $${s.weeklyAvg}/week, you'd hit ~$${Math.round(monthProjection)} monthly — about $${diff} over budget.`
+            : `At $${s.weeklyAvg}/week, you're pacing ~$${Math.abs(diff)} under your monthly budget.`);
+    }
+
+    // Top spending day or week-over-week
     if (s.topSpendingDay && s.topSpendingDay.avg > s.dailyAvg * 1.3) {
         insights.push(`${s.topSpendingDay.day}s are your biggest spending day — averaging $${s.topSpendingDay.avg}. Planning ahead for that day could save you.`);
     } else if (s.thisWeek > 0 && s.lastWeek > 0) {
