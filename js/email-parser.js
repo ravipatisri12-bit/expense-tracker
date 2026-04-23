@@ -289,10 +289,17 @@ ${truncated}`;
             const doc = await window.firebaseDb.collection('users')
                 .doc(window.currentUser.uid)
                 .collection('settings').doc('gmail_sync').get();
-            this._processedIds = (doc.exists && doc.data().processedIds) ? doc.data().processedIds : [];
+            if (doc.exists && doc.data().processedIds) {
+                this._processedIds = doc.data().processedIds;
+                return;
+            }
+            // First run after migration — seed from localStorage so existing imports aren't duplicated
+            const legacy = JSON.parse(localStorage.getItem('gmail_processed_ids') || '[]');
+            this._processedIds = legacy;
+            if (legacy.length > 0) await this.saveProcessedIds();
         } catch (e) {
             console.warn('Failed to load processed IDs from Firestore:', e.message);
-            this._processedIds = [];
+            this._processedIds = JSON.parse(localStorage.getItem('gmail_processed_ids') || '[]');
         }
     }
 
