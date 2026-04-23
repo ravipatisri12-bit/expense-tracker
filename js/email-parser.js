@@ -375,43 +375,45 @@ ${truncated}`;
                 return;
             }
 
-            let imported = 0;
-            for (const msg of newMessages) {
-                try {
-                    const fullMsg = await this.fetchMessageBody(token, msg.id);
-                    const subjectHeader = fullMsg.payload?.headers?.find(h => h.name === 'Subject');
-                    const subject = subjectHeader?.value || '';
-                    const bodyText = this.extractTextFromPayload(fullMsg.payload);
-
-                    let parsed = this.parseChaseRegex(bodyText, subject);
-
-                    this.markProcessed(msg.id);
-
-                    if (!this.isValidTransaction(parsed)) continue;
-
-                    const expense = {
-                        id: Date.now() + Math.floor(Math.random() * 10000),
-                        amount: parseFloat(parsed.amount),
-                        description: parsed.merchant,
-                        category: parsed.category || 'Other',
-                        date: parsed.date,
-                        timestamp: Date.now(),
-                        excludeFromBudget: false,
-                        source: 'gmail'
-                    };
-
-                    if (window.expenseTracker) {
-                        window.expenseTracker.addExpenseProgrammatically(expense);
+            // Fetch all message bodies in parallel batches of 5
+            const BATCH = 5;
+            const results = [];
+            for (let i = 0; i < newMessages.length; i += BATCH) {
+                const batch = newMessages.slice(i, i + BATCH);
+                const fetched = await Promise.all(batch.map(async msg => {
+                    try {
+                        const fullMsg = await this.fetchMessageBody(token, msg.id);
+                        return { id: msg.id, fullMsg };
+                    } catch (err) {
+                        if (err.message === 'TOKEN_EXPIRED') throw err;
+                        console.error('Error fetching message', msg.id, err);
+                        return { id: msg.id, fullMsg: null };
                     }
-                    imported++;
+                }));
+                results.push(...fetched);
+            }
 
-                    // Small delay to avoid Gmail API rate limits
-                    await new Promise(r => setTimeout(r, 300));
-                } catch (err) {
-                    if (err.message === 'TOKEN_EXPIRED') throw err;
-                    console.error('Error processing message', msg.id, err);
-                    this.markProcessed(msg.id);
-                }
+            let imported = 0;
+            for (const { id, fullMsg } of results) {
+                this.markProcessed(id);
+                if (!fullMsg) continue;
+                const subjectHeader = fullMsg.payload?.headers?.find(h => h.name === 'Subject');
+                const subject = subjectHeader?.value || '';
+                const bodyText = this.extractTextFromPayload(fullMsg.payload);
+                const parsed = this.parseChaseRegex(bodyText, subject);
+                if (!this.isValidTransaction(parsed)) continue;
+                const expense = {
+                    id: Date.now() + Math.floor(Math.random() * 10000),
+                    amount: parseFloat(parsed.amount),
+                    description: parsed.merchant,
+                    category: parsed.category || 'Other',
+                    date: parsed.date,
+                    timestamp: Date.now(),
+                    excludeFromBudget: false,
+                    source: 'gmail'
+                };
+                if (window.expenseTracker) window.expenseTracker.addExpenseProgrammatically(expense);
+                imported++;
             }
 
             localStorage.setItem('gmail_last_synced', new Date().toISOString());
