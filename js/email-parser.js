@@ -393,7 +393,7 @@ ${truncated}`;
                 results.push(...fetched);
             }
 
-            let imported = 0;
+            const toAdd = [];
             for (const { id, fullMsg } of results) {
                 this.markProcessed(id);
                 if (!fullMsg) continue;
@@ -402,7 +402,7 @@ ${truncated}`;
                 const bodyText = this.extractTextFromPayload(fullMsg.payload);
                 const parsed = this.parseChaseRegex(bodyText, subject);
                 if (!this.isValidTransaction(parsed)) continue;
-                const expense = {
+                toAdd.push({
                     id: Date.now() + Math.floor(Math.random() * 10000),
                     amount: parseFloat(parsed.amount),
                     description: parsed.merchant,
@@ -411,9 +411,11 @@ ${truncated}`;
                     timestamp: Date.now(),
                     excludeFromBudget: false,
                     source: 'gmail'
-                };
-                if (window.expenseTracker) window.expenseTracker.addExpenseProgrammatically(expense);
-                imported++;
+                });
+            }
+            const imported = toAdd.length;
+            if (window.expenseTracker && imported > 0) {
+                window.expenseTracker.addExpensesBatch(toAdd);
             }
 
             localStorage.setItem('gmail_last_synced', new Date().toISOString());

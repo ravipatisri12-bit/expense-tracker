@@ -373,8 +373,28 @@ class ExpenseTracker {
 
     addExpenseProgrammatically(expense) {
         this.expenses.push(expense);
-        this.saveExpenses();
-        if (currentUser) this.saveExpenseToFirebase(expense);
+        if (currentUser) {
+            this.saveExpenseToFirebase(expense);
+        } else {
+            this.saveExpenses();
+        }
+        this.updateDashboard();
+        this.renderTransactions();
+    }
+
+    addExpensesBatch(expenses) {
+        this.expenses.push(...expenses);
+        if (currentUser && expenses.length > 0) {
+            const batch = db.batch();
+            expenses.forEach(e => {
+                const ref = db.collection('users').doc(currentUser.uid)
+                    .collection('expenses').doc(e.id.toString());
+                batch.set(ref, e);
+            });
+            batch.commit().catch(err => console.error('Batch write failed:', err));
+        } else if (expenses.length > 0) {
+            this.saveExpenses();
+        }
         this.updateDashboard();
         this.renderTransactions();
     }
