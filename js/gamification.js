@@ -328,7 +328,7 @@ function checkInDaily(mood) {
 document.addEventListener('DOMContentLoaded', () => {
     updateGamificationUI();
     updateGreeting();
-    renderDailyCheckIn();
+    try { renderDailyCheckIn(); } catch(e) { console.error('renderDailyCheckIn:', e); }
     // Re-update when pages switch
     const origShowPage = window.showPage;
     if (origShowPage) {

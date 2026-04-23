@@ -726,6 +726,7 @@ class ExpenseTracker {
         if (!card) return;
 
         const g = window.gamification;
+        if (!g?.data) return;
         const weekId = this.getWeekId();
         const { thisWeekFood, weeklyAvg } = this.getWeeklyFoodStats();
 
@@ -886,9 +887,9 @@ class ExpenseTracker {
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
 
         this.renderTodayCard();
-        this.renderTodaysWin();
-        this.renderDailyPulse();
-        this.renderWeeklyQuest();
+        try { this.renderTodaysWin(); } catch(e) { console.error('renderTodaysWin:', e); }
+        try { this.renderDailyPulse(); } catch(e) { console.error('renderDailyPulse:', e); }
+        try { this.renderWeeklyQuest(); } catch(e) { console.error('renderWeeklyQuest:', e); }
         this.maybeShowEveningNotification();
     }
 
