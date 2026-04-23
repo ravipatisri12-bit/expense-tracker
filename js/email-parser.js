@@ -2,7 +2,6 @@
 // Triggered manually via "Pull from Gmail" button on the Add page
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent`;
 
 const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:30d';
 
@@ -82,78 +81,6 @@ class EmailParser {
         }
     }
 
-    async callGeminiWithRetry(prompt) {
-        const apiKey = localStorage.getItem('gemini_api_key');
-        if (!apiKey) return null;
-
-        for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-                const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { temperature: 0.1, maxOutputTokens: 200 }
-                    })
-                });
-
-                if (resp.status === 429 && attempt < 2) {
-                    await new Promise(r => setTimeout(r, Math.pow(2, attempt + 1) * 1000));
-                    continue;
-                }
-                if (!resp.ok) return null;
-
-                const data = await resp.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
-            } catch {
-                if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
-            }
-        }
-        return null;
-    }
-
-    async parseEmailWithGemini(emailText, emailSubject) {
-        const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-        const truncated = emailText.slice(0, 1500);
-
-        const prompt = `You are a financial data extractor. Extract the credit card transaction from this Chase bank alert email.
-
-Return ONLY a JSON object or null:
-{ "amount": <number>, "merchant": <string>, "date": "<YYYY-MM-DD>", "category": <one of: Food, Transportation, Entertainment, Coffee, Shopping, Bills, Other> }
-
-Rules:
-- amount must be a positive number (no $ or commas)
-- merchant is the business name only (e.g. "CHIPOTLE 0469", not "Chase Transaction")
-- category: Food=restaurants/grocery, Coffee=cafes, Transportation=gas/uber/transit, Entertainment=streaming/movies, Shopping=retail/amazon, Bills=utilities/insurance/subscriptions
-- Use ${today} if date not found
-- Return ONLY the JSON or null, no other text
-
-CRITICAL — return null if the email is ANY of these:
-- A promotional email, advertisement, offer, or discount ("get $50 off", "earn rewards")
-- A newsletter, marketing email, or account statement
-- A payment reminder, bill announcement, or balance notification
-- A rewards/cashback/points notification
-- Anything where YOU are not the one spending money on a specific purchase
-
-Only return JSON if this email is a real-time purchase alert confirming a specific card transaction you just made.
-
-Email subject: "${emailSubject}"
-Email:
-${truncated}`;
-
-        const text = await this.callGeminiWithRetry(prompt);
-        if (!text || text === 'null') return null;
-
-        try {
-            const match = text.match(/\{[\s\S]*\}/);
-            return match ? JSON.parse(match[0]) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    // Regex fallback for when Gemini is unavailable.
     // Priority: Chase structured table → subject line → free-form text.
     parseChaseRegex(emailText, emailSubject = '') {
         // 1. Chase structured table format:
