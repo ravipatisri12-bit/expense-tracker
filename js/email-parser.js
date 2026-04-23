@@ -285,33 +285,25 @@ ${truncated}`;
     }
 
     async loadProcessedIds() {
-        // Load from Firestore, fall back to localStorage
-        if (window.firebaseDb && window.currentUser) {
-            try {
-                const doc = await window.firebaseDb.collection('users')
-                    .doc(window.currentUser.uid)
-                    .collection('settings').doc('gmail_sync').get();
-                if (doc.exists && doc.data().processedIds) {
-                    this._processedIds = doc.data().processedIds;
-                    return;
-                }
-            } catch (e) { console.warn('Failed to load processed IDs from Firestore:', e.message); }
+        try {
+            const doc = await window.firebaseDb.collection('users')
+                .doc(window.currentUser.uid)
+                .collection('settings').doc('gmail_sync').get();
+            this._processedIds = (doc.exists && doc.data().processedIds) ? doc.data().processedIds : [];
+        } catch (e) {
+            console.warn('Failed to load processed IDs from Firestore:', e.message);
+            this._processedIds = [];
         }
-        try { this._processedIds = JSON.parse(localStorage.getItem('gmail_processed_ids') || '[]'); }
-        catch { this._processedIds = []; }
     }
 
     async saveProcessedIds() {
         const arr = (this._processedIds || []).slice(-1000);
-        localStorage.setItem('gmail_processed_ids', JSON.stringify(arr));
-        if (window.firebaseDb && window.currentUser) {
-            try {
-                await window.firebaseDb.collection('users')
-                    .doc(window.currentUser.uid)
-                    .collection('settings').doc('gmail_sync')
-                    .set({ processedIds: arr }, { merge: true });
-            } catch (e) { console.warn('Failed to save processed IDs to Firestore:', e.message); }
-        }
+        try {
+            await window.firebaseDb.collection('users')
+                .doc(window.currentUser.uid)
+                .collection('settings').doc('gmail_sync')
+                .set({ processedIds: arr }, { merge: true });
+        } catch (e) { console.warn('Failed to save processed IDs to Firestore:', e.message); }
     }
 
     updateLastSyncedUI() {
