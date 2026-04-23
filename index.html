@@ -110,6 +110,17 @@
             <!-- Greeting -->
             <p id="greeting-text" class="text-sm font-medium text-center -mt-4" style="color:var(--md-sys-color-outline)"></p>
 
+            <!-- Today's Win -->
+            <div id="today-win-card" class="card p-4 hidden">
+                <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-rounded" style="color:#43e97b;font-size:18px;flex-shrink:0">check_circle</span>
+                    <p id="today-win-text" class="text-sm font-medium leading-snug" style="color:var(--md-sys-color-on-surface)"></p>
+                </div>
+            </div>
+
+            <!-- Daily Budget Pulse -->
+            <div id="daily-pulse-card" class="card p-4 hidden"></div>
+
             <!-- Today Card -->
             <div id="today-card" class="card p-4"></div>
 
@@ -124,6 +135,9 @@
                     <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Log a save</span>
                 </button>
             </div>
+
+            <!-- Weekly Quest -->
+            <div id="weekly-quest-card" class="card p-4 hidden"></div>
 
             <!-- XP & Saved -->
             <div id="gamification-bar" class="card p-4">
@@ -159,6 +173,9 @@
             </div>
 
             <!-- Spending Trends (Daily/Weekly toggle) — moved below -->
+
+            <!-- Daily Check-In Ticket -->
+            <div id="daily-checkin-card" class="card p-0 overflow-hidden" style="border:1px solid rgba(255,255,255,0.07)"></div>
 
             <!-- AI Insights -->
             <div id="insights-section" class="card p-5">

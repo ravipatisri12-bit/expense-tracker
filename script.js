@@ -557,6 +557,233 @@ class ExpenseTracker {
     }
 
     // ====================================================================
+    // DAILY ENGAGEMENT HELPERS
+    // ====================================================================
+
+    getFoodCategories() {
+        const cats = this.settings.categories || [];
+        const matched = cats.filter(c => /food|dining|restaurant|eat|takeout|coffee|grocery|groceries/i.test(c));
+        return matched.length ? matched : ['Food', 'Dining'];
+    }
+
+    getWeekId() {
+        const now = new Date();
+        const jan1 = new Date(now.getFullYear(), 0, 1);
+        const week = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+        return `${now.getFullYear()}-W${week}`;
+    }
+
+    getWeeklyFoodStats() {
+        const foodCats = this.getFoodCategories();
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+        const startStr = this.getLocalDateString(startOfWeek);
+        const todayStr = this.getLocalDateString(now);
+
+        const thisWeekFood = this.expenses
+            .filter(e => e.date >= startStr && e.date <= todayStr && foodCats.some(c => e.category === c))
+            .reduce((s, e) => s + e.amount, 0);
+
+        const fourWeeksAgo = new Date(startOfWeek.getTime() - 28 * 86400000);
+        const fourWeeksStr = this.getLocalDateString(fourWeeksAgo);
+        const pastFoodTotal = this.expenses
+            .filter(e => e.date >= fourWeeksStr && e.date < startStr && foodCats.some(c => e.category === c))
+            .reduce((s, e) => s + e.amount, 0);
+        const weeklyAvg = pastFoodTotal / 4;
+
+        return { thisWeekFood, weeklyAvg };
+    }
+
+    renderTodaysWin() {
+        const card = document.getElementById('today-win-card');
+        const textEl = document.getElementById('today-win-text');
+        if (!card || !textEl) return;
+
+        const now = new Date();
+        const g = window.gamification?.data;
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        const foodCats = this.getFoodCategories();
+
+        const wins = [];
+
+        // Best-ever streak
+        if (g?.streak?.current > 0 && g.streak.current === g.streak.best && g.streak.current >= 2) {
+            wins.push({ msg: `Best streak ever — ${g.streak.current} days in a row`, weight: 25 });
+        }
+        // Active streak
+        if (g?.streak?.current >= 3) {
+            wins.push({ msg: `${g.streak.current}-day logging streak — consistency is everything`, weight: 18 });
+        }
+
+        // Food spending down vs last month
+        const thisMonthFood = this.expenses
+            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && foodCats.some(c => e.category === c); })
+            .reduce((s, e) => s + e.amount, 0);
+        const lastMonthFood = this.expenses
+            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear && foodCats.some(c => e.category === c); })
+            .reduce((s, e) => s + e.amount, 0);
+        if (lastMonthFood > 0 && thisMonthFood < lastMonthFood) {
+            const pct = Math.round(((lastMonthFood - thisMonthFood) / lastMonthFood) * 100);
+            if (pct >= 5) wins.push({ msg: `Food spending down ${pct}% vs last month — great control`, weight: 20 });
+        }
+
+        // Anti-portfolio (avoided spending)
+        const totalAvoided = window.gamification?.getTotalSavings() || 0;
+        if (totalAvoided >= 10) {
+            wins.push({ msg: `You've logged $${Math.round(totalAvoided)} in avoided spending — real discipline`, weight: 15 });
+        }
+
+        // Days tracked this month
+        const daysLogged = Object.keys(g?.dailyLog || {}).filter(d => {
+            const date = new Date(d + 'T00:00:00');
+            return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        }).length;
+        if (daysLogged >= 7) wins.push({ msg: `${daysLogged} days tracked this month — building a real habit`, weight: 12 });
+        else if (daysLogged >= 3) wins.push({ msg: `${daysLogged} days tracked this month — keep the momentum`, weight: 8 });
+
+        // Level milestone
+        if (g?.level >= 5) wins.push({ msg: `Level ${g.level} — you're one of the consistent ones`, weight: 6 });
+
+        // Defaults (always available)
+        wins.push({ msg: `Every dollar you track is a dollar you control`, weight: 2 });
+        wins.push({ msg: `Awareness is the first step to financial freedom`, weight: 1 });
+
+        wins.sort((a, b) => b.weight - a.weight);
+        const topWeight = wins[0].weight;
+        const topWins = wins.filter(w => w.weight === topWeight);
+        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+        const pick = topWins[dayOfYear % topWins.length];
+
+        textEl.textContent = pick.msg;
+        card.classList.remove('hidden');
+    }
+
+    renderDailyPulse() {
+        const card = document.getElementById('daily-pulse-card');
+        if (!card) return;
+
+        const income = this.settings.income || 0;
+        if (!income) { card.classList.add('hidden'); return; }
+
+        const now = new Date();
+        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
+        const disposable = Math.max(income - fixed, 0);
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
+        const baselineDaily = disposable / daysInMonth;
+
+        const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const monthlySpent = this.expenses
+            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.excludeFromBudget; })
+            .reduce((s, e) => s + e.amount, 0);
+
+        const remaining = totalBudget - monthlySpent;
+        const isOverMonthly = remaining < 0;
+
+        // Always forward-looking — never show a negative or reference the deficit
+        const dailyTarget = isOverMonthly
+            ? baselineDaily
+            : Math.min(remaining / daysLeft, baselineDaily * 1.5);
+
+        const todaySpend = this.getTodayStats().total;
+        const pct = dailyTarget > 0 ? todaySpend / dailyTarget : 0;
+        const barWidth = Math.min(pct * 100, 100).toFixed(1);
+        const barColor = pct >= 1 ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
+
+        const label = isOverMonthly ? "Today's fresh start" : "Today's target";
+        const sublabel = isOverMonthly ? 'based on your income' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left this month`;
+        const headroom = dailyTarget - todaySpend;
+        const statusMsg = pct >= 1
+            ? "You've hit today's target — every dollar from here is a choice"
+            : `$${headroom.toFixed(0)} headroom left today`;
+
+        card.classList.remove('hidden');
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <p class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">${label}</p>
+                    <p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline);opacity:0.6">${sublabel}</p>
+                </div>
+                <p class="text-2xl font-extrabold" style="color:var(--md-sys-color-on-surface)">$${Math.round(dailyTarget)}</p>
+            </div>
+            <div class="w-full h-1.5 rounded-full mb-2" style="background:rgba(255,255,255,0.06)">
+                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">${statusMsg}</span>
+                <span class="text-xs font-semibold" style="color:var(--md-sys-color-on-surface-variant)">$${todaySpend.toFixed(0)} spent</span>
+            </div>`;
+    }
+
+    renderWeeklyQuest() {
+        const card = document.getElementById('weekly-quest-card');
+        if (!card) return;
+
+        const g = window.gamification;
+        const weekId = this.getWeekId();
+        const { thisWeekFood, weeklyAvg } = this.getWeeklyFoodStats();
+
+        if (!g.data.weeklyQuest || g.data.weeklyQuest.weekId !== weekId) {
+            const rawTarget = weeklyAvg > 0 ? Math.round(weeklyAvg * 0.85 / 5) * 5 : 60;
+            g.data.weeklyQuest = {
+                weekId,
+                type: 'food-limit',
+                target: Math.max(rawTarget, 20),
+                completed: false,
+                xpRewarded: false
+            };
+            g.save();
+        }
+
+        const quest = g.data.weeklyQuest;
+        const isOver = thisWeekFood > quest.target;
+        const pct = quest.target > 0 ? thisWeekFood / quest.target : 0;
+        const barWidth = Math.min(pct * 100, 100).toFixed(1);
+        const barColor = isOver ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
+
+        const now = new Date();
+        const daysLeftInWeek = 6 - now.getDay() + 1;
+        const daysLeftText = daysLeftInWeek === 1 ? 'last day of the week' : `${daysLeftInWeek} days left`;
+        const remaining = Math.max(quest.target - thisWeekFood, 0);
+        const statusMsg = isOver
+            ? `$${(thisWeekFood - quest.target).toFixed(0)} over — finish the week strong`
+            : `$${remaining.toFixed(0)} left · ${daysLeftText}`;
+
+        // Award XP on Sunday if quest completed
+        if (now.getDay() === 0 && !isOver && !quest.xpRewarded && thisWeekFood > 0) {
+            quest.xpRewarded = true;
+            quest.completed = true;
+            g.save();
+            g.addXP(30, 'weekly-quest');
+            updateGamificationUI();
+            showNotification('Weekly quest complete — +30 XP', 'success');
+        }
+
+        card.classList.remove('hidden');
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-3">
+                <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">flag</span>
+                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Weekly Quest</span>
+                <span class="text-xs px-2 py-0.5 rounded-full ml-auto font-medium" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">+30 XP</span>
+            </div>
+            <p class="text-sm font-semibold mb-1" style="color:var(--md-sys-color-on-surface)">Keep food under $${quest.target} this week</p>
+            <p class="text-xs mb-3" style="color:var(--md-sys-color-outline)">${statusMsg}</p>
+            <div class="w-full h-1.5 rounded-full mb-1.5" style="background:rgba(255,255,255,0.06)">
+                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            </div>
+            <div class="flex justify-between text-xs" style="color:var(--md-sys-color-outline)">
+                <span>$${thisWeekFood.toFixed(0)} spent</span>
+                <span>$${quest.target} target</span>
+            </div>`;
+    }
+
+    // ====================================================================
     // DASHBOARD UPDATES
     // ====================================================================
 
@@ -659,6 +886,9 @@ class ExpenseTracker {
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
 
         this.renderTodayCard();
+        this.renderTodaysWin();
+        this.renderDailyPulse();
+        this.renderWeeklyQuest();
         this.maybeShowEveningNotification();
     }
 
@@ -678,12 +908,32 @@ class ExpenseTracker {
         const dayLabel = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         const fmt = v => '$' + v.toFixed(2);
 
+        // Beat Yesterday — get yesterday's total (only if they had expenses)
+        const yesterdayStr = this.getLocalDateString(new Date(Date.now() - 86400000));
+        const yesterdayTotal = this.expenses
+            .filter(e => e.date === yesterdayStr && !e.excludeFromBudget)
+            .reduce((s, e) => s + e.amount, 0);
+        const showBeatYesterday = yesterdayTotal > 0;
+        const beating = stats.total < yesterdayTotal;
+        const beatDiff = Math.abs(stats.total - yesterdayTotal);
+        const beatRow = showBeatYesterday ? `
+            <div class="flex items-center justify-between pt-2 mt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">vs yesterday</span>
+                <div class="flex items-center gap-1">
+                    <span class="material-symbols-rounded" style="font-size:14px;color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">${beating ? 'trending_down' : 'trending_flat'}</span>
+                    <span class="text-xs font-semibold" style="color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">
+                        ${beating ? `-$${beatDiff.toFixed(0)} ahead` : stats.total === yesterdayTotal ? 'same pace' : `$${beatDiff.toFixed(0)} more`}
+                    </span>
+                </div>
+            </div>` : '';
+
         if (stats.count === 0) {
             card.innerHTML = `
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-xs font-medium tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
                 </div>
-                <p class="text-sm" style="color:var(--md-sys-color-outline)">Nothing logged yet today</p>`;
+                <p class="text-sm" style="color:var(--md-sys-color-outline)">Nothing logged yet today</p>
+                ${showBeatYesterday ? `<p class="text-xs mt-2" style="color:var(--md-sys-color-outline)">Yesterday: ${fmt(yesterdayTotal)} — can you beat it?</p>` : ''}`;
             return;
         }
 
@@ -696,7 +946,8 @@ class ExpenseTracker {
             <div class="space-y-1.5">
                 ${stats.needs > 0 ? `<div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Needs</span><span style="color:var(--md-sys-color-on-surface-variant)">${fmt(stats.needs)}</span></div>` : ''}
                 ${stats.wants > 0 ? `<div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Wants</span><span style="color:var(--md-sys-color-on-surface-variant)">${fmt(stats.wants)}</span></div>` : ''}
-            </div>`;
+            </div>
+            ${beatRow}`;
     }
 
     maybeShowEveningNotification() {
