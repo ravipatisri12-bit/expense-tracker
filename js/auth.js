@@ -39,6 +39,11 @@ async function signInWithGoogle() {
 
         console.log('Successfully signed in:', result.user.displayName);
 
+        // Request notification permission for evening summary (non-blocking)
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         // Show success notification if available
         if (typeof showNotification === 'function') {
             showNotification('Successfully signed in!', 'success');

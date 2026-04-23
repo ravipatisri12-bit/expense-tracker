@@ -637,6 +637,63 @@ class ExpenseTracker {
             _el('report-saved').style.color = saved >= 0 ? '#43e97b' : '#cf6679'; 
         }
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
+
+        this.renderTodayCard();
+        this.maybeShowEveningNotification();
+    }
+
+    getTodayStats() {
+        const today = this.getLocalDateString(new Date());
+        const todayExpenses = this.expenses.filter(e => e.date === today && !e.excludeFromBudget);
+        const needsCategories = ['Bills', 'Transportation'];
+        const needsTotal = todayExpenses.filter(e => needsCategories.includes(e.category)).reduce((s, e) => s + e.amount, 0);
+        const wantsTotal = todayExpenses.filter(e => !needsCategories.includes(e.category)).reduce((s, e) => s + e.amount, 0);
+        return { total: needsTotal + wantsTotal, needs: needsTotal, wants: wantsTotal, count: todayExpenses.length };
+    }
+
+    renderTodayCard() {
+        const card = document.getElementById('today-card');
+        if (!card) return;
+        const stats = this.getTodayStats();
+        const dayLabel = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const fmt = v => '$' + v.toFixed(2);
+
+        if (stats.count === 0) {
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-medium tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
+                </div>
+                <p class="text-sm" style="color:var(--md-sys-color-outline)">Nothing logged yet today</p>`;
+            return;
+        }
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-medium tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">${stats.count} transaction${stats.count > 1 ? 's' : ''}</span>
+            </div>
+            <p class="text-2xl font-bold mb-3" style="color:var(--md-sys-color-on-surface)">${fmt(stats.total)}</p>
+            <div class="space-y-1.5">
+                ${stats.needs > 0 ? `<div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Needs</span><span style="color:var(--md-sys-color-on-surface-variant)">${fmt(stats.needs)}</span></div>` : ''}
+                ${stats.wants > 0 ? `<div class="flex justify-between text-sm"><span style="color:var(--md-sys-color-outline)">Wants</span><span style="color:var(--md-sys-color-on-surface-variant)">${fmt(stats.wants)}</span></div>` : ''}
+            </div>`;
+    }
+
+    maybeShowEveningNotification() {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        const now = new Date();
+        if (now.getHours() < 21) return;
+        const today = this.getLocalDateString(now);
+        if (localStorage.getItem('notification_shown_date') === today) return;
+        const stats = this.getTodayStats();
+        if (stats.count === 0) return;
+        const fmt = v => '$' + v.toFixed(2);
+        new Notification("Ledgr — Today's Summary", {
+            body: `${fmt(stats.total)} spent · ${stats.count} transaction${stats.count > 1 ? 's' : ''} · ${fmt(stats.needs)} needs, ${fmt(stats.wants)} wants`,
+            icon: '/icon_192.png',
+            tag: 'daily-summary'
+        });
+        localStorage.setItem('notification_shown_date', today);
     }
 
     updateVariableExpenses(monthlyExpenses) {

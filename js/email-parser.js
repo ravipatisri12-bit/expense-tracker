@@ -113,7 +113,8 @@ class EmailParser {
     }
 
     async parseEmailWithGemini(emailText, emailSubject) {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const truncated = emailText.slice(0, 1500);
 
         const prompt = `You are a financial data extractor. Extract the credit card transaction from this Chase bank alert email.
@@ -201,21 +202,27 @@ ${truncated}`;
     }
 
     _parseDate(dateStr, fallbackText = '') {
-        // "Apr 21, 2026" or "April 21, 2026"
+        const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+        // "Apr 21, 2026" or "April 21, 2026" — construct directly, never through Date object
         const monthMatch = (dateStr || fallbackText).match(
             /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i
         );
         if (monthMatch) {
-            const d = new Date(`${monthMatch[1]} ${monthMatch[2]}, ${monthMatch[3]}`);
-            if (!isNaN(d)) return d.toISOString().split('T')[0];
+            const m = MONTHS[monthMatch[1].toLowerCase().slice(0, 3)];
+            const d = parseInt(monthMatch[2]), y = parseInt(monthMatch[3]);
+            if (m && d && y) return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         }
-        // MM/DD/YYYY
-        const slashMatch = fallbackText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+        // MM/DD/YYYY — parse parts directly
+        const slashMatch = fallbackText.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
         if (slashMatch) {
-            const d = new Date(slashMatch[1]);
-            if (!isNaN(d)) return d.toISOString().split('T')[0];
+            const mo = parseInt(slashMatch[1]), d = parseInt(slashMatch[2]);
+            let y = parseInt(slashMatch[3]);
+            if (y < 100) y += 2000;
+            return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         }
-        return new Date().toISOString().split('T')[0];
+        // Fallback: today in local time
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     }
 
     guessCategory(merchant) {
