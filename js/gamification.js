@@ -114,12 +114,24 @@ class Gamification {
         if (!this.data.dailyLog[today]) {
             this.data.dailyLog[today] = { logged: true, underBudget: mood !== 'heavy' };
         }
-        if (this.data.dailyLog[today].checkedIn) return;
+        const alreadyCheckedIn = this.data.dailyLog[today].checkedIn;
         this.data.dailyLog[today].mood = mood;
         this.data.dailyLog[today].checkedIn = true;
-        this.addXP(mood !== 'heavy' ? 10 : 5, 'daily-checkin');
-        this.updateStreak();
+        this.data.dailyLog[today].underBudget = mood !== 'heavy';
+        if (!alreadyCheckedIn) {
+            // Only award XP on first check-in, not on edits
+            this.addXP(mood !== 'heavy' ? 10 : 5, 'daily-checkin');
+            this.updateStreak();
+        }
         this.save();
+    }
+
+    openEditCheckIn() {
+        const today = new Date().toISOString().split('T')[0];
+        if (this.data.dailyLog[today]) {
+            this.data.dailyLog[today].checkedIn = false;
+            this.save();
+        }
     }
 
     // === ACHIEVEMENTS ===
@@ -281,6 +293,13 @@ function renderDailyCheckIn() {
     }
     const dotTrail = `<div class="flex gap-2.5 justify-end mt-3">${dots.join('')}</div>`;
 
+    const moodBtnRow = `
+        <div class="flex gap-2">
+            <button onclick="checkInDaily('light')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(67,233,123,0.1);color:#43e97b;border:1px solid rgba(67,233,123,0.2)">Light</button>
+            <button onclick="checkInDaily('normal')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(102,126,234,0.1);color:#a8c7fa;border:1px solid rgba(102,126,234,0.2)">On Track</button>
+            <button onclick="checkInDaily('heavy')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)">Heavy</button>
+        </div>`;
+
     if (alreadyCheckedIn) {
         const mood = todayLog.mood || 'normal';
         const moodLabel = { light: 'Light', normal: 'On Track', heavy: 'Heavy' }[mood];
@@ -290,7 +309,10 @@ function renderDailyCheckIn() {
                 <span class="text-xs font-mono" style="color:var(--md-sys-color-outline)">${dayLabel}</span>
             </div>
             <div class="px-4 py-3">
-                <p class="text-xs" style="color:var(--md-sys-color-outline)">Logged as <span class="font-semibold" style="color:${moodColors[mood]}">${moodLabel}</span></p>
+                <div class="flex items-center justify-between mb-0.5">
+                    <p class="text-xs" style="color:var(--md-sys-color-outline)">Logged as <span class="font-semibold" style="color:${moodColors[mood]}">${moodLabel}</span></p>
+                    <button onclick="openEditDailyCheckIn()" class="text-xs px-2 py-0.5 rounded-md transition-all active:scale-95" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">Change</button>
+                </div>
                 ${dotTrail}
             </div>`;
         return;
@@ -303,25 +325,25 @@ function renderDailyCheckIn() {
         </div>
         <div class="px-4 py-3">
             <p class="text-xs mb-2.5" style="color:var(--md-sys-color-outline)">How was today?</p>
-            <div class="flex gap-2">
-                <button onclick="checkInDaily('light')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(67,233,123,0.1);color:#43e97b;border:1px solid rgba(67,233,123,0.2)">Light</button>
-                <button onclick="checkInDaily('normal')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(102,126,234,0.1);color:#a8c7fa;border:1px solid rgba(102,126,234,0.2)">On Track</button>
-                <button onclick="checkInDaily('heavy')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)">Heavy</button>
-            </div>
+            ${moodBtnRow}
             ${dotTrail}
         </div>`;
 }
 
 function checkInDaily(mood) {
+    const wasNew = !window.gamification.data.dailyLog[new Date().toISOString().split('T')[0]]?.checkedIn;
     window.gamification.checkIn(mood);
     updateGamificationUI();
     renderDailyCheckIn();
-    const msgs = {
-        light: 'Light day logged · +10 XP',
-        normal: 'On track — +10 XP',
-        heavy: 'Logged · +5 XP · Tomorrow is a fresh start'
-    };
-    showNotification(msgs[mood] || 'Logged', 'success');
+    if (wasNew) {
+        const msgs = { light: 'Light day logged · +10 XP', normal: 'On track — +10 XP', heavy: 'Logged · +5 XP · Tomorrow is a fresh start' };
+        showNotification(msgs[mood] || 'Logged', 'success');
+    }
+}
+
+function openEditDailyCheckIn() {
+    window.gamification.openEditCheckIn();
+    renderDailyCheckIn();
 }
 
 // Update UI when page loads and on page switches

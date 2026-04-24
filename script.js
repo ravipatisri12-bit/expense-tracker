@@ -671,12 +671,16 @@ class ExpenseTracker {
 
         const now = new Date();
         const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const disposable = Math.max(income - fixed, 0);
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-        const baselineDaily = disposable / daysInMonth;
 
         const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
+        // Use category budgets as baseline — far more accurate than income ÷ days.
+        // Falls back to (income − fixed) ÷ days only if no category goals are set.
+        const baselineDaily = totalBudget > 0
+            ? totalBudget / daysInMonth
+            : Math.max(income - fixed, 0) / daysInMonth;
+
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         const monthlySpent = this.expenses
@@ -684,30 +688,34 @@ class ExpenseTracker {
             .reduce((s, e) => s + e.amount, 0);
 
         const remaining = totalBudget - monthlySpent;
-        const isOverMonthly = remaining < 0;
+        const isOverMonthly = totalBudget > 0 && remaining < 0;
 
-        // Always forward-looking — never show a negative or reference the deficit
+        // Always forward-looking: if over monthly budget show daily baseline (what you should aim for),
+        // otherwise spread what's left evenly across days remaining.
         const dailyTarget = isOverMonthly
             ? baselineDaily
-            : Math.min(remaining / daysLeft, baselineDaily * 1.5);
+            : totalBudget > 0
+                ? Math.min(remaining / daysLeft, baselineDaily * 2)
+                : baselineDaily;
 
         const todaySpend = this.getTodayStats().total;
         const pct = dailyTarget > 0 ? todaySpend / dailyTarget : 0;
         const barWidth = Math.min(pct * 100, 100).toFixed(1);
         const barColor = pct >= 1 ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
 
-        const label = isOverMonthly ? "Today's fresh start" : "Today's target";
-        const sublabel = isOverMonthly ? 'based on your income' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left this month`;
+        const sublabel = isOverMonthly
+            ? 'daily average to stay on track'
+            : `$${Math.round(remaining)} left · ${daysLeft} day${daysLeft !== 1 ? 's' : ''} to go`;
         const headroom = dailyTarget - todaySpend;
         const statusMsg = pct >= 1
-            ? "You've hit today's target — every dollar from here is a choice"
-            : `$${headroom.toFixed(0)} headroom left today`;
+            ? "You've reached today's target"
+            : `$${headroom.toFixed(0)} left for today`;
 
         card.classList.remove('hidden');
         card.innerHTML = `
             <div class="flex items-center justify-between mb-3">
                 <div>
-                    <p class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">${label}</p>
+                    <p class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today's target</p>
                     <p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline);opacity:0.6">${sublabel}</p>
                 </div>
                 <p class="text-2xl font-extrabold" style="color:var(--md-sys-color-on-surface)">$${Math.round(dailyTarget)}</p>
@@ -717,7 +725,7 @@ class ExpenseTracker {
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-xs" style="color:var(--md-sys-color-outline)">${statusMsg}</span>
-                <span class="text-xs font-semibold" style="color:var(--md-sys-color-on-surface-variant)">$${todaySpend.toFixed(0)} spent</span>
+                <span class="text-xs font-semibold" style="color:var(--md-sys-color-on-surface-variant)">$${todaySpend.toFixed(0)} spent today</span>
             </div>`;
     }
 
@@ -749,12 +757,8 @@ class ExpenseTracker {
         const barColor = isOver ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
 
         const now = new Date();
-        const daysLeftInWeek = 6 - now.getDay() + 1;
-        const daysLeftText = daysLeftInWeek === 1 ? 'last day of the week' : `${daysLeftInWeek} days left`;
-        const remaining = Math.max(quest.target - thisWeekFood, 0);
-        const statusMsg = isOver
-            ? `$${(thisWeekFood - quest.target).toFixed(0)} over — finish the week strong`
-            : `$${remaining.toFixed(0)} left · ${daysLeftText}`;
+        const daysLeftInWeek = Math.max(7 - now.getDay(), 1); // days including today until Sunday
+        const daysLeftText = daysLeftInWeek === 1 ? 'last day' : `${daysLeftInWeek} days left`;
 
         // Award XP on Sunday if quest completed
         if (now.getDay() === 0 && !isOver && !quest.xpRewarded && thisWeekFood > 0) {
@@ -766,6 +770,22 @@ class ExpenseTracker {
             showNotification('Weekly quest complete — +30 XP', 'success');
         }
 
+        // Calculate week date range for context
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const fmtDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const weekRange = `${fmtDate(weekStart)} – ${fmtDate(weekEnd)}`;
+
+        const overAmount = thisWeekFood - quest.target;
+        const underAmount = quest.target - thisWeekFood;
+
+        // Footer context line
+        const contextLine = isOver
+            ? `<span style="color:#f59e0b">$${overAmount.toFixed(0)} over goal</span> · ${daysLeftText} to recover`
+            : `<span style="color:#43e97b">$${underAmount.toFixed(0)} under goal</span> · ${daysLeftText}`;
+
         card.classList.remove('hidden');
         card.innerHTML = `
             <div class="flex items-center gap-2 mb-3">
@@ -773,15 +793,18 @@ class ExpenseTracker {
                 <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Weekly Quest</span>
                 <span class="text-xs px-2 py-0.5 rounded-full ml-auto font-medium" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">+30 XP</span>
             </div>
-            <p class="text-sm font-semibold mb-1" style="color:var(--md-sys-color-on-surface)">Keep food under $${quest.target} this week</p>
-            <p class="text-xs mb-3" style="color:var(--md-sys-color-outline)">${statusMsg}</p>
-            <div class="w-full h-1.5 rounded-full mb-1.5" style="background:rgba(255,255,255,0.06)">
-                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            <p class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Food spending · ${weekRange}</p>
+            <div class="flex items-end justify-between mt-2 mb-2">
+                <div>
+                    <span class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">$${thisWeekFood.toFixed(0)}</span>
+                    <span class="text-xs ml-1" style="color:var(--md-sys-color-outline)">of $${quest.target} goal</span>
+                </div>
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">${daysLeftText}</span>
             </div>
-            <div class="flex justify-between text-xs" style="color:var(--md-sys-color-outline)">
-                <span>$${thisWeekFood.toFixed(0)} spent</span>
-                <span>$${quest.target} target</span>
-            </div>`;
+            <div class="w-full h-2 rounded-full mb-2" style="background:rgba(255,255,255,0.06)">
+                <div class="h-2 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            </div>
+            <p class="text-xs" style="color:var(--md-sys-color-outline)">${contextLine}</p>`;
     }
 
     // ====================================================================
