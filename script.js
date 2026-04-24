@@ -585,14 +585,19 @@ class ExpenseTracker {
             .filter(e => e.date >= startStr && e.date <= todayStr && foodCats.some(c => e.category === c))
             .reduce((s, e) => s + e.amount, 0);
 
+        const lastWeekStart = new Date(startOfWeek.getTime() - 7 * 86400000);
+        const lastWeekEnd = new Date(startOfWeek.getTime() - 86400000);
+        const lastWeekFood = this.expenses
+            .filter(e => e.date >= this.getLocalDateString(lastWeekStart) && e.date <= this.getLocalDateString(lastWeekEnd) && foodCats.some(c => e.category === c))
+            .reduce((s, e) => s + e.amount, 0);
+
         const fourWeeksAgo = new Date(startOfWeek.getTime() - 28 * 86400000);
-        const fourWeeksStr = this.getLocalDateString(fourWeeksAgo);
         const pastFoodTotal = this.expenses
-            .filter(e => e.date >= fourWeeksStr && e.date < startStr && foodCats.some(c => e.category === c))
+            .filter(e => e.date >= this.getLocalDateString(fourWeeksAgo) && e.date < startStr && foodCats.some(c => e.category === c))
             .reduce((s, e) => s + e.amount, 0);
         const weeklyAvg = pastFoodTotal / 4;
 
-        return { thisWeekFood, weeklyAvg };
+        return { thisWeekFood, weeklyAvg, lastWeekFood };
     }
 
     renderTodaysWin() {
@@ -736,14 +741,30 @@ class ExpenseTracker {
         const g = window.gamification;
         if (!g?.data) return;
         const weekId = this.getWeekId();
-        const { thisWeekFood, weeklyAvg } = this.getWeeklyFoodStats();
+        const { thisWeekFood, weeklyAvg, lastWeekFood } = this.getWeeklyFoodStats();
 
-        if (!g.data.weeklyQuest || g.data.weeklyQuest.weekId !== weekId) {
-            const rawTarget = weeklyAvg > 0 ? Math.round(weeklyAvg * 0.85 / 5) * 5 : 60;
+        // Target priority: food budget goal ÷ 4.3 → 4-week avg → last week → 150
+        const foodBudgetMonthly = this.getFoodCategories()
+            .reduce((s, c) => s + (this.settings.goals?.[c] || 0), 0);
+        const calcTarget = () => {
+            if (foodBudgetMonthly > 0) return Math.round(foodBudgetMonthly / 4.3 / 5) * 5;
+            if (weeklyAvg > 0) return Math.round(weeklyAvg * 0.85 / 5) * 5;
+            if (lastWeekFood > 0) return Math.round(lastWeekFood * 0.9 / 5) * 5;
+            return 150;
+        };
+
+        const needsNewQuest = !g.data.weeklyQuest || g.data.weeklyQuest.weekId !== weekId;
+        // Also reset if target was set with no data and now we have spending history
+        const targetClearlyWrong = g.data.weeklyQuest &&
+            g.data.weeklyQuest.weekId === weekId &&
+            thisWeekFood > g.data.weeklyQuest.target * 4 &&
+            (weeklyAvg > g.data.weeklyQuest.target * 2 || lastWeekFood > g.data.weeklyQuest.target * 2);
+
+        if (needsNewQuest || targetClearlyWrong) {
             g.data.weeklyQuest = {
                 weekId,
                 type: 'food-limit',
-                target: Math.max(rawTarget, 20),
+                target: Math.max(calcTarget(), 20),
                 completed: false,
                 xpRewarded: false
             };
@@ -781,25 +802,31 @@ class ExpenseTracker {
         const overAmount = thisWeekFood - quest.target;
         const underAmount = quest.target - thisWeekFood;
 
-        // Footer context line
+        // Footer: neutral language — no shame, no "recover"
         const contextLine = isOver
-            ? `<span style="color:#f59e0b">$${overAmount.toFixed(0)} over goal</span> · ${daysLeftText} to recover`
-            : `<span style="color:#43e97b">$${underAmount.toFixed(0)} under goal</span> · ${daysLeftText}`;
+            ? `<span style="color:#f59e0b">$${overAmount.toFixed(0)} above goal</span> · ${daysLeftText}`
+            : underAmount < 10
+                ? `<span style="color:#43e97b">Right on track</span> · ${daysLeftText}`
+                : `<span style="color:#43e97b">$${underAmount.toFixed(0)} under goal</span> · ${daysLeftText}`;
+
+        const vsLastWeek = lastWeekFood > 0
+            ? `<span class="text-xs ml-auto" style="color:var(--md-sys-color-outline)">Last week: $${lastWeekFood.toFixed(0)}</span>`
+            : '';
 
         card.classList.remove('hidden');
         card.innerHTML = `
             <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">flag</span>
-                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Weekly Quest</span>
-                <span class="text-xs px-2 py-0.5 rounded-full ml-auto font-medium" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">+30 XP</span>
+                <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">restaurant</span>
+                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Food This Week</span>
+                ${vsLastWeek}
             </div>
-            <p class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Food spending · ${weekRange}</p>
-            <div class="flex items-end justify-between mt-2 mb-2">
+            <p class="text-xs mb-2" style="color:var(--md-sys-color-outline)">${weekRange}</p>
+            <div class="flex items-end justify-between mb-2">
                 <div>
                     <span class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">$${thisWeekFood.toFixed(0)}</span>
                     <span class="text-xs ml-1" style="color:var(--md-sys-color-outline)">of $${quest.target} goal</span>
                 </div>
-                <span class="text-xs" style="color:var(--md-sys-color-outline)">${daysLeftText}</span>
+                <span class="text-xs font-semibold" style="color:${barColor}">${Math.round(pct * 100)}%</span>
             </div>
             <div class="w-full h-2 rounded-full mb-2" style="background:rgba(255,255,255,0.06)">
                 <div class="h-2 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
