@@ -346,7 +346,6 @@ function openEditDailyCheckIn() {
 
 // Update UI when page loads and on page switches
 document.addEventListener('DOMContentLoaded', () => {
-    updateGamificationUI();
     updateGreeting();
     try { renderHabitCard(); } catch(e) { console.error('renderHabitCard:', e); }
     // Re-update when pages switch

@@ -911,6 +911,7 @@ class ExpenseTracker {
 
         try { this.renderTodayPanel(); } catch(e) { console.error('renderTodayPanel:', e); }
         try { this.renderWeeklyQuest(); } catch(e) { console.error('renderWeeklyQuest:', e); }
+        try { if (typeof renderHabitCard === 'function') renderHabitCard(); } catch(e) { console.error('renderHabitCard:', e); }
         this.maybeShowEveningNotification();
     }
 
