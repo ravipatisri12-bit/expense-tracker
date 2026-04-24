@@ -799,37 +799,64 @@ class ExpenseTracker {
         const fmtDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const weekRange = `${fmtDate(weekStart)} – ${fmtDate(weekEnd)}`;
 
-        const overAmount = thisWeekFood - quest.target;
-        const underAmount = quest.target - thisWeekFood;
-
-        // Footer: neutral language — no shame, no "recover"
-        const contextLine = isOver
-            ? `<span style="color:#f59e0b">$${overAmount.toFixed(0)} above goal</span> · ${daysLeftText}`
-            : underAmount < 10
-                ? `<span style="color:#43e97b">Right on track</span> · ${daysLeftText}`
-                : `<span style="color:#43e97b">$${underAmount.toFixed(0)} under goal</span> · ${daysLeftText}`;
-
-        const vsLastWeek = lastWeekFood > 0
-            ? `<span class="text-xs ml-auto" style="color:var(--md-sys-color-outline)">Last week: $${lastWeekFood.toFixed(0)}</span>`
-            : '';
+        const wayOver = pct > 1.5; // more than 150% — progress bar is meaningless
 
         card.classList.remove('hidden');
+
+        // When WAY over goal mid-week: flip to week-vs-week view (no guilt %)
+        if (wayOver && lastWeekFood > 0) {
+            const wowDiff = thisWeekFood - lastWeekFood;
+            const wowColor = wowDiff > 0 ? '#f59e0b' : '#43e97b';
+            const wowIcon = wowDiff > 0 ? 'trending_up' : 'trending_down';
+            const wowLabel = wowDiff > 0
+                ? `$${wowDiff.toFixed(0)} more than last week`
+                : `$${Math.abs(wowDiff).toFixed(0)} less than last week`;
+            card.innerHTML = `
+                <div class="flex items-center gap-2 mb-3" style="border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px">
+                    <span class="material-symbols-rounded" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;color:#f59e0b">restaurant</span>
+                    <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Food This Week</span>
+                    <span class="text-xs ml-auto" style="color:var(--md-sys-color-outline)">${weekRange}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-2xl font-extrabold" style="color:var(--md-sys-color-on-surface)">$${thisWeekFood.toFixed(0)}</p>
+                        <p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline)">this week · ${daysLeftText}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-center gap-1 justify-end">
+                            <span class="material-symbols-rounded" style="font-size:14px;color:${wowColor}">${wowIcon}</span>
+                            <span class="text-sm font-semibold" style="color:${wowColor}">${wowLabel}</span>
+                        </div>
+                        <p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline)">Last week: $${lastWeekFood.toFixed(0)}</p>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        // Normal view: under goal or slightly over
+        const overAmount = thisWeekFood - quest.target;
+        const underAmount = quest.target - thisWeekFood;
+        const contextLine = isOver
+            ? `<span style="color:#f59e0b">$${overAmount.toFixed(0)} above goal</span> · ${daysLeftText}`
+            : underAmount < 5
+                ? `<span style="color:#43e97b">Right on target</span> · ${daysLeftText}`
+                : `<span style="color:#43e97b">$${underAmount.toFixed(0)} under goal</span> · ${daysLeftText}`;
+
         card.innerHTML = `
-            <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">restaurant</span>
+            <div class="flex items-center gap-2 mb-3" style="border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px">
+                <span class="material-symbols-rounded" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;color:#43e97b">restaurant</span>
                 <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Food This Week</span>
-                ${vsLastWeek}
+                <span class="text-xs ml-auto" style="color:var(--md-sys-color-outline)">${lastWeekFood > 0 ? `Last week: $${lastWeekFood.toFixed(0)}` : weekRange}</span>
             </div>
-            <p class="text-xs mb-2" style="color:var(--md-sys-color-outline)">${weekRange}</p>
             <div class="flex items-end justify-between mb-2">
                 <div>
-                    <span class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">$${thisWeekFood.toFixed(0)}</span>
-                    <span class="text-xs ml-1" style="color:var(--md-sys-color-outline)">of $${quest.target} goal</span>
+                    <span class="text-2xl font-extrabold" style="color:var(--md-sys-color-on-surface)">$${thisWeekFood.toFixed(0)}</span>
+                    <span class="text-xs ml-1.5" style="color:var(--md-sys-color-outline)">of $${quest.target} goal</span>
                 </div>
-                <span class="text-xs font-semibold" style="color:${barColor}">${Math.round(pct * 100)}%</span>
+                <span class="text-xs font-semibold" style="color:${barColor}">${daysLeftText}</span>
             </div>
-            <div class="w-full h-2 rounded-full mb-2" style="background:rgba(255,255,255,0.06)">
-                <div class="h-2 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            <div class="w-full h-1.5 rounded-full mb-2.5" style="background:rgba(255,255,255,0.06)">
+                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
             </div>
             <p class="text-xs" style="color:var(--md-sys-color-outline)">${contextLine}</p>`;
     }
