@@ -27,7 +27,9 @@ try {
         
         // Initialize Firebase Authentication
         auth = firebase.auth();
-        
+        // Explicitly set LOCAL persistence so sessions survive page refreshes and browser restarts
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
+
         console.log('Firebase initialized successfully');
     } else {
         console.warn('Firebase SDK not loaded. Running in localStorage-only mode.');

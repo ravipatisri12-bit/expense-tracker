@@ -3,8 +3,9 @@
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
-// Broad query — no label filter since most users don't have that label set up
-const GMAIL_QUERY = 'from:no.reply.alerts@chase.com newer_than:30d';
+// Filter to transaction alert emails only — Chase account summaries, newsletters,
+// and investment updates come from the same sender but have different subjects
+const GMAIL_QUERY = 'from:no.reply.alerts@chase.com (subject:transaction OR subject:charge OR subject:"you made") newer_than:30d';
 
 class EmailParser {
     isTokenValid() {
@@ -15,12 +16,16 @@ class EmailParser {
 
     async getValidToken() {
         if (this.isTokenValid()) return localStorage.getItem('gmail_access_token');
+        // Gmail OAuth token expired (~60 min TTL) — need user to re-approve Gmail access
+        // This is NOT a full sign-in, just refreshing the Gmail read permission
+        const syncBtn = document.getElementById('gmail-sync-btn');
+        if (syncBtn) syncBtn.textContent = 'Reconnecting...';
         if (typeof showNotification === 'function') {
-            showNotification('Reconnecting Gmail...', 'success');
+            showNotification('Gmail access expired — approving via Google popup', 'success');
         }
         const token = await window.refreshGmailToken();
         if (!token && typeof showNotification === 'function') {
-            showNotification('Gmail reconnect failed — tap "Reconnect Gmail" in Settings', 'error', 7000);
+            showNotification('Gmail reconnect failed — tap "Reconnect Gmail"', 'error', 7000);
             this.showReconnectButton(true);
         }
         return token;
@@ -192,15 +197,15 @@ class EmailParser {
     }
 
     isValidTransaction(t) {
-        return (
-            t &&
-            typeof t.amount === 'number' &&
-            t.amount > 0 &&
-            t.amount < 100000 &&
-            typeof t.merchant === 'string' &&
-            t.merchant.length > 0 &&
-            !isNaN(new Date(t.date))
-        );
+        if (!t || typeof t.amount !== 'number' || typeof t.merchant !== 'string') return false;
+        if (t.amount <= 0 || t.amount > 10000) return false;
+        if (t.merchant.length === 0) return false;
+        const parsedDate = new Date(t.date);
+        if (isNaN(parsedDate)) return false;
+        // Reject future-dated transactions (account summaries, scheduled payments)
+        const today = new Date().toISOString().split('T')[0];
+        if (t.date > today) return false;
+        return true;
     }
 
     getProcessedIds() {
@@ -285,9 +290,16 @@ class EmailParser {
             return;
         }
 
+        // Background auto-sync: skip entirely if token already expired — don't open popups
+        if (silent && !this.isTokenValid()) return;
+
         localStorage.setItem('gmail_syncing', 'true');
         localStorage.setItem('gmail_syncing_ts', String(Date.now()));
-        if (!silent) this.setSyncButtonState(true);
+        if (!silent) {
+            this.setSyncButtonState(true);
+            // Yield to browser to paint the button state before any popup can steal focus
+            await new Promise(r => setTimeout(r, 50));
+        }
 
         try {
             const token = await this.getValidToken();
