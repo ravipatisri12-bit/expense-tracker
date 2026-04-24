@@ -112,15 +112,15 @@ class Gamification {
     checkIn(mood) {
         const today = new Date().toISOString().split('T')[0];
         if (!this.data.dailyLog[today]) {
-            this.data.dailyLog[today] = { logged: true, underBudget: mood !== 'heavy' };
+            this.data.dailyLog[today] = { logged: true, underBudget: mood !== 'wants' };
         }
         const alreadyCheckedIn = this.data.dailyLog[today].checkedIn;
         this.data.dailyLog[today].mood = mood;
         this.data.dailyLog[today].checkedIn = true;
-        this.data.dailyLog[today].underBudget = mood !== 'heavy';
+        this.data.dailyLog[today].underBudget = mood !== 'wants';
         if (!alreadyCheckedIn) {
-            // Only award XP on first check-in, not on edits
-            this.addXP(mood !== 'heavy' ? 10 : 5, 'daily-checkin');
+            const xp = mood === 'no-spend' ? 15 : mood === 'essential' ? 10 : 5;
+            this.addXP(xp, 'daily-checkin');
             this.updateStreak();
         }
         this.save();
@@ -265,17 +265,18 @@ function renderHabitCard() {
     const streak = g.data.streak.current;
     const bestStreak = g.data.streak.best;
 
-    const moodColors = { light: '#43e97b', normal: '#667eea', heavy: '#f59e0b' };
+    const moodColors = { 'no-spend': '#43e97b', essential: '#667eea', wants: '#f59e0b' };
+    const moodLabels = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
     const weekDays = ['S','M','T','W','T','F','S'];
 
-    // 7-day dot trail — evenly spaced across full card width
+    // 7-day dot trail
     const dots = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86400000);
         const ds = d.toISOString().split('T')[0];
         const log = g.data.dailyLog[ds];
         const isToday = ds === today;
-        const dotColor = log?.mood ? moodColors[log.mood] : (log?.logged ? '#667eea' : 'rgba(255,255,255,0.10)');
+        const dotColor = log?.mood ? (moodColors[log.mood] || '#667eea') : (log?.logged ? '#667eea' : 'rgba(255,255,255,0.10)');
         const ring = isToday && !alreadyCheckedIn ? 'box-shadow:0 0 0 2px rgba(255,255,255,0.25)' : '';
         dots.push(`
             <div class="flex flex-col items-center gap-1.5">
@@ -297,15 +298,16 @@ function renderHabitCard() {
         </div>`;
 
     if (alreadyCheckedIn) {
-        const mood = todayLog.mood || 'normal';
-        const moodLabel = { light: 'Light', normal: 'On Track', heavy: 'Heavy' }[mood];
+        const mood = todayLog.mood || 'wants';
+        const label = moodLabels[mood] || mood;
+        const color = moodColors[mood] || '#667eea';
         card.innerHTML = `
             <div class="px-4 pt-4 pb-4">
                 ${streakHeader}
                 ${dotTrail}
                 <div class="flex items-center justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.07)">
                     <span class="text-xs" style="color:var(--md-sys-color-outline)">
-                        Logged as <span class="font-semibold" style="color:${moodColors[mood]}">${moodLabel}</span>
+                        Logged as <span class="font-semibold" style="color:${color}">${label}</span>
                         ${bestStreak > 1 ? `<span style="opacity:0.5"> · Best ${bestStreak}d</span>` : ''}
                     </span>
                     <button onclick="openEditDailyCheckIn()" class="text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">Change</button>
@@ -314,16 +316,43 @@ function renderHabitCard() {
         return;
     }
 
+    // Smart suggestion based on today's actual transactions
+    let suggested = null;
+    try {
+        const et = window.expenseTracker;
+        if (et) {
+            const stats = et.getTodayStats();
+            if (stats.count === 0) suggested = 'no-spend';
+            else if (stats.wants === 0 && stats.needs > 0) suggested = 'essential';
+            else if (stats.wants > 0) suggested = 'wants';
+        }
+    } catch(e) {}
+
+    const btn = (id, label) => {
+        const styles = {
+            'no-spend': { bg: 'rgba(67,233,123,0.1)',   color: '#43e97b', border: 'rgba(67,233,123,0.2)',   bgHi: 'rgba(67,233,123,0.18)',  borderHi: 'rgba(67,233,123,0.45)' },
+            essential:  { bg: 'rgba(102,126,234,0.1)',  color: '#a8c7fa', border: 'rgba(102,126,234,0.2)',  bgHi: 'rgba(102,126,234,0.18)', borderHi: 'rgba(102,126,234,0.45)' },
+            wants:      { bg: 'rgba(245,158,11,0.1)',   color: '#f59e0b', border: 'rgba(245,158,11,0.2)',   bgHi: 'rgba(245,158,11,0.18)',  borderHi: 'rgba(245,158,11,0.45)' },
+        };
+        const s = styles[id];
+        const hi = id === suggested;
+        return `<button onclick="checkInDaily('${id}')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:${hi ? s.bgHi : s.bg};color:${s.color};border:1px solid ${hi ? s.borderHi : s.border}">${label}${hi ? ' ·' : ''}</button>`;
+    };
+
+    const hint = suggested
+        ? `<p class="text-xs mb-2" style="color:var(--md-sys-color-outline)">Looks like a <span style="color:${moodColors[suggested]}">${moodLabels[suggested]}</span> day — confirm or change</p>`
+        : `<p class="text-xs mb-2" style="color:var(--md-sys-color-outline)">How did you spend today?</p>`;
+
     card.innerHTML = `
         <div class="px-4 pt-4 pb-4">
             ${streakHeader}
             ${dotTrail}
             <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.07)">
-                <p class="text-xs mb-2.5" style="color:var(--md-sys-color-outline)">How was your spending today?</p>
+                ${hint}
                 <div class="flex gap-2">
-                    <button onclick="checkInDaily('light')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(67,233,123,0.1);color:#43e97b;border:1px solid rgba(67,233,123,0.2)">Light</button>
-                    <button onclick="checkInDaily('normal')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(102,126,234,0.1);color:#a8c7fa;border:1px solid rgba(102,126,234,0.2)">On Track</button>
-                    <button onclick="checkInDaily('heavy')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)">Heavy</button>
+                    ${btn('no-spend', 'No Spend')}
+                    ${btn('essential', 'Essentials')}
+                    ${btn('wants', 'Wants')}
                 </div>
             </div>
         </div>`;
@@ -334,7 +363,11 @@ function checkInDaily(mood) {
     window.gamification.checkIn(mood);
     renderHabitCard();
     if (wasNew) {
-        const msgs = { light: 'Light day — streak extended', normal: 'On track — keep it up', heavy: 'Logged · Tomorrow is a fresh start' };
+        const msgs = {
+            'no-spend': 'No spend day — streak extended',
+            essential: 'Essentials only — solid discipline',
+            wants: 'Logged · every day counts'
+        };
         showNotification(msgs[mood] || 'Logged', 'success');
     }
 }
