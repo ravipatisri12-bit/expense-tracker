@@ -267,19 +267,19 @@ class EmailParser {
         }
     }
 
-    async sync() {
+    async sync(silent = false) {
         // Clear stale lock — any lock older than 2 minutes is from a previous crashed session
         const lockTs = parseInt(localStorage.getItem('gmail_syncing_ts') || '0', 10);
         const lockStale = Date.now() - lockTs > 120000;
         if (localStorage.getItem('gmail_syncing') === 'true' && !lockStale) {
-            if (typeof showNotification === 'function') {
+            if (!silent && typeof showNotification === 'function') {
                 showNotification('Sync already in progress...', 'success');
             }
             return;
         }
 
         if (!window.currentUser) {
-            if (typeof showNotification === 'function') {
+            if (!silent && typeof showNotification === 'function') {
                 showNotification('Sign in with Google first to use Gmail sync', 'error');
             }
             return;
@@ -287,7 +287,7 @@ class EmailParser {
 
         localStorage.setItem('gmail_syncing', 'true');
         localStorage.setItem('gmail_syncing_ts', String(Date.now()));
-        this.setSyncButtonState(true);
+        if (!silent) this.setSyncButtonState(true);
 
         try {
             const token = await this.getValidToken();
@@ -383,7 +383,7 @@ class EmailParser {
         } finally {
             localStorage.removeItem('gmail_syncing');
             localStorage.removeItem('gmail_syncing_ts');
-            this.setSyncButtonState(false);
+            if (!silent) this.setSyncButtonState(false);
         }
     }
 }

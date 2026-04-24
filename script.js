@@ -1338,7 +1338,7 @@ class ExpenseTracker {
                 const hoursSince = lastSync ? (Date.now() - new Date(lastSync).getTime()) / 3600000 : Infinity;
                 if (hoursSince >= 4) {
                     console.log('Auto-syncing Gmail (last sync:', lastSync || 'never', ')');
-                    window.emailParser.sync();
+                    window.emailParser.sync(true);
                 }
             }
 
