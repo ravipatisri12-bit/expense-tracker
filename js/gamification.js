@@ -254,6 +254,27 @@ function submitAntiPortfolio() {
 
 // === HABIT CARD — streak + 7-day trail + daily check-in (merged) ===
 
+let habitCalExpanded = false;
+let habitCalViewYear = null;
+let habitCalViewMonth = null;
+
+function toggleHabitCal() {
+    habitCalExpanded = !habitCalExpanded;
+    if (habitCalExpanded) {
+        const now = new Date();
+        habitCalViewYear = now.getFullYear();
+        habitCalViewMonth = now.getMonth();
+    }
+    renderHabitCard();
+}
+
+function habitCalNav(dir) {
+    habitCalViewMonth += dir;
+    if (habitCalViewMonth < 0)  { habitCalViewMonth = 11; habitCalViewYear--; }
+    if (habitCalViewMonth > 11) { habitCalViewMonth = 0;  habitCalViewYear++; }
+    renderHabitCard();
+}
+
 function renderHabitCard() {
     const card = document.getElementById('habit-card');
     if (!card) return;
@@ -275,19 +296,62 @@ function renderHabitCard() {
         essential:  'rgba(102,126,234,0.18)', 'essential-text': '#a8c7fa',
         wants:      'rgba(245,158,11,0.18)',  'wants-text':     '#f59e0b',
     };
-    const tiles = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(Date.now() - i * 86400000);
-        const ds = d.toISOString().split('T')[0];
-        const log = g.data.dailyLog[ds];
-        const isToday = ds === today;
-        const mood = log?.mood;
-        const bg   = mood ? tileBg[mood]            : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
-        const col  = mood ? tileBg[mood + '-text']  : log?.logged ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)';
-        const ring = isToday ? `box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.25)'}` : '';
-        tiles.push(`<div class="flex-1 py-1.5 rounded-lg flex items-center justify-center text-xs font-bold" style="background:${bg};color:${col};${ring}">${weekDays[d.getDay()]}</div>`);
+    // Calendar section — compact 7-day row or full month grid on tap
+    let calSection;
+    if (habitCalExpanded) {
+        const yr = habitCalViewYear;
+        const mo = habitCalViewMonth;
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const firstDay = new Date(yr, mo, 1).getDay();
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const now = new Date();
+        const isFutureMonth = yr > now.getFullYear() || (yr === now.getFullYear() && mo > now.getMonth());
+        const dayHdrs = weekDays.map(d =>
+            `<div class="flex items-center justify-center" style="font-size:9px;color:var(--md-sys-color-outline);opacity:0.5;height:14px">${d}</div>`
+        ).join('');
+        const cells = [];
+        for (let i = 0; i < firstDay; i++) cells.push('<div></div>');
+        for (let day = 1; day <= daysInMonth; day++) {
+            const ds = `${yr}-${String(mo + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const log = g.data.dailyLog[ds];
+            const mood = log?.mood;
+            const isToday = ds === today;
+            const isFuture = ds > today;
+            const bg  = isFuture ? 'transparent'
+                      : mood ? tileBg[mood]
+                      : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
+            const col = isFuture ? 'rgba(255,255,255,0.1)'
+                      : mood ? tileBg[mood + '-text']
+                      : log?.logged ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)';
+            const ring = isToday ? `;box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.3)'}` : '';
+            cells.push(`<div class="rounded flex items-center justify-center font-medium" style="aspect-ratio:1;font-size:9px;background:${bg};color:${col}${ring}">${day}</div>`);
+        }
+        const nextDisabled = isFutureMonth ? 'opacity:0.2;pointer-events:none' : '';
+        calSection = `
+            <div class="mt-2">
+                <div class="flex items-center justify-between mb-1">
+                    <button onclick="habitCalNav(-1)" class="p-0.5 rounded" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded" style="font-size:14px">chevron_left</span></button>
+                    <button onclick="toggleHabitCal()" class="text-xs font-semibold px-2 flex items-center gap-0.5" style="color:var(--md-sys-color-on-surface)">${monthNames[mo]} ${yr}<span class="material-symbols-rounded" style="font-size:11px;opacity:0.5">expand_less</span></button>
+                    <button onclick="habitCalNav(1)" class="p-0.5 rounded" style="color:var(--md-sys-color-outline);${nextDisabled}"><span class="material-symbols-rounded" style="font-size:14px">chevron_right</span></button>
+                </div>
+                <div class="grid grid-cols-7 gap-0.5 mb-0.5">${dayHdrs}</div>
+                <div class="grid grid-cols-7 gap-0.5">${cells.join('')}</div>
+            </div>`;
+    } else {
+        const tiles = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(Date.now() - i * 86400000);
+            const ds = d.toISOString().split('T')[0];
+            const log = g.data.dailyLog[ds];
+            const isToday = ds === today;
+            const mood = log?.mood;
+            const bg   = mood ? tileBg[mood]           : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
+            const col  = mood ? tileBg[mood + '-text'] : log?.logged ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)';
+            const ring = isToday ? `box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.25)'}` : '';
+            tiles.push(`<div class="flex-1 py-1.5 rounded-lg flex items-center justify-center text-xs font-bold" style="background:${bg};color:${col};${ring}">${weekDays[d.getDay()]}</div>`);
+        }
+        calSection = `<div class="flex gap-1 mt-2 cursor-pointer" onclick="toggleHabitCal()">${tiles.join('')}</div>`;
     }
-    const calRow = `<div class="flex gap-1 mt-2">${tiles.join('')}</div>`;
 
     // Streak header row
     const streakRow = `
@@ -309,7 +373,7 @@ function renderHabitCard() {
         card.innerHTML = `
             <div class="px-3 pt-3 pb-3">
                 ${streakRow}
-                ${calRow}
+                ${calSection}
                 <div class="flex items-center justify-between mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
                     <span class="text-xs" style="color:var(--md-sys-color-outline)">
                         <span class="font-semibold" style="color:${color}">${label}</span> day logged
@@ -345,7 +409,7 @@ function renderHabitCard() {
     card.innerHTML = `
         <div class="px-3 pt-3 pb-3">
             ${streakRow}
-            ${calRow}
+            ${calSection}
             <div class="flex gap-1.5 mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
                 ${btn('no-spend', 'No Spend')}
                 ${btn('essential', 'Essentials')}
