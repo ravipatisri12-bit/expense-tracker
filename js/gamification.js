@@ -269,33 +269,37 @@ function renderHabitCard() {
     const moodLabels = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
     const weekDays = ['S','M','T','W','T','F','S'];
 
-    // 7-day dot trail — compact dots with day labels
-    const dots = [];
+    // Calendar tile row — one colored tile per day
+    const tileBg = {
+        'no-spend': 'rgba(67,233,123,0.18)',  'no-spend-text': '#43e97b',
+        essential:  'rgba(102,126,234,0.18)', 'essential-text': '#a8c7fa',
+        wants:      'rgba(245,158,11,0.18)',  'wants-text':     '#f59e0b',
+    };
+    const tiles = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86400000);
         const ds = d.toISOString().split('T')[0];
         const log = g.data.dailyLog[ds];
         const isToday = ds === today;
-        const dotColor = log?.mood ? (moodColors[log.mood] || '#667eea') : (log?.logged ? '#667eea' : 'rgba(255,255,255,0.10)');
-        const ring = isToday && !alreadyCheckedIn ? 'box-shadow:0 0 0 2px rgba(255,255,255,0.22)' : '';
-        dots.push(`<div class="flex flex-col items-center gap-1">
-            <div class="w-2 h-2 rounded-full" style="background:${dotColor};${ring}"></div>
-            <span style="font-size:8px;color:var(--md-sys-color-outline);opacity:0.6">${weekDays[d.getDay()]}</span>
-        </div>`);
+        const mood = log?.mood;
+        const bg   = mood ? tileBg[mood]            : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
+        const col  = mood ? tileBg[mood + '-text']  : log?.logged ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)';
+        const ring = isToday ? `box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.25)'}` : '';
+        tiles.push(`<div class="flex-1 py-1.5 rounded-lg flex items-center justify-center text-xs font-bold" style="background:${bg};color:${col};${ring}">${weekDays[d.getDay()]}</div>`);
     }
-    const dotTrail = `<div class="flex justify-between mt-2">${dots.join('')}</div>`;
+    const calRow = `<div class="flex gap-1 mt-2">${tiles.join('')}</div>`;
 
-    // Header: streak on left, dots on right — single compact row
+    // Streak header row
     const streakRow = `
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
                 ${streak > 0
                     ? `<span class="material-symbols-rounded" style="color:#f59e0b;font-size:15px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">local_fire_department</span>
                        <span class="text-xs font-bold" style="color:var(--md-sys-color-on-surface)">${streak} day${streak !== 1 ? 's' : ''}</span>`
-                    : `<span class="text-xs" style="color:var(--md-sys-color-outline)">No streak yet</span>`}
-                ${bestStreak > streak && bestStreak > 1 ? `<span class="text-xs" style="color:var(--md-sys-color-outline);opacity:0.45">· best ${bestStreak}</span>` : ''}
+                    : `<span class="text-xs" style="color:var(--md-sys-color-outline)">Start your streak</span>`}
+                ${bestStreak > streak && bestStreak > 1 ? `<span class="text-xs" style="color:var(--md-sys-color-outline);opacity:0.4">· best ${bestStreak}</span>` : ''}
             </div>
-            ${dotTrail.replace('<div class="flex justify-between mt-2">', '<div class="flex gap-2">')}
+            <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Daily Habit</span>
         </div>`;
 
     if (alreadyCheckedIn) {
@@ -303,9 +307,10 @@ function renderHabitCard() {
         const label = moodLabels[mood] || mood;
         const color = moodColors[mood] || '#667eea';
         card.innerHTML = `
-            <div class="px-3 py-3">
+            <div class="px-3 pt-3 pb-3">
                 ${streakRow}
-                <div class="flex items-center justify-between mt-2.5 pt-2.5" style="border-top:1px solid rgba(255,255,255,0.06)">
+                ${calRow}
+                <div class="flex items-center justify-between mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
                     <span class="text-xs" style="color:var(--md-sys-color-outline)">
                         <span class="font-semibold" style="color:${color}">${label}</span> day logged
                     </span>
@@ -329,18 +334,19 @@ function renderHabitCard() {
 
     const btn = (id, label) => {
         const s = {
-            'no-spend': { bg: 'rgba(67,233,123,0.1)',  color: '#43e97b', border: 'rgba(67,233,123,0.2)',  bgHi: 'rgba(67,233,123,0.16)',  bHi: 'rgba(67,233,123,0.4)' },
-            essential:  { bg: 'rgba(102,126,234,0.1)', color: '#a8c7fa', border: 'rgba(102,126,234,0.2)', bgHi: 'rgba(102,126,234,0.16)', bHi: 'rgba(102,126,234,0.4)' },
-            wants:      { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)',  bgHi: 'rgba(245,158,11,0.16)',  bHi: 'rgba(245,158,11,0.4)' },
+            'no-spend': { bg: 'rgba(67,233,123,0.1)',  color: '#43e97b', border: 'rgba(67,233,123,0.2)',  bgHi: 'rgba(67,233,123,0.18)',  bHi: 'rgba(67,233,123,0.45)' },
+            essential:  { bg: 'rgba(102,126,234,0.1)', color: '#a8c7fa', border: 'rgba(102,126,234,0.2)', bgHi: 'rgba(102,126,234,0.18)', bHi: 'rgba(102,126,234,0.45)' },
+            wants:      { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)',  bgHi: 'rgba(245,158,11,0.18)',  bHi: 'rgba(245,158,11,0.45)' },
         }[id];
         const hi = id === suggested;
         return `<button onclick="checkInDaily('${id}')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:${hi ? s.bgHi : s.bg};color:${s.color};border:1px solid ${hi ? s.bHi : s.border}">${label}</button>`;
     };
 
     card.innerHTML = `
-        <div class="px-3 py-3">
+        <div class="px-3 pt-3 pb-3">
             ${streakRow}
-            <div class="flex gap-1.5 mt-2.5 pt-2.5" style="border-top:1px solid rgba(255,255,255,0.06)">
+            ${calRow}
+            <div class="flex gap-1.5 mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
                 ${btn('no-spend', 'No Spend')}
                 ${btn('essential', 'Essentials')}
                 ${btn('wants', 'Wants')}
