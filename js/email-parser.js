@@ -3,7 +3,8 @@
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
-const GMAIL_QUERY = 'from:no.reply.alerts@chase.com label:"Chase Transactions" newer_than:30d';
+// Broad query — no label filter since most users don't have that label set up
+const GMAIL_QUERY = 'from:no.reply.alerts@chase.com newer_than:30d';
 
 class EmailParser {
     isTokenValid() {
@@ -267,7 +268,16 @@ class EmailParser {
     }
 
     async sync() {
-        if (localStorage.getItem('gmail_syncing') === 'true') return;
+        // Clear stale lock — any lock older than 2 minutes is from a previous crashed session
+        const lockTs = parseInt(localStorage.getItem('gmail_syncing_ts') || '0', 10);
+        const lockStale = Date.now() - lockTs > 120000;
+        if (localStorage.getItem('gmail_syncing') === 'true' && !lockStale) {
+            if (typeof showNotification === 'function') {
+                showNotification('Sync already in progress...', 'success');
+            }
+            return;
+        }
+
         if (!window.currentUser) {
             if (typeof showNotification === 'function') {
                 showNotification('Sign in with Google first to use Gmail sync', 'error');
@@ -276,6 +286,7 @@ class EmailParser {
         }
 
         localStorage.setItem('gmail_syncing', 'true');
+        localStorage.setItem('gmail_syncing_ts', String(Date.now()));
         this.setSyncButtonState(true);
 
         try {
@@ -371,9 +382,14 @@ class EmailParser {
             }
         } finally {
             localStorage.removeItem('gmail_syncing');
+            localStorage.removeItem('gmail_syncing_ts');
             this.setSyncButtonState(false);
         }
     }
 }
+
+// Clear any stale lock from a previous session on page load
+localStorage.removeItem('gmail_syncing');
+localStorage.removeItem('gmail_syncing_ts');
 
 window.emailParser = new EmailParser();
