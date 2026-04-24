@@ -110,72 +110,26 @@
             <!-- Greeting -->
             <p id="greeting-text" class="text-sm font-medium text-center -mt-4" style="color:var(--md-sys-color-outline)"></p>
 
-            <!-- Today's Win -->
-            <div id="today-win-card" class="card p-4 hidden">
-                <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-rounded" style="color:#43e97b;font-size:18px;flex-shrink:0">check_circle</span>
-                    <p id="today-win-text" class="text-sm font-medium leading-snug" style="color:var(--md-sys-color-on-surface)"></p>
-                </div>
-            </div>
-
-            <!-- Daily Budget Pulse -->
-            <div id="daily-pulse-card" class="card p-4 hidden"></div>
-
-            <!-- Today Card -->
-            <div id="today-card" class="card p-4"></div>
-
-            <!-- Quick Actions -->
+            <!-- Quick Actions — primary CTAs -->
             <div class="flex gap-3">
-                <button onclick="showPage('add-expense')" class="flex-1 card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
-                    <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">add</span>
-                    <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Add expense</span>
+                <button onclick="showPage('add-expense')" class="flex-[2] py-3.5 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all active:scale-[0.97]" style="background:var(--accent-gradient);color:white">
+                    <span class="material-symbols-rounded" style="font-size:18px">add</span>
+                    Add Expense
                 </button>
-                <button onclick="openAntiPortfolio()" class="flex-1 card p-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="border:1px dashed rgba(255,255,255,0.15)">
-                    <span class="material-symbols-rounded" style="font-size:18px;color:var(--md-sys-color-primary)">savings</span>
-                    <span class="text-sm font-medium" style="color:var(--md-sys-color-primary)">Log a save</span>
+                <button onclick="openAntiPortfolio()" class="flex-1 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all active:scale-[0.97]" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-primary);border:1px solid rgba(255,255,255,0.12)">
+                    <span class="material-symbols-rounded" style="font-size:18px">savings</span>
+                    Save
                 </button>
             </div>
+
+            <!-- Today Panel (combined target + total) -->
+            <div id="today-panel" class="card p-4"></div>
 
             <!-- Weekly Quest -->
             <div id="weekly-quest-card" class="card p-4 hidden"></div>
 
-            <!-- XP & Saved -->
-            <div id="gamification-bar" class="card p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white" id="level-badge">LVL 1</span>
-                        <div>
-                            <div class="text-xs font-medium" style="color:var(--md-sys-color-on-surface)" id="xp-text">0 / 100 XP</div>
-                            <div class="w-24 h-1 rounded-full mt-1" style="background:rgba(255,255,255,0.08)">
-                                <div id="xp-progress" class="h-1 rounded-full transition-all duration-500" style="width:0%;background:linear-gradient(90deg,#667eea,#764ba2)"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <span class="material-symbols-rounded" style="color:#667eea;font-size:16px">savings</span>
-                        <span class="text-xs font-bold" style="color:#667eea" id="total-saved">$0</span>
-                    </div>
-                </div>
-                <div class="flex gap-2 flex-wrap">
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+5 add</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+15 save</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-outline)">+20 under budget</span>
-                </div>
-            </div>
-
-            <!-- Streak -->
-            <div class="card p-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-rounded" style="color:#667eea;font-size:20px">local_fire_department</span>
-                    <span class="text-sm font-bold" style="color:var(--md-sys-color-on-surface)" id="streak-count">0</span>
-                </div>
-                <span id="streak-label" class="text-xs font-medium" style="color:var(--md-sys-color-outline)"></span>
-            </div>
-
-            <!-- Spending Trends (Daily/Weekly toggle) — moved below -->
-
-            <!-- Daily Check-In Ticket -->
-            <div id="daily-checkin-card" class="card p-0 overflow-hidden" style="border:1px solid rgba(255,255,255,0.07)"></div>
+            <!-- Habit Card (streak + 7-day trail + daily check-in) -->
+            <div id="habit-card" class="card overflow-hidden" style="border:1px solid rgba(255,255,255,0.07)"></div>
 
             <!-- AI Insights -->
             <div id="insights-section" class="card p-5">

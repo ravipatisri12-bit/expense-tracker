@@ -215,16 +215,7 @@ function updateGreeting() {
 }
 
 function updateGamificationUI() {
-    const g = window.gamification;
-    const stats = g.getStats();
-
-    const el = (id) => document.getElementById(id);
-
-    // XP bar
-    if (el('level-badge')) el('level-badge').textContent = `LVL ${stats.level}`;
-    if (el('xp-text')) el('xp-text').textContent = `${stats.xp % 100} / 100 XP`;
-    if (el('xp-progress')) el('xp-progress').style.width = `${stats.xpProgress * 100}%`;
-    if (el('total-saved')) el('total-saved').textContent = `$${stats.totalSaved.toFixed(0)}`;
+    renderHabitCard();
 }
 
 // === ANTI-PORTFOLIO HANDLERS ===
@@ -261,102 +252,109 @@ function submitAntiPortfolio() {
     updateGamificationUI();
 }
 
-// === DAILY CHECK-IN RENDERER ===
+// === HABIT CARD — streak + 7-day trail + daily check-in (merged) ===
 
-function renderDailyCheckIn() {
-    const card = document.getElementById('daily-checkin-card');
+function renderHabitCard() {
+    const card = document.getElementById('habit-card');
     if (!card) return;
 
     const g = window.gamification;
     const today = new Date().toISOString().split('T')[0];
     const todayLog = g.data.dailyLog[today];
     const alreadyCheckedIn = todayLog?.checkedIn;
-    const dayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const streak = g.data.streak.current;
+    const bestStreak = g.data.streak.best;
 
-    // Build 7-day dot trail (oldest → newest, left → right)
     const moodColors = { light: '#43e97b', normal: '#667eea', heavy: '#f59e0b' };
     const weekDays = ['S','M','T','W','T','F','S'];
+
+    // 7-day dot trail — evenly spaced across full card width
     const dots = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86400000);
         const ds = d.toISOString().split('T')[0];
         const log = g.data.dailyLog[ds];
         const isToday = ds === today;
-        const dayChar = weekDays[d.getDay()];
-        const dotColor = log?.mood ? moodColors[log.mood] : (log?.logged ? '#667eea' : 'rgba(255,255,255,0.08)');
-        const ring = isToday && !alreadyCheckedIn ? 'box-shadow:0 0 0 1.5px rgba(255,255,255,0.25)' : '';
+        const dotColor = log?.mood ? moodColors[log.mood] : (log?.logged ? '#667eea' : 'rgba(255,255,255,0.10)');
+        const ring = isToday && !alreadyCheckedIn ? 'box-shadow:0 0 0 2px rgba(255,255,255,0.25)' : '';
         dots.push(`
-            <div class="flex flex-col items-center gap-1">
-                <div class="w-2 h-2 rounded-full" style="background:${dotColor};${ring}"></div>
-                <span style="font-size:9px;color:var(--md-sys-color-outline)">${dayChar}</span>
+            <div class="flex flex-col items-center gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full" style="background:${dotColor};${ring}"></div>
+                <span style="font-size:9px;color:var(--md-sys-color-outline)">${weekDays[d.getDay()]}</span>
             </div>`);
     }
-    const dotTrail = `<div class="flex gap-2.5 justify-end mt-3">${dots.join('')}</div>`;
+    const dotTrail = `<div class="flex justify-between mt-3">${dots.join('')}</div>`;
 
-    const moodBtnRow = `
-        <div class="flex gap-2">
-            <button onclick="checkInDaily('light')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(67,233,123,0.1);color:#43e97b;border:1px solid rgba(67,233,123,0.2)">Light</button>
-            <button onclick="checkInDaily('normal')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(102,126,234,0.1);color:#a8c7fa;border:1px solid rgba(102,126,234,0.2)">On Track</button>
-            <button onclick="checkInDaily('heavy')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)">Heavy</button>
+    const streakHeader = `
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Daily Habit</span>
+            <div class="flex items-center gap-1.5">
+                ${streak > 0
+                    ? `<span class="material-symbols-rounded" style="color:#f59e0b;font-size:17px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">local_fire_department</span>
+                       <span class="text-sm font-bold" style="color:var(--md-sys-color-on-surface)">${streak} day${streak !== 1 ? 's' : ''}</span>`
+                    : `<span class="text-xs" style="color:var(--md-sys-color-outline)">Start your streak</span>`}
+            </div>
         </div>`;
 
     if (alreadyCheckedIn) {
         const mood = todayLog.mood || 'normal';
         const moodLabel = { light: 'Light', normal: 'On Track', heavy: 'Heavy' }[mood];
         card.innerHTML = `
-            <div class="px-4 pt-3 pb-2 flex justify-between items-center" style="border-bottom:1px dashed rgba(255,255,255,0.08)">
-                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Daily Log</span>
-                <span class="text-xs font-mono" style="color:var(--md-sys-color-outline)">${dayLabel}</span>
-            </div>
-            <div class="px-4 py-3">
-                <div class="flex items-center justify-between mb-0.5">
-                    <p class="text-xs" style="color:var(--md-sys-color-outline)">Logged as <span class="font-semibold" style="color:${moodColors[mood]}">${moodLabel}</span></p>
-                    <button onclick="openEditDailyCheckIn()" class="text-xs px-2 py-0.5 rounded-md transition-all active:scale-95" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">Change</button>
-                </div>
+            <div class="px-4 pt-4 pb-4">
+                ${streakHeader}
                 ${dotTrail}
+                <div class="flex items-center justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.07)">
+                    <span class="text-xs" style="color:var(--md-sys-color-outline)">
+                        Logged as <span class="font-semibold" style="color:${moodColors[mood]}">${moodLabel}</span>
+                        ${bestStreak > 1 ? `<span style="opacity:0.5"> · Best ${bestStreak}d</span>` : ''}
+                    </span>
+                    <button onclick="openEditDailyCheckIn()" class="text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">Change</button>
+                </div>
             </div>`;
         return;
     }
 
     card.innerHTML = `
-        <div class="px-4 pt-3 pb-2 flex justify-between items-center" style="border-bottom:1px dashed rgba(255,255,255,0.08)">
-            <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Daily Log</span>
-            <span class="text-xs font-mono" style="color:var(--md-sys-color-outline)">${dayLabel}</span>
-        </div>
-        <div class="px-4 py-3">
-            <p class="text-xs mb-2.5" style="color:var(--md-sys-color-outline)">How was today?</p>
-            ${moodBtnRow}
+        <div class="px-4 pt-4 pb-4">
+            ${streakHeader}
             ${dotTrail}
+            <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.07)">
+                <p class="text-xs mb-2.5" style="color:var(--md-sys-color-outline)">How was your spending today?</p>
+                <div class="flex gap-2">
+                    <button onclick="checkInDaily('light')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(67,233,123,0.1);color:#43e97b;border:1px solid rgba(67,233,123,0.2)">Light</button>
+                    <button onclick="checkInDaily('normal')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(102,126,234,0.1);color:#a8c7fa;border:1px solid rgba(102,126,234,0.2)">On Track</button>
+                    <button onclick="checkInDaily('heavy')" class="flex-1 py-2 text-xs font-semibold rounded-xl transition-all active:scale-95" style="background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)">Heavy</button>
+                </div>
+            </div>
         </div>`;
 }
 
 function checkInDaily(mood) {
     const wasNew = !window.gamification.data.dailyLog[new Date().toISOString().split('T')[0]]?.checkedIn;
     window.gamification.checkIn(mood);
-    updateGamificationUI();
-    renderDailyCheckIn();
+    renderHabitCard();
     if (wasNew) {
-        const msgs = { light: 'Light day logged · +10 XP', normal: 'On track — +10 XP', heavy: 'Logged · +5 XP · Tomorrow is a fresh start' };
+        const msgs = { light: 'Light day — streak extended', normal: 'On track — keep it up', heavy: 'Logged · Tomorrow is a fresh start' };
         showNotification(msgs[mood] || 'Logged', 'success');
     }
 }
 
 function openEditDailyCheckIn() {
     window.gamification.openEditCheckIn();
-    renderDailyCheckIn();
+    renderHabitCard();
 }
 
 // Update UI when page loads and on page switches
 document.addEventListener('DOMContentLoaded', () => {
     updateGamificationUI();
     updateGreeting();
-    try { renderDailyCheckIn(); } catch(e) { console.error('renderDailyCheckIn:', e); }
+    try { renderHabitCard(); } catch(e) { console.error('renderHabitCard:', e); }
     // Re-update when pages switch
     const origShowPage = window.showPage;
     if (origShowPage) {
         window.showPage = function(pageId) {
             origShowPage(pageId);
-            setTimeout(() => { updateGamificationUI(); renderDailyCheckIn(); }, 50);
+            setTimeout(() => { updateGamificationUI(); }, 50);
         };
     }
 });

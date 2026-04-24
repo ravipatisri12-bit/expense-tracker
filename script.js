@@ -909,9 +909,7 @@ class ExpenseTracker {
         }
         if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
 
-        this.renderTodayCard();
-        try { this.renderTodaysWin(); } catch(e) { console.error('renderTodaysWin:', e); }
-        try { this.renderDailyPulse(); } catch(e) { console.error('renderDailyPulse:', e); }
+        try { this.renderTodayPanel(); } catch(e) { console.error('renderTodayPanel:', e); }
         try { this.renderWeeklyQuest(); } catch(e) { console.error('renderWeeklyQuest:', e); }
         this.maybeShowEveningNotification();
     }
@@ -923,6 +921,96 @@ class ExpenseTracker {
         const needsTotal = todayExpenses.filter(e => needsCategories.includes(e.category)).reduce((s, e) => s + e.amount, 0);
         const wantsTotal = todayExpenses.filter(e => !needsCategories.includes(e.category)).reduce((s, e) => s + e.amount, 0);
         return { total: needsTotal + wantsTotal, needs: needsTotal, wants: wantsTotal, count: todayExpenses.length };
+    }
+
+    renderTodayPanel() {
+        const card = document.getElementById('today-panel');
+        if (!card) return;
+
+        const stats = this.getTodayStats();
+        const now = new Date();
+        const dayLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const fmt = v => '$' + v.toFixed(2);
+
+        // Daily target logic (from renderDailyPulse)
+        const income = this.settings.income || 0;
+        const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
+        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
+        const baselineDaily = totalBudget > 0
+            ? totalBudget / daysInMonth
+            : income > 0 ? Math.max(income - fixed, 0) / daysInMonth : 0;
+        const showTarget = baselineDaily > 0;
+
+        const currentMonth = now.getMonth(), currentYear = now.getFullYear();
+        const monthlySpent = this.expenses
+            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.excludeFromBudget; })
+            .reduce((s, e) => s + e.amount, 0);
+        const remaining = totalBudget - monthlySpent;
+        const isOverMonthly = totalBudget > 0 && remaining < 0;
+        const dailyTarget = showTarget
+            ? (isOverMonthly ? baselineDaily : totalBudget > 0 ? Math.min(remaining / daysLeft, baselineDaily * 2) : baselineDaily)
+            : 0;
+
+        // Beat Yesterday
+        const yesterdayStr = this.getLocalDateString(new Date(Date.now() - 86400000));
+        const yesterdayTotal = this.expenses
+            .filter(e => e.date === yesterdayStr && !e.excludeFromBudget)
+            .reduce((s, e) => s + e.amount, 0);
+        const showBeatYesterday = yesterdayTotal > 0;
+        const beating = stats.total < yesterdayTotal;
+        const beatDiff = Math.abs(stats.total - yesterdayTotal);
+
+        const beatRow = showBeatYesterday ? `
+            <div class="flex items-center justify-between mt-3 pt-2.5" style="border-top:1px solid rgba(255,255,255,0.06)">
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">vs yesterday</span>
+                <div class="flex items-center gap-1">
+                    <span class="material-symbols-rounded" style="font-size:14px;color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">${beating ? 'trending_down' : 'trending_flat'}</span>
+                    <span class="text-xs font-semibold" style="color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">
+                        ${beating ? `-$${beatDiff.toFixed(0)} ahead` : stats.total === yesterdayTotal ? 'same pace' : `$${beatDiff.toFixed(0)} more`}
+                    </span>
+                </div>
+            </div>` : '';
+
+        if (stats.count === 0) {
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
+                </div>
+                <p class="text-sm mt-1" style="color:var(--md-sys-color-outline)">Nothing logged yet</p>
+                ${showTarget ? `<p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline);opacity:0.6">Target: $${Math.round(dailyTarget)} today</p>` : ''}
+                ${showBeatYesterday ? `<p class="text-xs mt-1" style="color:var(--md-sys-color-outline)">Yesterday: ${fmt(yesterdayTotal)} — can you beat it?</p>` : ''}`;
+            return;
+        }
+
+        const pct = dailyTarget > 0 ? stats.total / dailyTarget : 0;
+        const barWidth = Math.min(pct * 100, 100).toFixed(1);
+        const barColor = pct >= 1 ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
+        const headroom = dailyTarget - stats.total;
+
+        const targetSection = showTarget ? `
+            <div class="w-full h-1.5 rounded-full my-3" style="background:rgba(255,255,255,0.06)">
+                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
+            </div>
+            <div class="flex justify-between text-xs" style="color:var(--md-sys-color-outline)">
+                <span>${pct >= 1 ? 'Target reached' : `$${headroom.toFixed(0)} left today`}</span>
+                <span>of $${Math.round(dailyTarget)} target</span>
+            </div>` : '';
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
+                <span class="text-xs" style="color:var(--md-sys-color-outline)">${stats.count} transaction${stats.count !== 1 ? 's' : ''}</span>
+            </div>
+            <p class="text-3xl font-extrabold" style="color:var(--md-sys-color-on-surface)">${fmt(stats.total)}</p>
+            ${stats.needs > 0 || stats.wants > 0 ? `
+            <div class="flex gap-3 mt-1">
+                ${stats.needs > 0 ? `<span class="text-xs" style="color:var(--md-sys-color-outline)">Needs ${fmt(stats.needs)}</span>` : ''}
+                ${stats.wants > 0 ? `<span class="text-xs" style="color:var(--md-sys-color-outline)">Wants ${fmt(stats.wants)}</span>` : ''}
+            </div>` : ''}
+            ${targetSection}
+            ${beatRow}`;
     }
 
     renderTodayCard() {
