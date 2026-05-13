@@ -15,6 +15,7 @@ dist/
 .vscode/
 .idea/
 .kiro/
+.claude/settings.local.json
 
 # Test files (keep in repo but document)
 # test-*.html files are kept for development
