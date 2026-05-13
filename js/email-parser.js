@@ -95,7 +95,7 @@ class EmailParser {
         //    "Amount    $11.14"
         const structuredAmount = emailText.match(/Amount\s+\$([0-9,]+\.?\d{0,2})/i);
         const structuredMerchant = emailText.match(/Merchant\s+([A-Z0-9][^\n\t]+?)(?:\s{2,}|\t|\n|$)/i);
-        const structuredDate = emailText.match(/Date\s+((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})/i);
+        const structuredDate = emailText.match(/Date\s+((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}(?:\s+at\s+\d{1,2}:\d{2}\s+(?:AM|PM)\s+ET)?)/i);
 
         if (structuredAmount && structuredMerchant) {
             const amount = parseFloat(structuredAmount[1].replace(/,/g, ''));
@@ -136,6 +136,29 @@ class EmailParser {
 
     _parseDate(dateStr, fallbackText = '') {
         const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+        const pad2 = n => String(n).padStart(2, '0');
+
+        // Chase reports in Eastern Time ("Apr 21, 2026 at 5:43 PM ET").
+        // Convert to a UTC instant, then read calendar parts in the device's
+        // local timezone so an 11 PM ET purchase shows as Apr 21 for a PT user
+        // (and Apr 22 for someone actually in ET/GMT).
+        const dtMatch = (fallbackText + ' ' + dateStr).match(
+            /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s+(AM|PM)\s+ET\b/i
+        );
+        if (dtMatch) {
+            const m = MONTHS[dtMatch[1].toLowerCase().slice(0, 3)];
+            const d = parseInt(dtMatch[2]), y = parseInt(dtMatch[3]);
+            let hr = parseInt(dtMatch[4]);
+            const min = parseInt(dtMatch[5]);
+            if (dtMatch[6].toUpperCase() === 'PM' && hr < 12) hr += 12;
+            if (dtMatch[6].toUpperCase() === 'AM' && hr === 12) hr = 0;
+            const offset = this._isETDaylight(y, m, d) ? '-04:00' : '-05:00';
+            const dt = new Date(`${y}-${pad2(m)}-${pad2(d)}T${pad2(hr)}:${pad2(min)}:00${offset}`);
+            if (!isNaN(dt)) {
+                return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+            }
+        }
+
         // "Apr 21, 2026" or "April 21, 2026" — construct directly, never through Date object
         const monthMatch = (dateStr || fallbackText).match(
             /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i
@@ -143,7 +166,7 @@ class EmailParser {
         if (monthMatch) {
             const m = MONTHS[monthMatch[1].toLowerCase().slice(0, 3)];
             const d = parseInt(monthMatch[2]), y = parseInt(monthMatch[3]);
-            if (m && d && y) return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            if (m && d && y) return `${y}-${pad2(m)}-${pad2(d)}`;
         }
         // MM/DD/YYYY — parse parts directly
         const slashMatch = fallbackText.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
@@ -151,11 +174,20 @@ class EmailParser {
             const mo = parseInt(slashMatch[1]), d = parseInt(slashMatch[2]);
             let y = parseInt(slashMatch[3]);
             if (y < 100) y += 2000;
-            return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            return `${y}-${pad2(mo)}-${pad2(d)}`;
         }
         // Fallback: today in local time
         const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        return `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+    }
+
+    // US DST: 2nd Sunday of March → 1st Sunday of November.
+    _isETDaylight(y, m, d) {
+        if (m < 3 || m > 11) return false;
+        if (m > 3 && m < 11) return true;
+        const firstWeekday = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+        const firstSun = firstWeekday === 0 ? 1 : 8 - firstWeekday;
+        return m === 3 ? d >= firstSun + 7 : d < firstSun;
     }
 
     guessCategory(merchant) {
@@ -272,34 +304,29 @@ class EmailParser {
         }
     }
 
-    async sync(silent = false) {
+    async sync() {
         // Clear stale lock — any lock older than 2 minutes is from a previous crashed session
         const lockTs = parseInt(localStorage.getItem('gmail_syncing_ts') || '0', 10);
         const lockStale = Date.now() - lockTs > 120000;
         if (localStorage.getItem('gmail_syncing') === 'true' && !lockStale) {
-            if (!silent && typeof showNotification === 'function') {
+            if (typeof showNotification === 'function') {
                 showNotification('Sync already in progress...', 'success');
             }
             return;
         }
 
         if (!window.currentUser) {
-            if (!silent && typeof showNotification === 'function') {
+            if (typeof showNotification === 'function') {
                 showNotification('Sign in with Google first to use Gmail sync', 'error');
             }
             return;
         }
 
-        // Background auto-sync: skip entirely if token already expired — don't open popups
-        if (silent && !this.isTokenValid()) return;
-
         localStorage.setItem('gmail_syncing', 'true');
         localStorage.setItem('gmail_syncing_ts', String(Date.now()));
-        if (!silent) {
-            this.setSyncButtonState(true);
-            // Yield to browser to paint the button state before any popup can steal focus
-            await new Promise(r => setTimeout(r, 50));
-        }
+        this.setSyncButtonState(true);
+        // Yield to browser to paint the button state before any popup can steal focus
+        await new Promise(r => setTimeout(r, 50));
 
         try {
             const token = await this.getValidToken();
@@ -395,7 +422,7 @@ class EmailParser {
         } finally {
             localStorage.removeItem('gmail_syncing');
             localStorage.removeItem('gmail_syncing_ts');
-            if (!silent) this.setSyncButtonState(false);
+            this.setSyncButtonState(false);
         }
     }
 }

@@ -227,7 +227,8 @@ class ExpenseTracker {
 
     getDefaultSettings() {
         return {
-            income: 4000, // Sample monthly income for testing
+            income: 4000, // Default income — used for any month without an override
+            incomeOverrides: {}, // { "YYYY-MM": amount } for one-off months
             rent: 1200,
             utilities: 150,
             insurance: 200,
@@ -243,6 +244,22 @@ class ExpenseTracker {
                 Other: 100
             }
         };
+    }
+
+    getIncomeFor(year, month) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        return this.settings.incomeOverrides?.[key] ?? this.settings.income ?? 0;
+    }
+
+    setIncomeOverride(year, month, amount) {
+        if (!this.settings.incomeOverrides) this.settings.incomeOverrides = {};
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (amount == null) delete this.settings.incomeOverrides[key];
+        else this.settings.incomeOverrides[key] = parseFloat(amount);
+        this.saveSettingsToFirebase?.();
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        this.updateDashboard();
+        return this.settings.incomeOverrides;
     }
 
     // ====================================================================
@@ -671,10 +688,10 @@ class ExpenseTracker {
         const card = document.getElementById('daily-pulse-card');
         if (!card) return;
 
-        const income = this.settings.income || 0;
+        const now = new Date();
+        const income = this.getIncomeFor(now.getFullYear(), now.getMonth());
         if (!income) { card.classList.add('hidden'); return; }
 
-        const now = new Date();
         const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
@@ -945,7 +962,7 @@ class ExpenseTracker {
         const spent = regularExpenses.reduce((s, e) => s + e.amount, 0);
         const essential = essentialExpenses.reduce((s, e) => s + e.amount, 0);
         const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const income = this.settings.income || 0;
+        const income = this.getIncomeFor(currentYear, currentMonth);
         const overall = spent + essential + fixed;
         const saved = income - overall;
         
@@ -988,7 +1005,7 @@ class ExpenseTracker {
         const fmt = v => '$' + v.toFixed(2);
 
         // Daily target logic (from renderDailyPulse)
-        const income = this.settings.income || 0;
+        const income = this.getIncomeFor(now.getFullYear(), now.getMonth());
         const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
@@ -1475,16 +1492,6 @@ class ExpenseTracker {
                 localStorage.removeItem('data_cleaned'); // Remove flag after use
             }
 
-            // Auto-sync Gmail if last sync was more than 4 hours ago
-            if (window.emailParser && localStorage.getItem('gmail_access_token')) {
-                const lastSync = localStorage.getItem('gmail_last_synced');
-                const hoursSince = lastSync ? (Date.now() - new Date(lastSync).getTime()) / 3600000 : Infinity;
-                if (hoursSince >= 4) {
-                    console.log('Auto-syncing Gmail (last sync:', lastSync || 'never', ')');
-                    window.emailParser.sync(true);
-                }
-            }
-
         } catch (error) {
             console.error('Error loading user data:', error);
             showNotification('Failed to load data from cloud', 'error');
@@ -1640,7 +1647,8 @@ class ExpenseTracker {
         const totalVariableExpenses = historicalExpenses.reduce((sum, expense) => sum + expense.amount, 0);
         const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
         const totalExpenses = totalVariableExpenses + totalFixedExpenses;
-        const totalSavings = this.settings.income - totalExpenses;
+        const monthIncome = this.getIncomeFor(parseInt(year), parseInt(month));
+        const totalSavings = monthIncome - totalExpenses;
 
         // Group expenses by category
         const expensesByCategory = {};
@@ -1654,7 +1662,7 @@ class ExpenseTracker {
         return {
             expenses: historicalExpenses,
             totals: {
-                income: this.settings.income,
+                income: monthIncome,
                 totalExpenses,
                 variableExpenses: totalVariableExpenses,
                 fixedExpenses: totalFixedExpenses,
@@ -2053,8 +2061,11 @@ class ExpenseTracker {
         // Max amount only from reached months for proper bar scaling
         const maxAmount = Math.max(...reachedMonths.map(m => m.amount), 0);
 
-        // Calculate total saved (simplified - income * active months - total spent)
-        const totalSaved = Math.max(0, (this.settings.income * activeMonths) - totalSpent);
+        // Calculate total saved — sum of (per-month income) for reached active months minus total spent
+        const reachedIncome = reachedMonths.reduce((sum, m, i) => {
+            return m.amount > 0 ? sum + this.getIncomeFor(year, i) : sum;
+        }, 0);
+        const totalSaved = Math.max(0, reachedIncome - totalSpent);
 
         return { months, totalSpent, activeMonths, avgPerMonth, maxAmount, totalSaved };
     }
@@ -3236,6 +3247,12 @@ function closeEditModal() {
 // Initialize the application
 var expenseTracker = new ExpenseTracker();
 window.expenseTracker = expenseTracker;
+
+// Console helper — set income for a specific month (month is 1-12).
+// Usage: setIncomeForMonth(2026, 1, 4000)  // January 2026 = 4000
+//        setIncomeForMonth(2026, 1, null)  // remove override → falls back to default
+window.setIncomeForMonth = (year, month, amount) =>
+    expenseTracker.setIncomeOverride(year, month - 1, amount);
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
