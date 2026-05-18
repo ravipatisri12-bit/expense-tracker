@@ -4,6 +4,17 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      force_slot:
+        description: 'Force a specific slot regardless of local hour'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - morning
+          - afternoon
+          - evening
 
 jobs:
   send:
@@ -20,4 +31,5 @@ jobs:
         working-directory: scripts
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FORCE_SLOT: ${{ inputs.force_slot }}
         run: node send-notifications.js

@@ -111,10 +111,10 @@ function buildMessage(slot, ctx) {
     };
 }
 
-async function processToken(uid, tokenDoc) {
+async function processToken(uid, tokenDoc, forceSlot) {
     const data = tokenDoc.data();
     const tz = data.tz || 'America/Los_Angeles';
-    const hour = localHour(tz);
+    const hour = forceSlot ?? localHour(tz);
     if (hour !== SLOT_BUDGET_ROOM && hour !== SLOT_AFTERNOON && hour !== SLOT_END_OF_DAY) return;
 
     const today = localDateString(tz);
@@ -150,11 +150,16 @@ async function processToken(uid, tokenDoc) {
 }
 
 async function main() {
+    const forceSlotEnv = process.env.FORCE_SLOT;
+    const slotMap = { morning: SLOT_BUDGET_ROOM, afternoon: SLOT_AFTERNOON, evening: SLOT_END_OF_DAY };
+    const forceSlot = forceSlotEnv ? (slotMap[forceSlotEnv] ?? parseInt(forceSlotEnv, 10)) : undefined;
+    if (forceSlot !== undefined) console.log(`FORCE_SLOT active: hour ${forceSlot}`);
+
     const users = await db.collection('users').get();
     for (const userDoc of users.docs) {
         const tokens = await userDoc.ref.collection('fcmTokens').get();
         for (const tokenDoc of tokens.docs) {
-            await processToken(userDoc.id, tokenDoc);
+            await processToken(userDoc.id, tokenDoc, forceSlot);
         }
     }
 }
