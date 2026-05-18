@@ -34,12 +34,14 @@ async function enableNotifications() {
         }
 
         const uid = window.firebaseAuth.currentUser.uid;
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
         await window.firebaseDb
             .collection('users').doc(uid)
             .collection('fcmTokens').doc(token)
             .set({
                 token,
                 userAgent: navigator.userAgent,
+                tz,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 

@@ -17,6 +17,11 @@ dist/
 .kiro/
 .claude/settings.local.json
 
+# Service account keys — must NEVER be committed, public repo
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*service-account*.json
+
 # Test files (keep in repo but document)
 # test-*.html files are kept for development
 

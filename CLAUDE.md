@@ -50,7 +50,9 @@ Network-first, cache-as-fallback service worker with a versioned cache name (`ex
 - **`js/notifications.js`** — `enableNotifications()` requests permission, registers the messaging SW, gets a token via `messaging.getToken({ vapidKey })`, writes to Firestore at `users/{uid}/fcmTokens/{token}`. The VAPID key is inlined.
 - Settings page has a "Notifications" card with an Enable button. **Permission can only be requested in response to a user tap** (iOS rule) — never auto-prompt on page load.
 - **iOS gotcha**: web push only works on iOS 16.4+ AND only after the PWA is added to Home Screen. In Safari directly, the permission prompt won't appear and `getToken()` will fail.
-- No sender exists yet — tokens accumulate in Firestore but nothing pushes to them. A GitHub Actions cron + FCM HTTP v1 API call is the planned sender.
+- **Sender**: `.github/workflows/notifications.yml` runs hourly. It executes `scripts/send-notifications.js` (Node, isolated `package.json` so the PWA's deps don't get polluted with `firebase-admin`). The script reads each registered token's stored `tz`, computes the device's local hour, and sends one of three messages at 9am / 6pm / 10pm local time. Stale tokens are auto-deleted from Firestore.
+- **Required GitHub repo secret**: `FIREBASE_SERVICE_ACCOUNT` — full JSON of a service-account key from Firebase Console → Project Settings → Service Accounts → Generate new private key. Paste the entire JSON as the secret value. Without this the workflow fails immediately.
+- **Tunable constants** in `scripts/send-notifications.js`: `MONTHLY_TOTAL_SOFT` ($1000), `MONTHLY_TOTAL_HARD` ($2000), `MONTHLY_FOOD` ($400), `FOOD_CATEGORIES`. These are not in app Settings yet.
 
 ## Conventions (from `.kiro/`)
 
