@@ -14,6 +14,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="js/defensive.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
@@ -23,6 +24,7 @@
     <script src="js/quick-add.js"></script>
     <script src="js/gamification.js"></script>
     <script src="js/email-parser.js"></script>
+    <script src="js/notifications.js"></script>
     <script>document.fonts.ready.then(()=>document.documentElement.classList.add('fonts-loaded'))</script>
 </head>
 <body class="min-h-screen pb-20 pt-14">
@@ -540,6 +542,16 @@
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="privacy-toggle" class="sr-only peer" onchange="togglePrivacyMode()"><div class="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600" style="background:var(--md-sys-color-outline-variant)"><div class="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all" style="background:var(--md-sys-color-on-surface)"></div></div></label>
                 </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card p-5">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">notifications</span>
+                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Notifications</h3>
+                </div>
+                <p class="text-xs mb-3 ml-7" style="color:var(--md-sys-color-outline)" id="notif-status">Not enabled on this device</p>
+                <button id="enable-notif-btn" onclick="enableNotifications()" class="w-full py-2.5 rounded-full text-sm font-medium" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline-variant)">Enable Notifications</button>
             </div>
 
             <button onclick="saveSettings()" class="w-full py-3 rounded-full font-medium text-sm" style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">Save Settings</button>
