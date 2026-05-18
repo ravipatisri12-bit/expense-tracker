@@ -124,6 +124,13 @@
                 </button>
             </div>
 
+            <!-- Notification preview (dev/testing) -->
+            <div class="flex gap-2 text-xs">
+                <button onclick="fireNotificationPreview('morning')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 9am</button>
+                <button onclick="fireNotificationPreview('afternoon')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 6pm</button>
+                <button onclick="fireNotificationPreview('evening')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 10pm</button>
+            </div>
+
             <!-- Today Panel (combined target + total) -->
             <div id="today-panel" class="card p-4"></div>
 
