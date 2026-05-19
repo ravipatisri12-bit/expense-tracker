@@ -180,6 +180,57 @@ function buildMessage(slot, ctx) {
     };
 }
 
+async function fetchActiveTrip(uid, today) {
+    try {
+        const snap = await db.collection('users').doc(uid).collection('trips').get();
+        if (snap.empty) return null;
+        for (const doc of snap.docs) {
+            const t = doc.data();
+            if (t.endedAt) continue;
+            if (today > t.endDate) continue;
+            if (t.startedAt) return t;
+            if (today >= t.startDate && today <= t.endDate) return t;
+        }
+        return null;
+    } catch (e) {
+        console.error('fetchActiveTrip failed:', e.message);
+        return null;
+    }
+}
+
+async function fetchTripExpenses(uid, tripId) {
+    const snap = await db.collection('users').doc(uid).collection('expenses')
+        .where('tripId', '==', tripId).get();
+    return snap.docs.map(d => d.data());
+}
+
+function buildTripMessage(slot, ctx) {
+    // ctx: { trip, tripSpent, today, todayTotal, daysLeft, totalDays, dayNum }
+    const remaining = Math.max(0, ctx.trip.budget - ctx.tripSpent);
+    const idealRest = Math.max(1, ctx.totalDays - ctx.dayNum + 1);
+    const aim = Math.round(remaining / idealRest);
+    if (slot === SLOT_BUDGET_ROOM) {
+        return {
+            title: `→ $${aim} to spend on the trip today`,
+            body: `Day ${ctx.dayNum} of ${ctx.totalDays} · $${Math.round(remaining)} left of $${ctx.trip.budget} budget`
+        };
+    }
+    if (slot === SLOT_AFTERNOON) {
+        const todayLine = ctx.todayTotal > 0 ? `· $${Math.round(ctx.todayTotal)} today` : `· $0 today so far`;
+        return {
+            title: todayLine,
+            body: `${ctx.trip.name}: $${Math.round(ctx.tripSpent)} of $${ctx.trip.budget} · ${ctx.daysLeft} days left`
+        };
+    }
+    // evening
+    const symbol = ctx.tripSpent > ctx.trip.budget ? '!' : ctx.todayTotal <= aim ? '✓' : '·';
+    const word = ctx.tripSpent > ctx.trip.budget ? 'over trip budget' : ctx.todayTotal <= aim ? 'under trip pace' : 'over trip pace';
+    return {
+        title: `${symbol} $${Math.round(ctx.todayTotal)} today — ${word}`,
+        body: `Day ${ctx.dayNum} done · $${Math.round(remaining)} left of $${ctx.trip.budget} budget`
+    };
+}
+
 async function processToken(uid, tokenDoc, gamification, forceSlot) {
     const data = tokenDoc.data();
     const tz = data.tz || 'America/Los_Angeles';
@@ -190,23 +241,40 @@ async function processToken(uid, tokenDoc, gamification, forceSlot) {
     const monthStart = startOfMonthString(tz);
     const expenses = await fetchUserExpenses(uid, monthStart, today);
     const todayExpenses = expenses.filter(e => e.date === today);
-    const ctx = {
-        todayTotal: sumExpenses(todayExpenses),
-        todayFood: sumExpenses(todayExpenses, isFood),
-        monthTotal: sumExpenses(expenses),
-        monthFood: sumExpenses(expenses, isFood),
-        daysLeft: daysLeftInMonth(tz),
-        todayCount: todayExpenses.length,
-        monthName: localMonthName(tz),
-        streak: gamification?.streak?.current || 0,
-        checkedIn: !!gamification?.dailyLog?.[today]?.checkedIn,
-        mood: gamification?.dailyLog?.[today]?.mood || null
-    };
-    const { title, body } = buildMessage(hour, ctx);
+
+    const trip = await fetchActiveTrip(uid, today);
+    let title, body;
+    if (trip) {
+        const tripExpenses = await fetchTripExpenses(uid, trip.id);
+        const tripSpent = tripExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const todayTripTotal = tripExpenses.filter(e => e.date === today).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const totalDays = Math.floor((new Date(trip.endDate) - new Date(trip.startDate)) / 86400000) + 1;
+        const dayNum = Math.max(1, Math.floor((new Date(today) - new Date(trip.startDate)) / 86400000) + 1);
+        const cappedDay = Math.min(dayNum, totalDays);
+        const daysLeft = Math.max(0, totalDays - cappedDay);
+        const ctx = { trip, tripSpent, today, todayTotal: todayTripTotal, daysLeft, totalDays, dayNum: cappedDay };
+        ({ title, body } = buildTripMessage(hour, ctx));
+    } else {
+        // Spec §2 — monthly cap math excludes trip expenses.
+        const regularThisMonth = expenses.filter(e => e.tripId == null);
+        const ctx = {
+            todayTotal: sumExpenses(todayExpenses.filter(e => e.tripId == null)),
+            todayFood: sumExpenses(todayExpenses.filter(e => e.tripId == null), isFood),
+            monthTotal: sumExpenses(regularThisMonth),
+            monthFood: sumExpenses(regularThisMonth, isFood),
+            daysLeft: daysLeftInMonth(tz),
+            todayCount: todayExpenses.length,
+            monthName: localMonthName(tz),
+            streak: gamification?.streak?.current || 0,
+            checkedIn: !!gamification?.dailyLog?.[today]?.checkedIn,
+            mood: gamification?.dailyLog?.[today]?.mood || null
+        };
+        ({ title, body } = buildMessage(hour, ctx));
+    }
 
     try {
         await messaging.send({ token: data.token, notification: { title, body } });
-        console.log(`Sent ${hour}h to ${uid} / ${data.token.slice(0, 12)}…`);
+        console.log(`Sent ${hour}h to ${uid} / ${data.token.slice(0, 12)}…${trip ? ' (trip)' : ''}`);
     } catch (err) {
         const code = err.errorInfo?.code;
         if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-argument') {
