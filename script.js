@@ -3971,3 +3971,56 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     </div>
 </div>`;
 };
+
+ExpenseTracker.prototype.renderHistoryYearShape = function () {
+    const root = document.getElementById('history-year-shape');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const sel = this._historyState.month;
+    const now = new Date();
+    const totals = new Array(12).fill(0);
+    const tripPart = new Array(12).fill(0);
+    for (const e of this.expenses) {
+        const d = this.parseLocalDate(e.date);
+        if (d.getFullYear() !== Y) continue;
+        const m = d.getMonth();
+        totals[m] += Number(e.amount || 0);
+        if (e.tripId != null) tripPart[m] += Number(e.amount || 0);
+    }
+    const max = Math.max(1, ...totals);
+    const isFuture = m => Y > now.getFullYear() || (Y === now.getFullYear() && m > now.getMonth());
+
+    const cols = totals.map((v, m) => {
+        const future = isFuture(m);
+        const h = future ? 14 : Math.max(6, (v / max) * 100);
+        const tripPct = totals[m] > 0 ? (tripPart[m] / totals[m]) * h : 0;
+        const trip = tripPart[m] > 0 ? `<div class="trip-cap" style="--trip-bottom:${h - tripPct}%;height:${Math.max(2, tripPct * 0.5)}%"></div>` : '';
+        const cls = `shape-col ${m === sel ? 'selected' : ''}`;
+        const barCls = future ? 'shape-bar empty' : 'shape-bar';
+        return `<div class="${cls}" onclick="onHistoryMonthSelect(${m})"><div class="${barCls}" style="height:${h}%"></div>${trip}</div>`;
+    }).join('');
+
+    const labels = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+        .map((l, m) => `<span class="${m === sel ? 'selected' : ''}">${l}</span>`).join('');
+
+    const past = totals.slice(0, Y < now.getFullYear() ? 12 : now.getMonth() + 1);
+    const high = past.length ? Math.max(...past) : 0;
+    const highIdx = past.indexOf(high);
+    const low = past.length ? Math.min(...past.filter(v => v > 0)) : 0;
+    const lowIdx = past.indexOf(low);
+    const sumPast = past.reduce((s, v) => s + v, 0);
+    const avg = past.length ? Math.round(sumPast / past.length) : 0;
+    const monthName = i => ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][i] || '';
+
+    root.innerHTML = `
+<div class="year-shape">
+    <div class="shape-head"><div class="shape-title">Year shape</div><div class="shape-meta">12 months · spent</div></div>
+    <div class="shape-bars">${cols}</div>
+    <div class="shape-labels">${labels}</div>
+    <div class="shape-foot">
+        <div class="item"><span>HIGH</span><span class="v">$${Math.round(high)} ${highIdx >= 0 ? '· ' + monthName(highIdx) : ''}</span></div>
+        <div class="item" style="text-align:center"><span>AVG</span><span class="v">$${avg}/mo</span></div>
+        <div class="item" style="text-align:right"><span>LOW</span><span class="v">$${Math.round(low)} ${lowIdx >= 0 ? '· ' + monthName(lowIdx) : ''}</span></div>
+    </div>
+</div>`;
+};
