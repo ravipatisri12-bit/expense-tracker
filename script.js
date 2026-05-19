@@ -3595,3 +3595,45 @@ window.onHabitCheckin = function (mood) {
     window.gamification.save();
     window.expenseTracker.renderHomeHabit();
 };
+
+ExpenseTracker.prototype._categoryColor = function (name) {
+    return {
+        Food: '#ff9c66', Coffee: '#ffd166', Transit: '#66d9ff', Transportation: '#66d9ff',
+        Shopping: '#7ee7c1', Shop: '#7ee7c1', Entertainment: '#c89eff', Fun: '#c89eff',
+        Bills: '#b0b6c8', Other: '#8b8fa3'
+    }[name] || '#8b8fa3';
+};
+
+ExpenseTracker.prototype.renderHomeCategories = function (monthExpenses) {
+    const root = document.getElementById('home-categories');
+    if (!root) return;
+    const totals = {};
+    let grand = 0;
+    for (const e of monthExpenses) {
+        totals[e.category] = (totals[e.category] || 0) + Number(e.amount || 0);
+        grand += Number(e.amount || 0);
+    }
+    const ordered = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    if (grand === 0) {
+        root.innerHTML = `<div class="section-head"><h2 class="section-title">Where it goes</h2><span class="section-meta">no expenses yet</span></div><div class="cat-card"><div style="text-align:center;color:var(--on-surface-mute);padding:20px 0;font-size:13px">Add an expense to see your breakdown.</div></div>`;
+        return;
+    }
+    let offset = 0;
+    const arcs = ordered.map(([cat, amt]) => {
+        const pct = Math.round((amt / grand) * 100);
+        const seg = `<circle cx="18" cy="18" r="15.92" fill="none" stroke="${this._categoryColor(cat)}" stroke-width="3.6" stroke-dasharray="${pct} 100" stroke-dashoffset="-${offset}" stroke-linecap="round"/>`;
+        offset += pct;
+        return seg;
+    }).join('');
+    const legend = ordered.map(([cat, amt]) => {
+        const pct = Math.round((amt / grand) * 100);
+        return `<div class="cat-item" onclick="openCategoryFilter('${cat}')"><span class="swatch" style="background:${this._categoryColor(cat)}"></span><span class="name">${this._escapeHtml(cat)}</span><span class="amt">$${Math.round(amt)} · ${pct}%</span></div>`;
+    }).join('');
+
+    root.innerHTML = `
+<div class="section-head"><h2 class="section-title">Where it goes</h2><span class="section-meta">this month</span></div>
+<div class="cat-card"><div class="cat-row">
+    <div class="donut"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.92" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3.6"/>${arcs}</svg><div class="center"><div class="total">$${Math.round(grand)}</div><div class="label">spent</div></div></div>
+    <div class="cat-legend">${legend}</div>
+</div></div>`;
+};
