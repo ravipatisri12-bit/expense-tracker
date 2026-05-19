@@ -3420,3 +3420,62 @@ ExpenseTracker.prototype.renderHomeGreeting = function (now) {
 ExpenseTracker.prototype._escapeHtml = function (s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 };
+
+ExpenseTracker.prototype.renderHomeMonthHero = function (ctx) {
+    const root = document.getElementById('home-month-hero');
+    if (!root) return;
+    const { monthName, year, dayOfMonth, daysInMonth, daysLeft, monthTotalRegular, todayTotal, avgPerDay, aim, tripExpensesThisMonth, SOFT, HARD } = ctx;
+    const fillPct = Math.min(100, (monthTotalRegular / HARD) * 100);
+    const softLeftPct = (SOFT / HARD) * 100;
+    const overSoft = aim.state === 'HARD_OVER' || aim.state === 'SOFT_OVER';
+    const ofText = overSoft
+        ? `over <strong>$${SOFT.toLocaleString()}</strong> soft target<br><span style="opacity:.6">aim $${aim.dailyTotal}/day to stay under $${HARD}</span>`
+        : `of <strong>$${SOFT.toLocaleString()}</strong> soft target<br><span style="opacity:.6">$${(SOFT - monthTotalRegular).toLocaleString()} left</span>`;
+    const compositionLine = tripExpensesThisMonth > 0
+        ? `<div class="month-composition">+ $${tripExpensesThisMonth.toLocaleString()} on trips · TOTAL $${(monthTotalRegular + tripExpensesThisMonth).toLocaleString()}</div>` : '';
+    const forecastLine = window.Forecast
+        ? `<div class="month-forecast">${window.Forecast.display(monthName, monthTotalRegular, dayOfMonth, daysInMonth)}</div>` : '';
+    const lastSync = this._gmailLastSyncedLabel();
+
+    root.innerHTML = `
+<div class="month-hero">
+    <div class="month-eyebrow"><span class="material-symbols-rounded">calendar_month</span> Monthly view</div>
+    <div class="month-name">${monthName}<span class="year">${year}</span></div>
+    <div class="month-sub">
+        <div class="month-day-pill">DAY ${dayOfMonth} / ${daysInMonth}</div>
+        <div class="month-meta">${daysLeft} days left this month</div>
+    </div>
+    <div class="month-numbers">
+        <div class="month-spent"><span class="currency">$</span>${Math.round(monthTotalRegular).toLocaleString()}</div>
+        <div class="month-of">${ofText}</div>
+    </div>
+    <div class="cap-bar">
+        <div class="fill" style="width:${fillPct}%"></div>
+        <div class="marker-soft" style="left:${softLeftPct}%"></div>
+        <div class="marker-hard"></div>
+    </div>
+    <div class="month-pace">
+        <div class="pace-cell"><div class="label">Today's spend</div><div class="value">$${Math.round(todayTotal)}</div></div>
+        <div class="pace-cell"><div class="label">Avg / day</div><div class="value">$${avgPerDay}</div></div>
+        <div class="pace-cell aim"><div class="label">Aim today</div><div class="value">$${aim.dailyTotal}</div></div>
+    </div>
+    ${forecastLine}
+    ${compositionLine}
+    <div class="cta-row">
+        <button class="cta-primary" onclick="showPage('add-expense')"><span class="material-symbols-rounded">add</span> Add</button>
+        <button class="cta-secondary" onclick="onAutoAddTap()"><span class="material-symbols-rounded">bolt</span> Auto add</button>
+    </div>
+    <div class="sync-status"><span class="sync-dot"></span> ${lastSync}</div>
+</div>`;
+};
+
+ExpenseTracker.prototype._gmailLastSyncedLabel = function () {
+    const ts = localStorage.getItem('gmail_last_synced');
+    if (!ts) return 'Never synced';
+    const d = new Date(ts);
+    return `Synced ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+};
+
+window.onAutoAddTap = window.onAutoAddTap || function () {
+    if (window.emailParser && typeof window.emailParser.sync === 'function') window.emailParser.sync();
+};
