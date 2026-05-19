@@ -263,7 +263,7 @@ async function processToken(uid, tokenDoc, gamification, forceSlot) {
             monthTotal: sumExpenses(regularThisMonth),
             monthFood: sumExpenses(regularThisMonth, isFood),
             daysLeft: daysLeftInMonth(tz),
-            todayCount: todayExpenses.length,
+            todayCount: todayExpenses.filter(e => e.tripId == null).length,
             monthName: localMonthName(tz),
             streak: gamification?.streak?.current || 0,
             checkedIn: !!gamification?.dailyLog?.[today]?.checkedIn,

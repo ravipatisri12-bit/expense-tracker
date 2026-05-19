@@ -3479,7 +3479,10 @@ ExpenseTracker.prototype._gmailLastSyncedLabel = function () {
 window.onAutoAddTap = async function () {
     const dot = document.querySelector('#dashboard-page .sync-dot');
     const status = document.querySelector('#dashboard-page .sync-status');
-    if (status) status.querySelector('span:not(.sync-dot)') ? status.lastChild.textContent = ' Syncing…' : (status.textContent = ' Syncing…');
+    if (status) {
+        const tn = status.lastChild;
+        if (tn && tn.nodeType === Node.TEXT_NODE) tn.textContent = ' Syncing…';
+    }
     if (!window.emailParser || !window.emailParser.sync) {
         if (typeof showNotification === 'function') showNotification('Gmail import not available', 'error');
         return;

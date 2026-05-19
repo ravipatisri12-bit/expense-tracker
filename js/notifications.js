@@ -244,6 +244,7 @@ function _activeTripForPreview() {
     return window.tripsStore.getActiveTrip(today);
 }
 function _buildTripPreview(slot, trip) {
+    if (!window.expenseTracker) return { title: trip.name, body: 'App not ready' };
     const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
     const expenses = window.expenseTracker.getTripExpenses(trip.id);
     const tripSpent = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
