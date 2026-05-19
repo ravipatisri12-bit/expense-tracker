@@ -20,7 +20,7 @@
     function pickTripForDashboard() {
         const today = todayStr();
         const focusId = window.tripsStore && window.tripsStore._focusTripId;
-        if (focusId) { const t = window.tripsStore.getById(focusId); if (t) return t; }
+        if (focusId) { window.tripsStore._focusTripId = null; const t = window.tripsStore.getById(focusId); if (t) return t; }
         const active = window.tripsStore && window.tripsStore.getActiveTrip(today);
         if (active) return active;
         const upcoming = window.tripsStore && window.tripsStore.getUpcomingTrips(today)[0];
@@ -192,7 +192,7 @@ ${all.length === 0 ? `<div class="today-empty" style="padding:40px 16px"><div>No
         const card = $('new-trip-modal-card');
         if (!modal || !card) return;
         const today = todayStr();
-        const next7 = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
+        const next7 = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return window.expenseTracker.getLocalDateString(d); })();
         card.innerHTML = `
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
     <h3 class="f-serif" style="font-size:20px;font-weight:500">New trip</h3>
