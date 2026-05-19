@@ -3535,3 +3535,63 @@ ExpenseTracker.prototype._formatTripDates = function (trip) {
     const fmt = d => this.parseLocalDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
     return `${fmt(trip.startDate)} – ${fmt(trip.endDate)}`;
 };
+
+ExpenseTracker.prototype.renderHomeHabit = function () {
+    const root = document.getElementById('home-habit');
+    if (!root) return;
+    const g = window.gamification;
+    const streak = g?.data?.streak?.current || 0;
+    const best = g?.data?.streak?.longest || 0;
+    const today = this.getLocalDateString(new Date());
+
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = this.getLocalDateString(d);
+        const log = g?.data?.dailyLog?.[key];
+        days.push({
+            num: d.getDate(),
+            label: d.toLocaleDateString('en-US', { weekday: 'narrow' }).toUpperCase(),
+            mood: log?.mood || null,
+            isToday: key === today
+        });
+    }
+    const tile = d => {
+        const cls = ['habit-tile'];
+        if (d.mood === 'no-spend') cls.push('no-spend');
+        if (d.mood === 'essential') cls.push('essential');
+        if (d.mood === 'wants') cls.push('wants');
+        if (d.isToday) cls.push('today');
+        return `<div class="${cls.join(' ')}">${d.num}<span class="habit-day-label">${d.label}</span></div>`;
+    };
+    const todayMood = g?.data?.dailyLog?.[today]?.mood;
+    const cls = m => `ck-${m === 'no-spend' ? 'no' : m === 'essential' ? 'es' : 'wt'}` + (todayMood === m ? ' suggested' : '');
+
+    root.innerHTML = `
+<div class="section-head"><h2 class="section-title">Daily habit</h2><span class="section-meta">tap a day</span></div>
+<div class="habit-card">
+    <div class="habit-row">
+        <div class="habit-streak">
+            <div class="flame"><span class="material-symbols-rounded">local_fire_department</span></div>
+            <div class="num">${streak} <span>day streak</span></div>
+        </div>
+        <div class="habit-best">BEST · ${best} DAYS</div>
+    </div>
+    <div class="habit-week">${days.map(tile).join('')}</div>
+    <div class="checkin">
+        <button class="${cls('no-spend')}" onclick="onHabitCheckin('no-spend')">No spend</button>
+        <button class="${cls('essential')}" onclick="onHabitCheckin('essential')">Essentials</button>
+        <button class="${cls('wants')}" onclick="onHabitCheckin('wants')">Wants</button>
+    </div>
+</div>`;
+};
+
+window.onHabitCheckin = function (mood) {
+    if (!window.gamification) return;
+    const today = window.expenseTracker.getLocalDateString(new Date());
+    window.gamification.data.dailyLog = window.gamification.data.dailyLog || {};
+    window.gamification.data.dailyLog[today] = { ...(window.gamification.data.dailyLog[today] || {}), mood, checkedIn: true };
+    window.gamification.save();
+    window.expenseTracker.renderHomeHabit();
+};
