@@ -308,7 +308,7 @@
         </div>
     </div>
 
-    <script>window.onerror=function(m,s,l,c,e){document.title='ERR:'+l+':'+m;document.body.insertAdjacentHTML('afterbegin','<pre style="color:red;padding:20px;font-size:14px;position:fixed;top:60px;left:0;right:0;z-index:9999;background:white">ERROR at line '+l+':\n'+m+'\n'+(e&&e.stack||'')+'</pre>')}</script>
+    <script>window.onerror=function(m,s,l,c,e){if((s&&s.startsWith('chrome-extension://'))||(e&&e.stack&&e.stack.includes('chrome-extension://')))return;document.title='ERR:'+l+':'+m;document.body.insertAdjacentHTML('afterbegin','<pre style="color:red;padding:20px;font-size:14px;position:fixed;top:60px;left:0;right:0;z-index:9999;background:white">ERROR at line '+l+':\n'+m+'\n'+(e&&e.stack||'')+'</pre>')}</script>
     <script src="script.js"></script>
 </body>
 </html>
