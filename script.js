@@ -2302,17 +2302,18 @@ class ExpenseTracker {
     backfillTripTags() {
         if (!window.tripsStore) return 0;
         const today = this.getLocalDateString(new Date());
-        // Only auto-tag against trips that are currently ACTIVE per the state
-        // machine in trips.js. Ended trips (manual `endedAt` or past `endDate`)
-        // and upcoming trips are intentionally skipped: a trip that has ended
-        // is frozen in time, and an upcoming trip auto-tags via the on-submit
-        // path once it becomes active.
-        const activeTrips = window.tripsStore.all().filter(t => window.tripsStore.getState(t, today) === 'ACTIVE');
-        if (activeTrips.length === 0) return 0;
+        // Auto-tag against trips that are ACTIVE or UPCOMING per the state machine
+        // in trips.js. ENDED trips (manual `endedAt` or past `endDate`) are frozen
+        // in time and never receive new auto-tags.
+        const eligibleTrips = window.tripsStore.all().filter(t => {
+            const s = window.tripsStore.getState(t, today);
+            return s === 'ACTIVE' || s === 'UPCOMING';
+        });
+        if (eligibleTrips.length === 0) return 0;
         const updated = [];
         for (const e of this.expenses) {
             if (e.tripId) continue;
-            const t = activeTrips.find(t => e.date >= t.startDate && e.date <= t.endDate);
+            const t = eligibleTrips.find(t => e.date >= t.startDate && e.date <= t.endDate);
             if (t) { e.tripId = t.id; updated.push(e); }
         }
         if (updated.length > 0) {
@@ -3965,7 +3966,7 @@ window.showHomeTrendPopover = function (barEl) {
 // ============================================================
 
 ExpenseTracker.prototype.renderAddExpensePage = function () {
-    const trip = window.tripsStore && window.tripsStore.getActiveTrip(this.getLocalDateString(new Date()));
+    const trip = this._getEligibleTripForBanner();
     this._addPageState = this._addPageState || {};
     if (this._addPageState.untag === undefined) this._addPageState.untag = false;
     const tagging = trip && !this._addPageState.untag;
@@ -3976,15 +3977,37 @@ ExpenseTracker.prototype.renderAddExpensePage = function () {
     this._renderManualCard(tagging);
 };
 
+// Pick the trip whose state would be eligible for auto-tag right now.
+// Prefers ACTIVE; falls back to the soonest UPCOMING trip if none is active.
+ExpenseTracker.prototype._getEligibleTripForBanner = function () {
+    if (!window.tripsStore) return null;
+    const today = this.getLocalDateString(new Date());
+    const active = window.tripsStore.getActiveTrip(today);
+    if (active) return active;
+    const upcoming = window.tripsStore.getUpcomingTrips(today)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+    return upcoming || null;
+};
+
 ExpenseTracker.prototype._renderAddTripBanner = function (trip, tagging) {
     const root = document.getElementById('add-trip-banner');
     if (!root) return;
     if (!trip) { root.classList.add('hidden'); root.innerHTML = ''; return; }
     root.classList.remove('hidden');
-    const day = this._tripDayNumber(trip, this.getLocalDateString(new Date()));
-    const totalDays = this._tripTotalDays(trip);
+    const today = this.getLocalDateString(new Date());
+    const state = window.tripsStore.getState(trip, today);
+    let context;
+    if (state === 'ACTIVE') {
+        const day = this._tripDayNumber(trip, today);
+        const totalDays = this._tripTotalDays(trip);
+        context = `day ${day} of ${totalDays}`;
+    } else {
+        // UPCOMING — show countdown so the user understands it isn't live yet.
+        const days = Math.max(0, Math.ceil((this.parseLocalDate(trip.startDate) - this.parseLocalDate(today)) / 86400000));
+        context = days === 0 ? 'starts today' : `starts in ${days} day${days === 1 ? '' : 's'}`;
+    }
     if (tagging) {
-        root.innerHTML = `<div class="trip-banner"><span class="material-symbols-rounded">flight</span> Auto-tagging to <strong>${this._escapeHtml(trip.name)}</strong> · day ${day} of ${totalDays} <span class="toggle" onclick="onToggleTripTag()">Untag</span></div>`;
+        root.innerHTML = `<div class="trip-banner"><span class="material-symbols-rounded">flight</span> Auto-tagging to <strong>${this._escapeHtml(trip.name)}</strong> · ${context} <span class="toggle" onclick="onToggleTripTag()">Untag</span></div>`;
     } else {
         root.innerHTML = `<div class="trip-banner muted"><span class="material-symbols-rounded">block</span> Saving as regular expenses <span class="toggle" onclick="onToggleTripTag()">Re-tag</span></div>`;
     }
@@ -4053,7 +4076,7 @@ window.onToggleManualForm = function () {
     t._renderAddToggle();
     const card = document.getElementById('add-manual-card');
     if (card) card.classList.toggle('hidden', !t._addPageState.manualOpen);
-    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    const tagging = !!(t._getEligibleTripForBanner() && !t._addPageState.untag);
     if (t._addPageState.manualOpen) t._renderManualCard(tagging);
 };
 
@@ -4097,7 +4120,7 @@ window.onPickAddDate = function (date) {
     const savedAmt = amt ? amt.value : '';
     const savedDesc = desc ? desc.value : '';
     t._addPageState.date = date;
-    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    const tagging = !!(t._getEligibleTripForBanner() && !t._addPageState.untag);
     t._renderManualCard(tagging);
     const newAmt = document.getElementById('manual-amount');
     const newDesc = document.getElementById('manual-desc');
@@ -4111,7 +4134,7 @@ window.onPickAddCategory = function (cat) {
     const savedAmt = amt ? amt.value : '';
     const savedDesc = desc ? desc.value : '';
     t._addPageState.category = cat;
-    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    const tagging = !!(t._getEligibleTripForBanner() && !t._addPageState.untag);
     t._renderManualCard(tagging);
     const newAmt = document.getElementById('manual-amount');
     const newDesc = document.getElementById('manual-desc');
@@ -4128,8 +4151,11 @@ window.onManualSubmit = async function () {
     const category = t._addPageState.category;
     const date = t._addPageState.date || t.getLocalDateString(new Date());
     if (!amount || !description || !category) { alert('Amount, description, and category are required.'); return; }
-    const activeTrip = window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date()));
-    const tripId = (activeTrip && !t._addPageState.untag) ? activeTrip.id : null;
+    // Auto-tag based on the EXPENSE's date (not today). pickTripIdForDate covers
+    // both ACTIVE and UPCOMING trips so prepayments dated inside an upcoming
+    // window attach correctly. Per-page Untag toggle still suppresses tagging.
+    const tripId = (!t._addPageState.untag && window.tripsStore)
+        ? window.tripsStore.pickTripIdForDate(date) : null;
     const expense = { id: Date.now(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId };
     t.expenses.push(expense);
     t.saveExpenses();

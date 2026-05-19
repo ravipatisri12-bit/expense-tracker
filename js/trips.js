@@ -60,13 +60,16 @@
             return this.trips.filter(t => this.getState(t, today) === 'ENDED');
         }
 
-        // Spec §5.3 — pick the active trip whose window contains the date.
+        // Spec §5.3 — pick the trip whose window contains the date.
+        // We auto-tag against ACTIVE and UPCOMING trips so prepayments / advance
+        // bookings (e.g. a hotel charge dated three weeks ahead) attach to the
+        // right trip even before it starts. ENDED trips are frozen and skipped.
         pickTripIdForDate(expenseDate, today = todayLocalDateString()) {
-            const t = this.trips.find(t =>
-                this.getState(t, today) === 'ACTIVE' &&
-                expenseDate >= t.startDate &&
-                expenseDate <= t.endDate
-            );
+            const t = this.trips.find(t => {
+                const state = this.getState(t, today);
+                if (state !== 'ACTIVE' && state !== 'UPCOMING') return false;
+                return expenseDate >= t.startDate && expenseDate <= t.endDate;
+            });
             return t ? t.id : null;
         }
 
