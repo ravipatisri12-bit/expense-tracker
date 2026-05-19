@@ -230,6 +230,7 @@ class ExpenseTracker {
         return {
             income: 4000, // Default income — used for any month without an override
             incomeOverrides: {}, // { "YYYY-MM": amount } for one-off months
+            savingsTargetRate: 0.50, // 0.30–0.70 — Spending Planner anchor (spec §2)
             rent: 1200,
             utilities: 150,
             insurance: 200,
@@ -298,18 +299,24 @@ class ExpenseTracker {
     // ====================================================================
 
     showPage(pageId, clickedElement = null) {
-        // pageId can be 'dashboard' | 'trips' | 'trip-dashboard' | 'transactions' | 'history' | 'add-expense' | 'settings'
+        // pageId can be 'dashboard' | 'trips' | 'trip-dashboard' | 'plan' | 'transactions' | 'history' | 'add-expense' | 'settings'
         // When leaving the trip dashboard, clear the in-page trip selection so future
         // returns via teaser/active-fallback re-pick the correct trip.
         if (pageId !== 'trip-dashboard' && window.tripsStore) {
             window.tripsStore._currentTripId = null;
             window.tripsStore._expandedBreakdownCat = null;
         }
+        // Hide the Plan FAB whenever leaving the Plan page.
+        if (pageId !== 'plan') {
+            const fab = document.getElementById('plan-fab');
+            if (fab) fab.classList.add('hidden');
+        }
         document.querySelectorAll('.page-content').forEach(page => { page.classList.add('hidden'); });
         const map = {
             'dashboard': 'dashboard-page',
             'trips': 'trips-page',
             'trip-dashboard': 'trip-dashboard-page',
+            'plan': 'plan-page',
             'transactions': 'transactions-page',
             'history': 'history-page',
             'add-expense': 'add-expense-page',
@@ -322,7 +329,7 @@ class ExpenseTracker {
         }
         // Update nav active state
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        const navBtnId = { dashboard: 'nav-home', trips: 'nav-trips', 'trip-dashboard': 'nav-trips', transactions: 'nav-txns', history: 'nav-history' }[pageId];
+        const navBtnId = { dashboard: 'nav-home', trips: 'nav-trips', 'trip-dashboard': 'nav-trips', plan: 'nav-plan', transactions: 'nav-txns', history: 'nav-history' }[pageId];
         if (navBtnId) {
             const btn = document.getElementById(navBtnId);
             if (btn) btn.classList.add('active');
@@ -330,6 +337,7 @@ class ExpenseTracker {
         // Renderer hooks
         if (pageId === 'trips' && typeof renderTripsIndex === 'function') renderTripsIndex();
         if (pageId === 'trip-dashboard' && typeof renderTripDashboard === 'function') renderTripDashboard();
+        if (pageId === 'plan' && typeof renderPlanPage === 'function') renderPlanPage();
         if (pageId === 'history' && typeof renderHistoryPage === 'function') renderHistoryPage();
         if (pageId === 'add-expense' && typeof renderAddExpensePage === 'function') renderAddExpensePage();
         window.scrollTo({ top: 0, behavior: 'instant' });
@@ -916,6 +924,14 @@ class ExpenseTracker {
         try { this.renderHomeHabit(); } catch (e) { console.warn(e); }
         try { this.renderHomeCategories(regularThisMonth); } catch (e) { console.warn(e); }
         try { this.renderHomeTrend({ regularThisMonth, daysInMonth, dayOfMonth, monthName, aim }); } catch (e) { console.warn(e); }
+
+        // Plan: bust headroom cache + re-render if Plan is active. Spec §5.3.
+        if (window.wishlistStore) {
+            window.wishlistStore._headroomCache = null;
+            if (this.currentPage === 'plan' && typeof renderPlanPage === 'function') {
+                try { renderPlanPage(); } catch (e) { console.warn('renderPlanPage:', e); }
+            }
+        }
     }
 
     _computeAimToday({ monthTotal, monthFood, daysLeft, SOFT, HARD, FOOD }) {
@@ -1334,7 +1350,15 @@ class ExpenseTracker {
         document.getElementById('setting-utilities').value = this.settings.utilities;
         document.getElementById('setting-insurance').value = this.settings.insurance;
         document.getElementById('setting-income').value = this.settings.income;
-        
+
+        const tgt = document.getElementById('setting-savings-target');
+        if (tgt) {
+            const pct = Math.round(((this.settings.savingsTargetRate ?? 0.50) * 100));
+            tgt.value = pct;
+            const disp = document.getElementById('savings-target-display');
+            if (disp) disp.textContent = pct + '%';
+        }
+
         // Month label
         const ml = document.getElementById('income-month-label');
         if (ml) { const d = new Date(); ml.textContent = `Setting for ${d.toLocaleString('default',{month:'long'})} ${d.getFullYear()}`; }
@@ -1358,6 +1382,12 @@ class ExpenseTracker {
         this.settings.insurance = parseFloat(document.getElementById('setting-insurance').value) || 0;
         this.settings.income = parseFloat(document.getElementById('setting-income').value) || 0;
 
+        const tgtInput = document.getElementById('setting-savings-target');
+        if (tgtInput) {
+            const pct = parseInt(tgtInput.value, 10);
+            if (Number.isFinite(pct)) this.settings.savingsTargetRate = Math.max(30, Math.min(70, pct)) / 100;
+        }
+
         // Save category goals
         Object.keys(this.settings.goals).forEach(category => {
             const input = document.getElementById(`goal-${category.toLowerCase()}`);
@@ -1374,6 +1404,7 @@ class ExpenseTracker {
             this.saveSettingsToFirebase();
         }
         
+        if (window.wishlistStore) window.wishlistStore.bustCache();
         this.updateDashboard();
         showNotification('Settings saved successfully!', 'success');
     }

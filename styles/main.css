@@ -837,3 +837,114 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 
 .cs-empty { padding: 40px 24px; text-align: center; color: var(--on-surface-mute); display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .cs-empty .material-symbols-rounded { font-size: 36px; color: var(--on-surface-faint); }
+
+/* ====================================================================
+   PLAN — design tokens + page shell. Spec §4.
+   ==================================================================== */
+:root {
+    --plan-1: #ffb84d;
+    --plan-2: #ffd166;
+    --plan-grad: linear-gradient(120deg, #ffb84d 0%, #ffd166 100%);
+}
+
+#nav-plan.active { color: var(--plan-1); }
+#nav-plan.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+
+.plan-page .app-header { display: flex; align-items: baseline; justify-content: space-between; }
+.plan-page .page-title { font-size: 30px; line-height: 1; }
+.plan-page .page-meta { font-size: 10px; color: var(--on-surface-faint); letter-spacing: 0.18em; text-transform: uppercase; }
+
+.plan-header { padding: 18px; border-radius: 22px; background: rgba(255,184,77,0.08); border: 1px solid rgba(255,184,77,0.18); }
+.plan-header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--plan-1); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.plan-header .headline { font-family: 'Fraunces', serif; font-size: 22px; line-height: 1.15; color: var(--md-sys-color-on-surface); }
+.plan-header .headline .pct { background: var(--plan-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; cursor: pointer; padding: 0 2px; }
+.plan-header .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--on-surface-faint); }
+.plan-header .meta .delta-good { color: #43e97b; }
+.plan-header .meta .delta-bad { color: #cf6679; }
+
+.plan-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 4px 0; }
+.plan-section-head .title { font-family: 'Fraunces', serif; font-size: 18px; color: var(--md-sys-color-on-surface); }
+.plan-section-head .meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-surface-faint); }
+
+.plan-lane { display: flex; gap: 10px; overflow-x: auto; padding: 4px 4px 12px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.plan-lane::-webkit-scrollbar { display: none; }
+.month-card { flex: 0 0 168px; padding: 14px; border-radius: 18px; background: var(--md-sys-color-surface-container); border: 1px solid var(--line); scroll-snap-align: start; cursor: pointer; transition: border-color 120ms ease, transform 120ms ease; }
+.month-card.empty { border-style: dashed; }
+.month-card.selected { border-color: var(--plan-1); box-shadow: 0 0 0 1px var(--plan-1); transform: translateY(-1px); }
+.month-card .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.month-card .name { font-family: 'Fraunces', serif; font-size: 18px; color: var(--md-sys-color-on-surface); }
+.month-card .yr { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-faint); margin-left: 4px; }
+.headroom-chip { display: inline-block; padding: 3px 8px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.04em; }
+.headroom-chip.good { background: rgba(255,184,77,0.18); color: var(--plan-1); }
+.headroom-chip.warn { background: rgba(255,210,77,0.14); color: #ffd166; }
+.headroom-chip.bad { background: rgba(207,102,121,0.18); color: #cf6679; }
+.month-card .planted { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.month-card .pi { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,0.04); border-left: 2px solid var(--plan-1); font-size: 11px; }
+.month-card .pi.must { border-left-color: #cf6679; }
+.month-card .pi.want { border-left-color: var(--plan-1); }
+.month-card .pi.nice { border-left-color: var(--on-surface-faint); }
+.month-card .pi .name { flex: 1; color: var(--md-sys-color-on-surface); font-family: 'Inter Tight'; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month-card .pi .cost { font-family: 'JetBrains Mono', monospace; color: var(--on-surface-faint); }
+.month-card .progress { height: 4px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+.month-card .progress > span { display: block; height: 100%; background: var(--plan-grad); }
+.month-card .footnote { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-faint); margin-top: 6px; letter-spacing: 0.06em; }
+
+.month-detail-card { padding: 20px; border-radius: 22px; background: var(--md-sys-color-surface-container); border: 1px solid var(--line); }
+.month-detail-card .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--plan-1); margin-bottom: 6px; }
+.month-detail-card .name { font-family: 'Fraunces', serif; font-size: 26px; color: var(--md-sys-color-on-surface); margin-bottom: 16px; }
+.month-detail-card .table { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--md-sys-color-on-surface); display: flex; flex-direction: column; gap: 4px; }
+.month-detail-card .table .row { display: flex; justify-content: space-between; }
+.month-detail-card .table .row.muted { color: var(--on-surface-faint); }
+.month-detail-card .table .sep { border-top: 1px dashed var(--line); margin: 6px 0; }
+.month-detail-card .table .total { font-weight: 600; }
+.month-detail-card .table .total.good { color: var(--plan-1); }
+.month-detail-card .items { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.month-detail-card .items .row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+.month-detail-card .items .badge { padding: 2px 6px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; }
+.month-detail-card .items .badge.must { background: rgba(207,102,121,0.18); color: #cf6679; }
+.month-detail-card .items .badge.want { background: rgba(255,184,77,0.18); color: var(--plan-1); }
+.month-detail-card .items .badge.nice { background: rgba(176,182,200,0.14); color: var(--on-surface-faint); }
+.month-detail-card .items .name { flex: 1; font-family: 'Inter Tight'; }
+.month-detail-card .items .cost { font-family: 'JetBrains Mono', monospace; }
+.month-detail-card .items .x { background: transparent; border: 0; color: var(--on-surface-faint); cursor: pointer; padding: 2px 6px; }
+
+.wl-tabs { display: flex; gap: 6px; margin: 8px 4px 0; }
+.wl-tabs button { flex: 1; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid transparent; color: var(--on-surface-faint); font-family: 'Inter Tight'; font-size: 12px; cursor: pointer; }
+.wl-tabs button.active { background: rgba(255,184,77,0.14); color: var(--plan-1); border-color: rgba(255,184,77,0.3); }
+.wl-section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--on-surface-faint); margin: 14px 4px 6px; }
+.wl-card { background: var(--md-sys-color-surface-container); border: 1px solid var(--line); border-radius: 18px; padding: 4px 0; display: flex; flex-direction: column; }
+.wl-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.wl-row:last-child { border-bottom: 0; }
+.wl-row .badge { padding: 2px 6px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
+.wl-row .badge.must { background: rgba(207,102,121,0.18); color: #cf6679; }
+.wl-row .badge.want { background: rgba(255,184,77,0.18); color: var(--plan-1); }
+.wl-row .badge.nice { background: rgba(176,182,200,0.14); color: var(--on-surface-faint); }
+.wl-row .body { flex: 1; min-width: 0; }
+.wl-row .body .name { font-family: 'Inter Tight'; font-size: 14px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-row .body .note { font-size: 11px; color: var(--on-surface-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-row .cost { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--md-sys-color-on-surface); }
+.wl-row .month-chip { padding: 3px 8px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; background: rgba(255,184,77,0.14); color: var(--plan-1); cursor: pointer; }
+.wl-row .find-spot { padding: 4px 10px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em; background: var(--plan-grad); color: #1a103a; border: 0; cursor: pointer; }
+.wl-row .find-spot.fail { background: rgba(207,102,121,0.18); color: #cf6679; }
+.wl-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
+.wl-row .actions button { background: transparent; border: 0; color: var(--on-surface-faint); cursor: pointer; padding: 4px; border-radius: 999px; }
+.wl-row .actions button:hover { color: var(--md-sys-color-on-surface); }
+.wl-row.bought { opacity: 0.6; }
+.wl-row.bought .done-chip { padding: 2px 6px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.06em; background: rgba(67,233,123,0.14); color: #43e97b; }
+
+.fab-plan { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 999px; background: var(--plan-grad); color: #1a103a; border: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 30px rgba(255,184,77,0.35); cursor: pointer; z-index: 40; }
+.fab-plan .material-symbols-rounded { font-size: 26px; font-weight: 600; }
+
+.wish-modal-form { display: flex; flex-direction: column; gap: 14px; }
+.wish-modal-form label { font-size: 11px; color: var(--on-surface-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+.wish-modal-form input[type="text"], .wish-modal-form input[type="number"], .wish-modal-form textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--md-sys-color-on-surface); padding: 12px 14px; border-radius: 12px; font-family: 'Inter Tight'; font-size: 14px; }
+.wish-modal-form .pri-pills { display: flex; gap: 8px; }
+.wish-modal-form .pri-pills button { flex: 1; padding: 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid transparent; color: var(--on-surface-faint); font-family: 'Inter Tight'; font-size: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; }
+.wish-modal-form .pri-pills button.active { background: rgba(255,184,77,0.14); color: var(--plan-1); border-color: rgba(255,184,77,0.3); }
+.wish-modal-form .actions { display: flex; gap: 10px; margin-top: 4px; }
+.wish-modal-form .actions .primary { flex: 1; padding: 14px; border-radius: 14px; background: var(--plan-grad); color: #1a103a; border: 0; font-weight: 600; font-size: 14px; cursor: pointer; }
+.wish-modal-form .actions .secondary { padding: 14px 18px; border-radius: 14px; background: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); border: 0; font-size: 14px; cursor: pointer; }
+
+.plan-empty { padding: 32px 16px; text-align: center; color: var(--on-surface-faint); border-radius: 18px; background: rgba(255,255,255,0.02); border: 1px dashed var(--line); }
+.plan-warn { padding: 14px; border-radius: 14px; background: rgba(207,102,121,0.10); border: 1px solid rgba(207,102,121,0.25); color: #cf6679; font-size: 13px; }
+.plan-warn .icon { font-size: 16px; vertical-align: middle; margin-right: 6px; }
