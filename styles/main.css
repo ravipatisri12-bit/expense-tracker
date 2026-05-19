@@ -759,3 +759,22 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .trend-nav-btn:disabled { opacity: 0.3; cursor: default; }
 .trend-nav-btn .material-symbols-rounded { font-size: 14px; }
 .trend-nav-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: var(--on-surface-mute); text-transform: uppercase; min-width: 90px; text-align: center; }
+
+/* Trip daily-rhythm: $ amount label above each bar */
+.day-strip .day-bar { position: relative; }
+.day-strip .day-amount { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--on-surface); white-space: nowrap; pointer-events: none; }
+.day-strip .day-bar.today .day-amount { color: var(--trip-2); font-weight: 600; }
+.day-strip .day-axis { padding-top: 18px; }
+
+/* Trip breakdown expandable category rows */
+.breakdown .bd-row { cursor: pointer; transition: background 0.15s ease; }
+.breakdown .bd-row:hover { background: rgba(255,255,255,0.02); }
+.breakdown .bd-row.expanded { background: rgba(255,255,255,0.025); }
+.breakdown .bd-amount { display: inline-flex; align-items: center; gap: 6px; }
+.breakdown .bd-chev { font-size: 16px; color: var(--on-surface-faint); margin-left: 4px; }
+.breakdown .bd-row.expanded .bd-chev { color: var(--trip-2); }
+.breakdown .bd-detail { padding: 6px 0 12px 18px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px dashed rgba(255,255,255,0.04); }
+.breakdown .bd-txn { display: grid; grid-template-columns: 70px 1fr auto; gap: 12px; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.025); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.breakdown .bd-txn-date { color: var(--on-surface-mute); letter-spacing: 0.04em; }
+.breakdown .bd-txn-desc { color: var(--on-surface); font-family: 'Inter Tight'; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.breakdown .bd-txn-amt { color: var(--on-surface); font-weight: 500; }

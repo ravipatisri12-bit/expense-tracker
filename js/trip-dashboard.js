@@ -65,9 +65,18 @@
         const totals = {};
         for (const e of tripExpenses) totals[e.category] = (totals[e.category] || 0) + Number(e.amount || 0);
         const ordered = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+        const expandedCat = window.tripsStore._expandedBreakdownCat;
         const breakdownRows = ordered.length === 0 ? `<div class="today-empty">No expenses yet.</div>` : ordered.map(([cat, amt]) => {
             const pct = spent > 0 ? Math.round((amt / spent) * 100) : 0;
-            return `<div class="bd-row"><div class="bd-cat"><span class="dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat)}</div><div class="bd-bar"><span style="width:${pct}%;background:${categoryColor(cat)}"></span></div><div class="bd-amount">$${Math.round(amt)}<span class="pct">${pct}%</span></div></div>`;
+            const isExpanded = expandedCat === cat;
+            const catKey = JSON.stringify(cat).replace(/"/g, '&quot;');
+            const head = `<div class="bd-row${isExpanded ? ' expanded' : ''}" onclick="onTripBreakdownToggle(${catKey})"><div class="bd-cat"><span class="dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat)}</div><div class="bd-bar"><span style="width:${pct}%;background:${categoryColor(cat)}"></span></div><div class="bd-amount">$${Math.round(amt)}<span class="pct">${pct}%</span><span class="bd-chev material-symbols-rounded">${isExpanded ? 'expand_less' : 'expand_more'}</span></div></div>`;
+            if (!isExpanded) return head;
+            const txns = tripExpenses
+                .filter(e => e.category === cat)
+                .sort((a, b) => (b.date.localeCompare(a.date)) || b.timestamp - a.timestamp);
+            const txnRows = txns.map(t => `<div class="bd-txn"><span class="bd-txn-date">${t.date}</span><span class="bd-txn-desc">${escapeHtml(t.description || 'Expense')}</span><span class="bd-txn-amt">$${Number(t.amount).toFixed(2)}</span></div>`).join('');
+            return `${head}<div class="bd-detail">${txnRows}</div>`;
         }).join('');
 
         // Daily rhythm
@@ -84,7 +93,8 @@
             const isFuture = i >= cappedDayN;
             const cls = isFuture ? 'day-bar future' : isToday ? 'day-bar today' : 'day-bar';
             const h = isFuture ? 20 : Math.max(8, (v / maxDay) * 100);
-            return `<div class="day-bar-wrap"><div class="${cls}" style="height:${h}%"></div><div class="day-num${isToday ? ' today' : ''}">${dnum.getDate()}</div></div>`;
+            const amountLabel = !isFuture && v > 0 ? `<div class="day-amount">$${Math.round(v)}</div>` : '';
+            return `<div class="day-bar-wrap"><div class="${cls}" style="height:${h}%">${amountLabel}</div><div class="day-num${isToday ? ' today' : ''}">${dnum.getDate()}</div></div>`;
         }).join('');
 
         // Action buttons
@@ -236,6 +246,13 @@ ${all.length === 0 ? `<div class="today-empty" style="padding:40px 16px"><div>No
         await window.tripsStore.end(id);
         window.renderTripDashboard();
         if (window.expenseTracker) window.expenseTracker.updateDashboard();
+    };
+
+    window.onTripBreakdownToggle = function (cat) {
+        if (!window.tripsStore) return;
+        const cur = window.tripsStore._expandedBreakdownCat;
+        window.tripsStore._expandedBreakdownCat = cur === cat ? null : cat;
+        window.renderTripDashboard();
     };
 
     if (window.tripsStore) window.tripsStore.subscribe(() => {
