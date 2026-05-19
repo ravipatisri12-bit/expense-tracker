@@ -80,6 +80,9 @@
     <div class="meta">
         <span class="${deltaCls}">${statusText}</span>
         <span style="opacity:.5">·</span>
+        <span title="Total dollars you could still plant this year without missing your savings target">$${fmt(w.yearBufferRemaining())} year buffer</span>
+    </div>
+    <div class="meta" style="margin-top:6px">
         <span>${planted} planted</span>
         <span style="opacity:.5">·</span>
         <span>${unplaced} unplaced</span>
@@ -131,6 +134,11 @@
         const afterCommit = m.income - m.fixed - m.typicalVariable - m.planted;
         const afterCommitPct = m.income > 0 ? Math.round((afterCommit / m.income) * 100) : 0;
         const totalSpend = m.fixed + m.typicalVariable + m.planted;
+        // Per-month buffer = min(this month's headroom, year-end buffer).
+        // The tighter of "fits in this month" vs "fits in the year" is the real ceiling.
+        const yearBuf = w.yearBufferRemaining();
+        const monthBuffer = Math.max(0, Math.min(m.headroom, yearBuf));
+        const bufferLimitedBy = m.headroom <= yearBuf ? 'this month' : 'year target';
         const itemRows = m.plantedItems.map(i => `
 <div class="row">
     <span class="badge ${i.priority}">${i.priority}</span>
@@ -161,6 +169,9 @@
         <div class="sep"></div>
         <div class="row total ${afterCommit >= 0 ? 'good' : ''}"><span>After commitments</span><span>$${fmt(afterCommit)} (${afterCommitPct}% of income)</span></div>
         <div class="row muted"><span>Total spend</span><span>$${fmt(totalSpend)}</span></div>
+        <div class="sep"></div>
+        <div class="row total ${monthBuffer > 0 ? 'good' : ''}"><span>Buffer left here</span><span>$${fmt(monthBuffer)}</span></div>
+        <div class="row muted" style="font-size:11px"><span>limited by ${bufferLimitedBy}</span><span></span></div>
     </div>
     ${itemRows ? `<div class="items">${itemRows}</div>` : ''}
 </div>`;

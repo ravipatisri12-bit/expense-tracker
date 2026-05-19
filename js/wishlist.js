@@ -202,6 +202,24 @@
             return months;
         }
 
+        // Year-level slack: how many more dollars can be spent THIS YEAR (across all
+        // remaining months, in any combination) before projectedYearRate drops below target.
+        // Returns 0 if already at/below target. Used as the year-end ceiling for
+        // per-month buffer math.
+        yearBufferRemaining() {
+            const t = window.expenseTracker;
+            if (!t) return 0;
+            const income = (t.settings && t.settings.income) || 0;
+            if (income <= 0) return 0;
+            const target = (t.settings && t.settings.savingsTargetRate) || 0.50;
+            const yearIncome = income * 12;
+            const projectedRate = this.projectedYearRate();
+            // current year spend implicit in projectedRate: spend = yearIncome × (1 - rate)
+            const projectedSpend = yearIncome * (1 - projectedRate);
+            const allowedSpend = yearIncome * (1 - target);
+            return Math.max(0, allowedSpend - projectedSpend);
+        }
+
         // Projected savings rate for the current calendar year.
         projectedYearRate() {
             const t = window.expenseTracker;
