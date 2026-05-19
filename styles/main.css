@@ -720,6 +720,18 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .md-breakdown .row .swatch { width: 6px; height: 6px; border-radius: 50%; }
 .md-breakdown .row .name { color: var(--on-surface-mute); flex: 1; }
 .md-breakdown .row .amt { color: var(--on-surface); }
+
+.md-cats { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.md-cats-head { display: flex; align-items: baseline; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-surface-mute); margin-bottom: 10px; }
+.md-cats-meta { font-size: 9px; letter-spacing: 0.1em; color: var(--on-surface-faint); }
+.md-cat-row { display: grid; grid-template-columns: 10px 90px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.04); cursor: pointer; transition: background 0.15s ease; }
+.md-cat-row:last-child { border-bottom: 0; }
+.md-cat-row:hover { background: rgba(255,255,255,0.02); }
+.md-cat-row .dot { width: 8px; height: 8px; border-radius: 50%; }
+.md-cat-row .name { font-size: 12.5px; color: var(--on-surface); }
+.md-cat-row .md-cat-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.04); overflow: hidden; }
+.md-cat-row .md-cat-bar > span { display: block; height: 100%; border-radius: 999px; }
+.md-cat-row .amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--on-surface); white-space: nowrap; }
 .cat-card.history { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px 20px 8px; display: block; }
 .cat-card.history .cat-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
 .cat-card.history .cat-head .title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }

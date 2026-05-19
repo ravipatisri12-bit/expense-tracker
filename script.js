@@ -3139,13 +3139,21 @@ function openCategoryFilter(category, options) {
     if (!sheet || !card) return;
     const t = window.expenseTracker; if (!t) return;
 
-    // State: which month the sheet is showing (default = current month).
+    // State: which month the sheet is showing. options.year/month override the
+    // default (current month). options.reset always reseeds state.
     if (!t._catSheetState) t._catSheetState = {};
+    const now = new Date();
     if (options.reset) {
-        const now = new Date();
-        t._catSheetState = { category, year: now.getFullYear(), month: now.getMonth(), includeTrips: false };
+        t._catSheetState = {
+            category,
+            year: options.year != null ? options.year : now.getFullYear(),
+            month: options.month != null ? options.month : now.getMonth(),
+            includeTrips: false
+        };
     } else {
         t._catSheetState.category = category;
+        if (options.year != null) t._catSheetState.year = options.year;
+        if (options.month != null) t._catSheetState.month = options.month;
     }
     renderCatSheet();
     sheet.classList.remove('hidden');
@@ -4463,6 +4471,23 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
     else eyebrow = 'UPCOMING';
 
     const showBreakdown = regular > 0 || tripTotal > 0 || fixedThisMonth > 0;
+
+    // Per-category breakdown for the selected month. Click → opens cat-sheet
+    // for that category at THIS month.
+    const catTotals = {};
+    for (const e of monthAll) {
+        if (e.tripId != null) continue; // Trips already represented in composition row
+        const k = e.category || 'Other';
+        catTotals[k] = (catTotals[k] || 0) + Number(e.amount || 0);
+    }
+    const orderedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+    const catList = orderedCats.map(([name, amt]) => {
+        const safe = this._escapeHtml(name).replace(/'/g, "\\'");
+        const pct = regular > 0 ? Math.round((amt / regular) * 100) : 0;
+        const color = this._categoryColor(name);
+        return `<div class="md-cat-row" onclick="openCategoryFilter('${safe}', {reset:true, year:${Y}, month:${M}})"><span class="dot" style="background:${color}"></span><span class="name">${this._escapeHtml(name)}</span><div class="md-cat-bar"><span style="width:${pct}%;background:${color}"></span></div><span class="amt">$${Math.round(amt).toLocaleString()}</span></div>`;
+    }).join('');
+
     root.innerHTML = `
 <div class="month-detail">
     <div class="md-eyebrow">${eyebrow}</div>
@@ -4472,6 +4497,10 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
         ${regular > 0 ? `<div class="row"><span class="swatch" style="background:var(--m-1)"></span><span class="name">Regular spending</span><span class="amt">$${Math.round(regular).toLocaleString()}</span></div>` : ''}
         ${tripTotal > 0 ? `<div class="row"><span class="swatch" style="background:var(--trip-2)"></span><span class="name">Trips · ${tripCount}</span><span class="amt">$${Math.round(tripTotal).toLocaleString()}</span></div>` : ''}
         ${fixedThisMonth > 0 ? `<div class="row"><span class="swatch" style="background:#b0b6c8"></span><span class="name">Fixed obligations</span><span class="amt">$${Math.round(fixedThisMonth).toLocaleString()}</span></div>` : ''}
+    </div>` : ''}
+    ${orderedCats.length > 0 ? `<div class="md-cats">
+        <div class="md-cats-head">By category <span class="md-cats-meta">tap for transactions</span></div>
+        ${catList}
     </div>` : ''}
 </div>`;
 };
