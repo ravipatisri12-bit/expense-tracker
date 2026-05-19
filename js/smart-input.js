@@ -140,13 +140,21 @@ class SmartTransactionInput {
                     // Create expense object
                     const today = new Date();
                     const defaultDate = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+                    const expenseDate = parsed.date || defaultDate;
+                    // Auto-tag with the trip whose window contains expenseDate (per spec §5.3),
+                    // unless the user has flipped the per-page Untag toggle.
+                    const untag = !!(window.expenseTracker && window.expenseTracker._addPageState && window.expenseTracker._addPageState.untag);
+                    const tripId = (!untag && window.tripsStore && window.tripsStore.pickTripIdForDate)
+                        ? window.tripsStore.pickTripIdForDate(expenseDate) : null;
                     const expense = {
                         id: Date.now() + i,
                         amount: parsed.amount,
                         description: parsed.description || 'Expense',
                         category: parsed.category || 'Other',
-                        date: parsed.date || defaultDate,
-                        timestamp: Date.now() + i
+                        date: expenseDate,
+                        timestamp: Date.now() + i,
+                        excludeFromBudget: false,
+                        tripId
                     };
 
                     // Add to tracker
@@ -358,7 +366,7 @@ class SmartTransactionInput {
                         ? window.expenseTracker.getLocalDateString(d)
                         : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                 })();
-                const whenLabel = p.date === todayStr ? 'TODAY' : p.date === yest ? 'YESTERDAY' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+                const whenLabel = p.date === todayStr ? 'TODAY' : p.date === yest ? 'YESTERDAY' : (window.expenseTracker ? window.expenseTracker.parseLocalDate(p.date) : new Date(p.date + 'T00:00:00')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
                 return `<div class="parse-row"><span class="amt">$${p.amount}</span><span class="desc">${p.description}<span class="when">${whenLabel}</span></span><span class="cat-pill ${cls}">${p.category}</span></div>`;
             }).join('');
             preview.innerHTML = `<div class="ph"><span class="pulse"></span> Parsed live · ${ok.length} of ${lines.length}</div>${rows}`;

@@ -752,3 +752,10 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .page-toolbar-action { background: var(--m-grad); color: #1a103a; border: 0; box-shadow: 0 4px 16px rgba(102,126,234,0.20); }
 .page-toolbar-action .material-symbols-rounded { color: #1a103a; font-variation-settings: 'FILL' 1, 'wght' 600; }
 .page-toolbar-spacer { width: 36px; flex: 0 0 auto; }
+
+/* Home trend month navigator */
+.trend-nav { display: inline-flex; align-items: center; gap: 6px; }
+.trend-nav-btn { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--on-surface-mute); cursor: pointer; }
+.trend-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.trend-nav-btn .material-symbols-rounded { font-size: 14px; }
+.trend-nav-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: var(--on-surface-mute); text-transform: uppercase; min-width: 90px; text-align: center; }

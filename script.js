@@ -3657,21 +3657,37 @@ ExpenseTracker.prototype.renderHomeCategories = function (monthExpenses) {
 </div></div>`;
 };
 
-ExpenseTracker.prototype.renderHomeTrend = function ({ regularThisMonth, daysInMonth, dayOfMonth, monthName, aim }) {
+ExpenseTracker.prototype.renderHomeTrend = function (origCtx) {
     const root = document.getElementById('home-trend');
     if (!root) return;
+    if (origCtx) this._homeTrendCtx = origCtx;
+    const baseCtx = this._homeTrendCtx; if (!baseCtx) return;
+    const view = this._homeTrendView || 'daily';
+    const offset = this._homeTrendOffset || 0; // 0 = current month, +N = N months back
+
+    // If offset > 0, derive a different month's view
+    const now = new Date();
+    const M = now.getMonth() - offset;
+    const Yv = now.getFullYear() + Math.floor(M / 12);
+    const Mv = ((M % 12) + 12) % 12;
+    const daysInMonth = new Date(Yv, Mv + 1, 0).getDate();
+    const monthName = new Date(Yv, Mv, 1).toLocaleDateString('en-US', { month: 'long' });
+    const isCurrent = offset === 0;
+    const dayOfMonth = isCurrent ? now.getDate() : daysInMonth;
+    const aim = baseCtx.aim;
+    const regularThisMonth = isCurrent
+        ? baseCtx.regularThisMonth
+        : this.getRegularMonthExpenses(Yv, Mv);
+
     const perDay = new Array(daysInMonth).fill(0);
     for (const e of regularThisMonth) {
         const d = this.parseLocalDate(e.date).getDate();
         if (d >= 1 && d <= daysInMonth) perDay[d - 1] += Number(e.amount || 0);
     }
-    const max = Math.max(1, ...perDay);
 
-    const Y = new Date().getFullYear() - 1;
-    const M = new Date().getMonth();
     const lastYearTotalSamePoint = this.expenses
         .filter(e => e.tripId == null)
-        .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === Y && d.getMonth() === M && d.getDate() <= dayOfMonth; })
+        .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === Yv - 1 && d.getMonth() === Mv && d.getDate() <= dayOfMonth; })
         .reduce((s, e) => s + Number(e.amount || 0), 0);
     const thisPointTotal = perDay.slice(0, dayOfMonth).reduce((s, v) => s + v, 0);
     const compareDelta = thisPointTotal - lastYearTotalSamePoint;
@@ -3680,45 +3696,128 @@ ExpenseTracker.prototype.renderHomeTrend = function ({ regularThisMonth, daysInM
         ? `<span style="opacity:.7">vs same point last ${monthName}: no data</span>`
         : `<span>vs same point last ${monthName}:</span><span class="delta ${compareCls}">${compareDelta < 0 ? '−' : '+'}$${Math.abs(Math.round(compareDelta))} ${compareDelta < 0 ? 'lower' : 'higher'}</span>`;
 
-    const aimY = aim.dailyTotal > 0 && max > 0 ? Math.max(0, Math.min(100, 100 - (aim.dailyTotal / max) * 100)) : 60;
-
-    const bars = perDay.map((v, i) => {
-        const day = i + 1;
-        const h = Math.max(2, (v / max) * 100);
-        let cls = 'b';
-        if (day > dayOfMonth) cls += ' future';
-        if (day === dayOfMonth) cls += ' today';
-        return `<div class="${cls}" style="height:${day > dayOfMonth ? 14 : h}%" data-day="${day}" data-amt="${v}" onclick="showHomeTrendPopover(this)"></div>`;
-    }).join('');
-
-    const today = perDay[dayOfMonth - 1] || 0;
-    const sliced = perDay.slice(0, Math.max(1, dayOfMonth));
-    const bestIdx = sliced.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0])[0] || [0, 0];
-    const worstIdx = sliced.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0])[0] || [0, 0];
-    const todayDeltaText = today > aim.dailyTotal ? `+$${Math.round(today - aim.dailyTotal)} vs aim` : `−$${Math.round(aim.dailyTotal - today)} vs aim`;
     const monthAbbr = monthName.slice(0, 3).toUpperCase();
 
-    root.innerHTML = `
-<div class="section-head"><h2 class="section-title">Spending trend</h2><span class="section-meta">tap a bar</span></div>
-<div class="trend-card">
-    <div class="trend-toggle"><button class="active">Daily</button><button>Weekly</button></div>
-    <div class="trend-compare">${compareText}</div>
-    <div class="trend-chart-wrap">
-        <div class="trend-pace-line" style="top:${aimY}%"><span class="trend-pace-label">aim · $${aim.dailyTotal}/day</span></div>
-        <div class="trend-bars" style="--cols:${daysInMonth}">${bars}</div>
-    </div>
-    <div class="trend-foot">
-        <span>${monthAbbr} 1</span>
-        <span>${Math.round(daysInMonth / 2)}</span>
-        <span style="color:var(--m-1)">today · ${dayOfMonth}</span>
-        <span>${daysInMonth}</span>
-    </div>
-    <div class="trend-stats">
+    let chartHtml, footHtml, statsHtml, paceLabel, paceY;
+    if (view === 'daily') {
+        const max = Math.max(1, ...perDay);
+        const aimY = aim.dailyTotal > 0 && max > 0 ? Math.max(0, Math.min(100, 100 - (aim.dailyTotal / max) * 100)) : 60;
+        paceY = aimY; paceLabel = `aim · $${aim.dailyTotal}/day`;
+        const bars = perDay.map((v, i) => {
+            const day = i + 1;
+            const h = Math.max(2, (v / max) * 100);
+            let cls = 'b';
+            if (day > dayOfMonth) cls += ' future';
+            if (day === dayOfMonth) cls += ' today';
+            return `<div class="${cls}" style="height:${day > dayOfMonth ? 14 : h}%" data-day="${day}" data-amt="${v}" onclick="showHomeTrendPopover(this)"></div>`;
+        }).join('');
+        chartHtml = `<div class="trend-bars" style="--cols:${daysInMonth}">${bars}</div>`;
+        footHtml = `<span>${monthAbbr} 1</span><span>${Math.round(daysInMonth / 2)}</span><span style="color:var(--m-1)">today · ${dayOfMonth}</span><span>${daysInMonth}</span>`;
+
+        const today = perDay[dayOfMonth - 1] || 0;
+        const sliced = perDay.slice(0, Math.max(1, dayOfMonth));
+        const bestIdx = sliced.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0])[0] || [0, 0];
+        const worstIdx = sliced.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0])[0] || [0, 0];
+        const todayDeltaText = today > aim.dailyTotal ? `+$${Math.round(today - aim.dailyTotal)} vs aim` : `−$${Math.round(aim.dailyTotal - today)} vs aim`;
+        statsHtml = `
         <div class="trend-stat"><div class="lbl">Today</div><div class="val">$${Math.round(today)}</div><div class="meta">${todayDeltaText}</div></div>
         <div class="trend-stat"><div class="lbl">Best day</div><div class="val">$${Math.round(bestIdx[0])}</div><div class="meta">${monthName} ${bestIdx[1] + 1}</div></div>
-        <div class="trend-stat"><div class="lbl">Worst day</div><div class="val">$${Math.round(worstIdx[0])}</div><div class="meta">${monthName} ${worstIdx[1] + 1}</div></div>
+        <div class="trend-stat"><div class="lbl">Worst day</div><div class="val">$${Math.round(worstIdx[0])}</div><div class="meta">${monthName} ${worstIdx[1] + 1}</div></div>`;
+    } else {
+        // Weekly: bin by ISO-week-of-month buckets (Mon-anchored).
+        // 5 columns covering ~5 weeks of the month.
+        const weeks = [[],[],[],[],[]];
+        const weekTotals = [0,0,0,0,0];
+        const monthDate = new Date(new Date().getFullYear(), M, 1);
+        const firstDow = monthDate.getDay(); // 0=Sun
+        // bucket each day-of-month into a week index using Mon=0..Sun=6 mapping
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dow = (firstDow + day - 1) % 7;
+            const monIdx = (dow + 6) % 7; // 0=Mon
+            const weekIdx = Math.floor((day - 1 + ((firstDow + 6) % 7)) / 7);
+            const wi = Math.min(4, weekIdx);
+            weeks[wi].push(day);
+            weekTotals[wi] += perDay[day - 1] || 0;
+        }
+        // Cap visible weeks to those containing at least one day of the month
+        const visibleWeeks = weeks.map((w, i) => w.length ? i : null).filter(i => i !== null);
+        const max = Math.max(1, ...weekTotals);
+        const weeklyAim = (aim.dailyTotal || 0) * 7;
+        const aimY = weeklyAim > 0 && max > 0 ? Math.max(0, Math.min(100, 100 - (weeklyAim / max) * 100)) : 60;
+        paceY = aimY; paceLabel = `aim · $${weeklyAim}/wk`;
+        const todayWeekIdx = (() => {
+            const dowToday = (firstDow + dayOfMonth - 1) % 7;
+            return Math.floor((dayOfMonth - 1 + ((firstDow + 6) % 7)) / 7);
+        })();
+        const bars = visibleWeeks.map(i => {
+            const v = weekTotals[i];
+            const h = Math.max(2, (v / max) * 100);
+            const future = weeks[i][0] > dayOfMonth;
+            const today = i === todayWeekIdx;
+            let cls = 'b';
+            if (future) cls += ' future';
+            if (today) cls += ' today';
+            const label = `Wk ${i + 1}`;
+            return `<div class="${cls}" style="height:${future ? 14 : h}%" data-day="${label}" data-amt="${v}" onclick="showHomeTrendPopover(this)"></div>`;
+        }).join('');
+        chartHtml = `<div class="trend-bars weekly" style="--cols:${visibleWeeks.length}">${bars}</div>`;
+        footHtml = visibleWeeks.map(i => {
+            const cls = i === todayWeekIdx ? 'style="color:var(--m-1)"' : '';
+            return `<span ${cls}>W${i + 1}</span>`;
+        }).join('');
+
+        const thisWeek = weekTotals[todayWeekIdx] || 0;
+        const completed = weekTotals.slice(0, todayWeekIdx);
+        const best = completed.length ? Math.min(...completed) : 0;
+        const worst = completed.length ? Math.max(...completed) : 0;
+        const bestI = completed.indexOf(best);
+        const worstI = completed.indexOf(worst);
+        const wkDelta = thisWeek - weeklyAim;
+        const thisDeltaText = wkDelta >= 0 ? `+$${Math.round(wkDelta)} vs aim` : `−$${Math.round(-wkDelta)} vs aim`;
+        statsHtml = `
+        <div class="trend-stat"><div class="lbl">This week</div><div class="val">$${Math.round(thisWeek)}</div><div class="meta">${thisDeltaText}</div></div>
+        <div class="trend-stat"><div class="lbl">Best week</div><div class="val">$${Math.round(best)}</div><div class="meta">${completed.length ? `Wk ${bestI + 1}` : '—'}</div></div>
+        <div class="trend-stat"><div class="lbl">Worst week</div><div class="val">$${Math.round(worst)}</div><div class="meta">${completed.length ? `Wk ${worstI + 1}` : '—'}</div></div>`;
+    }
+
+    const navLabel = isCurrent ? 'this month' : `${monthName} ${Yv}`;
+    root.innerHTML = `
+<div class="section-head">
+    <h2 class="section-title">Spending trend</h2>
+    <div class="trend-nav">
+        <button class="trend-nav-btn" onclick="onHomeTrendStep(1)" aria-label="Previous month"><span class="material-symbols-rounded">chevron_left</span></button>
+        <span class="trend-nav-label">${navLabel}</span>
+        <button class="trend-nav-btn" onclick="onHomeTrendStep(-1)" ${offset === 0 ? 'disabled' : ''} aria-label="Next month"><span class="material-symbols-rounded">chevron_right</span></button>
     </div>
+</div>
+<div class="trend-card">
+    <div class="trend-toggle">
+        <button class="${view === 'daily' ? 'active' : ''}" onclick="onHomeTrendView('daily')">Daily</button>
+        <button class="${view === 'weekly' ? 'active' : ''}" onclick="onHomeTrendView('weekly')">Weekly</button>
+    </div>
+    <div class="trend-compare">${compareText}</div>
+    <div class="trend-chart-wrap">
+        <div class="trend-pace-line" style="top:${paceY}%"><span class="trend-pace-label">${paceLabel}</span></div>
+        ${chartHtml}
+    </div>
+    <div class="trend-foot">${footHtml}</div>
+    <div class="trend-stats">${statsHtml}</div>
 </div>`;
+};
+
+window.onHomeTrendStep = function (delta) {
+    const t = window.expenseTracker; if (!t) return;
+    const cur = t._homeTrendOffset || 0;
+    const next = Math.max(0, cur + delta);
+    t._homeTrendOffset = next;
+    t.renderHomeTrend();
+};
+
+window.onHomeTrendView = function (view) {
+    const t = window.expenseTracker;
+    if (!t || !t._homeTrendCtx) return;
+    t._homeTrendView = view;
+    t.renderHomeTrend(t._homeTrendCtx);
 };
 
 window.showHomeTrendPopover = function (barEl) {
