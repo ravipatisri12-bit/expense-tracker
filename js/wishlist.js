@@ -134,8 +134,25 @@
             return t._monthlyFixedTotal();
         }
 
+        // Sum of regular (non-trip) expenses logged in a given (year, month).
+        _loggedRegularInMonth(year, month) {
+            const t = window.expenseTracker; if (!t) return 0;
+            return t.expenses.reduce((s, e) => {
+                if (e.tripId) return s;
+                const d = t.parseLocalDate(e.date);
+                if (d.getFullYear() === year && d.getMonth() === month) return s + Number(e.amount || 0);
+                return s;
+            }, 0);
+        }
+
         // Returns array of {ym, label, longLabel, year, month, income, fixed,
-        // typicalVariable, planted, headroom, plantedItems} for currentMonth → Dec.
+        // typicalVariable, projectedVariable, mtdVariable, isCurrent, planted,
+        // headroom, plantedItems} for currentMonth → Dec.
+        //
+        // Variable estimate per month:
+        //   current month → MTD logged + (MTD/elapsedDays × remainingDays).
+        //                   This is what you're actually trending toward.
+        //   future months → trailing-3-month average. We don't know yet.
         // Cached.
         computeHeadroom() {
             this._sweepPastScheduled();
@@ -144,22 +161,38 @@
             if (!t) return [];
             const income = (t.settings && t.settings.income) || 0;
             const fixed = this._fixedMonth();
-            const typVar = this._typicalVariableMonth();
+            const trailingAvg = this._typicalVariableMonth();
             const now = new Date();
+            const Y = now.getFullYear();
+            const curMonth = now.getMonth();
+            const dayOfMonth = now.getDate();
+            const daysInCurMonth = new Date(Y, curMonth + 1, 0).getDate();
+            const elapsedDays = Math.max(1, dayOfMonth);
+            const remainingDays = Math.max(0, daysInCurMonth - dayOfMonth);
+            const mtdRegular = this._loggedRegularInMonth(Y, curMonth);
+            const projectedCurMonth = mtdRegular + (mtdRegular / elapsedDays) * remainingDays;
+
             const months = [];
-            for (let m = now.getMonth(); m <= 11; m++) {
-                const ym = now.getFullYear() + '-' + String(m + 1).padStart(2, '0');
+            for (let m = curMonth; m <= 11; m++) {
+                const ym = Y + '-' + String(m + 1).padStart(2, '0');
+                const isCurrent = m === curMonth;
+                const variable = isCurrent ? projectedCurMonth : trailingAvg;
                 const planted = this.scheduledIn(ym);
                 const plantedSum = planted.reduce((s, i) => s + Number(i.cost || 0), 0);
-                const headroom = income - fixed - typVar - plantedSum;
-                const date = new Date(now.getFullYear(), m, 1);
+                const headroom = income - fixed - variable - plantedSum;
+                const date = new Date(Y, m, 1);
                 months.push({
                     ym,
                     label: date.toLocaleDateString('en-US', { month: 'short' }),
                     longLabel: date.toLocaleDateString('en-US', { month: 'long' }),
-                    year: now.getFullYear(),
+                    year: Y,
                     month: m,
-                    income, fixed, typicalVariable: typVar,
+                    income, fixed,
+                    typicalVariable: variable,        // what we use for math
+                    trailingAvgVariable: trailingAvg, // for context display
+                    mtdVariable: isCurrent ? mtdRegular : null,
+                    projectedVariable: isCurrent ? projectedCurMonth : null,
+                    isCurrent,
                     planted: plantedSum,
                     headroom,
                     plantedItems: planted

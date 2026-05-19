@@ -45,10 +45,13 @@
             return;
         }
         const projected = w.projectedYearRate();
+        const projectedPct = Math.round(projected * 100);
         const delta = projected - target;
-        const deltaPct = Math.round(delta * 100 * 10) / 10;
         const deltaCls = delta >= 0 ? 'delta-good' : 'delta-bad';
-        const deltaText = (delta >= 0 ? '+' : '') + deltaPct + 'pt';
+        // Plain-English status: "saving 57% (target 50%)" — no jargon.
+        const statusText = delta >= 0
+            ? `on pace · saving ${projectedPct}% (target ${targetPct}%)`
+            : `behind · saving ${projectedPct}% (target ${targetPct}%)`;
         const open = w.open();
         const planted = open.filter(i => i.scheduledMonth).length;
         const unplaced = open.filter(i => !i.scheduledMonth).length;
@@ -75,7 +78,7 @@
     <div class="eyebrow"><span class="material-symbols-rounded" style="font-size:14px">event_note</span> Spending planner</div>
     <div class="headline">Targeting <span class="pct" onclick="onSavingsTargetEdit()">${targetPct}% saved</span> by Dec</div>
     <div class="meta">
-        <span class="${deltaCls}">${delta >= 0 ? 'on track' : 'over'} ${deltaText} headroom</span>
+        <span class="${deltaCls}">${statusText}</span>
         <span style="opacity:.5">·</span>
         <span>${planted} planted</span>
         <span style="opacity:.5">·</span>
@@ -99,12 +102,16 @@
             const afterCommit = m.income - m.fixed - m.typicalVariable - m.planted;
             const pctSaved = m.income > 0 ? Math.max(0, Math.round((afterCommit / m.income) * 100)) : 0;
             const progressW = Math.min(100, Math.max(0, pctSaved));
+            // Trending line: current month shows projected total spend; future months show trailing avg
+            const trendLine = m.isCurrent
+                ? `trending $${fmt(m.fixed + m.projectedVariable + m.planted)} spend`
+                : `est. $${fmt(m.fixed + m.typicalVariable + m.planted)} spend`;
             return `
 <div class="month-card ${empty} ${selectedCls}" onclick="selectPlanMonth('${m.ym}')">
     <div class="head"><span class="name">${m.label}<span class="yr">${m.year}</span></span><span class="headroom-chip ${cls}">${m.headroom >= 0 ? '+' : ''}$${fmt(m.headroom)}</span></div>
     <div class="planted">${items || '<div style="font-size:11px;color:var(--on-surface-faint);font-family:Inter Tight">no items</div>'}${more}</div>
     <div class="progress"><span style="width:${progressW}%"></span></div>
-    <div class="footnote">${pctSaved}% saved</div>
+    <div class="footnote">${pctSaved}% saved · ${trendLine}</div>
 </div>`;
         }).join('');
         root.innerHTML = `
@@ -123,6 +130,7 @@
         const longLabel = m.longLabel.toUpperCase();
         const afterCommit = m.income - m.fixed - m.typicalVariable - m.planted;
         const afterCommitPct = m.income > 0 ? Math.round((afterCommit / m.income) * 100) : 0;
+        const totalSpend = m.fixed + m.typicalVariable + m.planted;
         const itemRows = m.plantedItems.map(i => `
 <div class="row">
     <span class="badge ${i.priority}">${i.priority}</span>
@@ -130,19 +138,29 @@
     <span class="cost">$${fmt(i.cost)}</span>
     <button class="x" onclick="onWishUnschedule('${i.id}')" aria-label="Remove from this month"><span class="material-symbols-rounded" style="font-size:18px">close</span></button>
 </div>`).join('');
+
+        // Variable line is different for the current month vs future months.
+        let variableRow;
+        if (m.isCurrent) {
+            variableRow = `<div class="row muted"><span>− Variable (so far $${fmt(m.mtdVariable)} → trending $${fmt(m.projectedVariable)})</span><span>−$${fmt(m.projectedVariable)}</span></div>`;
+        } else {
+            variableRow = `<div class="row muted"><span>− Typical variable (3-mo avg)</span><span>−$${fmt(m.typicalVariable)}</span></div>`;
+        }
+
         root.innerHTML = `
 <div class="month-detail-card">
-    <div class="eyebrow">EXPANDED · ${longLabel} ${m.year}</div>
+    <div class="eyebrow">EXPANDED · ${longLabel} ${m.year}${m.isCurrent ? ' · CURRENT' : ''}</div>
     <div class="name">${m.longLabel}</div>
     <div class="table">
         <div class="row"><span>Income</span><span>$${fmt(m.income)}</span></div>
-        <div class="row muted"><span>− Fixed</span><span>−$${fmt(m.fixed)}</span></div>
-        <div class="row muted"><span>− Typical variable</span><span>−$${fmt(m.typicalVariable)}</span></div>
+        <div class="row muted"><span>− Fixed (rent + utilities + insurance)</span><span>−$${fmt(m.fixed)}</span></div>
+        ${variableRow}
         <div class="sep"></div>
         <div class="row"><span>Available room</span><span>$${fmt(m.income - m.fixed - m.typicalVariable)}</span></div>
         ${m.plantedItems.map(i => `<div class="row muted"><span>− Planted: ${escapeHtml(i.name)}</span><span>−$${fmt(i.cost)}</span></div>`).join('')}
         <div class="sep"></div>
-        <div class="row total ${afterCommit >= 0 ? 'good' : ''}"><span>After commitments</span><span>$${fmt(afterCommit)} (${afterCommitPct}%)</span></div>
+        <div class="row total ${afterCommit >= 0 ? 'good' : ''}"><span>After commitments</span><span>$${fmt(afterCommit)} (${afterCommitPct}% of income)</span></div>
+        <div class="row muted"><span>Total spend</span><span>$${fmt(totalSpend)}</span></div>
     </div>
     ${itemRows ? `<div class="items">${itemRows}</div>` : ''}
 </div>`;
