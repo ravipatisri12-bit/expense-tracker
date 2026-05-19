@@ -91,275 +91,34 @@
 
     <!-- HOME PAGE (merged Dashboard + Overview) -->
     <div id="dashboard-page" class="page-content">
-        <div class="max-w-lg mx-auto px-4 py-6 space-y-6">
-
-            <!-- Big Monthly Spending Number with Ring -->
-            <div class="pt-4 pb-0 text-center">
-                <p class="text-xs font-medium tracking-widest uppercase mb-4" style="color:var(--md-sys-color-outline)" id="month-label">February 2026</p>
-                <div class="relative inline-flex items-center justify-center">
-                    <svg id="budget-ring" viewBox="0 0 200 200" style="width:220px;height:220px;transform:rotate(-90deg)">
-                        <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-                        <circle cx="100" cy="100" r="75" fill="rgba(255,255,255,0.02)"/>
-                        <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
-                        <circle id="budget-ring-progress" cx="100" cy="100" r="85" fill="none" stroke="url(#ring-gradient)" stroke-width="10" stroke-linecap="round" stroke-dasharray="534.07" stroke-dashoffset="534.07" style="transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1),stroke 0.3s ease;filter:drop-shadow(0 0 6px rgba(102,126,234,0.4))"/>
-                        <defs><linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#764ba2"/></linearGradient></defs>
-                    </svg>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                        <p class="text-4xl font-extrabold tracking-tight" style="color:var(--md-sys-color-on-surface)" id="big-spending-number">$0</p>
-                        <p class="text-xs mt-1" style="color:var(--md-sys-color-outline)" id="budget-remaining-label"></p>
-                    </div>
-                </div>
-                <p class="text-sm mt-2 empty:hidden" id="spending-trend-text"></p>
+        <div class="home-page max-w-lg mx-auto px-4 pt-2 pb-24">
+            <div class="greeting">
+                <div class="hi"></div>
+                <div class="day"></div>
             </div>
-
-            <!-- Greeting -->
-            <p id="greeting-text" class="text-sm font-medium text-center -mt-4" style="color:var(--md-sys-color-outline)"></p>
-
-            <!-- Quick Actions — primary CTAs -->
-            <div class="flex gap-3">
-                <button onclick="showPage('add-expense')" class="flex-[2] py-3.5 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all active:scale-[0.97]" style="background:var(--accent-gradient);color:white">
-                    <span class="material-symbols-rounded" style="font-size:18px">add</span>
-                    Add Expense
-                </button>
-                <button onclick="openAntiPortfolio()" class="flex-1 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all active:scale-[0.97]" style="background:rgba(255,255,255,0.06);color:var(--md-sys-color-primary);border:1px solid rgba(255,255,255,0.12)">
-                    <span class="material-symbols-rounded" style="font-size:18px">savings</span>
-                    Save
-                </button>
-            </div>
-
-            <!-- Notification preview (dev/testing) -->
-            <div class="flex gap-2 text-xs">
-                <button onclick="fireNotificationPreview('morning')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 9am</button>
-                <button onclick="fireNotificationPreview('afternoon')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 6pm</button>
-                <button onclick="fireNotificationPreview('evening')" class="flex-1 py-2 rounded-full" style="background:rgba(255,255,255,0.04);color:var(--md-sys-color-on-surface-variant);border:1px solid rgba(255,255,255,0.08)">Preview 10pm</button>
-            </div>
-
-            <!-- Today Panel (combined target + total) -->
-            <div id="today-panel" class="card p-4"></div>
-
-            <!-- Weekly Quest -->
-            <div id="weekly-quest-card" class="card p-4 hidden"></div>
-
-            <!-- Habit Card (streak + 7-day trail + daily check-in) -->
-            <div id="habit-card" class="card overflow-hidden" style="border:1px solid rgba(255,255,255,0.07)"></div>
-
-            <!-- AI Insights -->
-            <div id="insights-section" class="card p-5">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">auto_awesome</span>
-                    <h3 class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Insights</h3>
-                    <span id="insights-badge" class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15));color:var(--md-sys-color-primary)">AI</span>
-                </div>
-                <div id="insights-content" class="space-y-3">
-                    <div class="shimmer rounded" style="height:14px;width:90%;background:rgba(255,255,255,0.06)"></div>
-                    <div class="shimmer rounded" style="height:14px;width:75%;background:rgba(255,255,255,0.06)"></div>
-                    <div class="shimmer rounded" style="height:14px;width:85%;background:rgba(255,255,255,0.06)"></div>
-                </div>
-            </div>
-
-            <!-- Spending Trends (collapsible) -->
-            <details class="card">
-                <summary class="p-4 flex justify-between items-center cursor-pointer list-none">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">trending_up</span>
-                        <h3 class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Spending Trends</h3>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex rounded-lg p-0.5" onclick="event.stopPropagation()">
-                            <button onclick="event.stopPropagation();switchTrendsView('daily')" id="trends-daily-btn" class="trends-toggle-btn active px-3 py-1 text-xs font-medium rounded-md">Daily</button>
-                            <button onclick="event.stopPropagation();switchTrendsView('weekly')" id="trends-weekly-btn" class="trends-toggle-btn px-3 py-1 text-xs font-medium rounded-md" style="color:var(--md-sys-color-outline)">Weekly</button>
-                        </div>
-                        <span class="material-symbols-rounded text-sm" style="color:var(--md-sys-color-outline)">expand_more</span>
-                    </div>
-                </summary>
-                <div class="px-4 pb-4">
-                    <!-- Navigation Controls -->
-                    <div class="flex justify-between items-center mb-3" onclick="event.stopPropagation()">
-                        <button onclick="navigateTrends('prev')" class="p-1 rounded" style="color:var(--md-sys-color-primary)">
-                            <span class="material-symbols-rounded text-lg">chevron_left</span>
-                        </button>
-                        <h3 id="trends-title" class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Daily Spending (This Week)</h3>
-                        <button onclick="navigateTrends('next')" class="p-1 rounded" style="color:var(--md-sys-color-primary)">
-                            <span class="material-symbols-rounded text-lg">chevron_right</span>
-                        </button>
-                    </div>
-                    <div id="trends-content" class="space-y-2"></div>
-                    <div class="mt-3 pt-3 border-t flex justify-between items-center text-sm" style="color:var(--md-sys-color-outline)">
-                        <span id="trends-avg-label">Avg per day</span>
-                        <span id="trends-average" class="font-medium" style="color:var(--md-sys-color-on-surface)">$0.00</span>
-                    </div>
-                </div>
-            </details>
-
-
-            <!-- Spending Distribution -->
-            <details class="card">
-                <summary class="p-4 flex justify-between items-center cursor-pointer list-none">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">donut_small</span>
-                        <h3 class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Spending Distribution</h3>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)" id="budget-ring-label"></p>
-                        <span class="material-symbols-rounded text-sm" style="color:var(--md-sys-color-outline)">expand_more</span>
-                    </div>
-                </summary>
-                <div class="px-4 pb-4">
-                    <div class="flex flex-col items-center mb-4">
-                        <svg id="category-pie-chart" viewBox="0 0 200 200" style="width:180px;height:180px;"></svg>
-                    </div>
-                    <div id="category-breakdown" class="space-y-2"></div>
-                </div>
-            </details>
-
-            <!-- Category Filter Modal (slide-up) -->
-            <div id="category-filter-modal" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this)closeCategoryFilter()">
-                <div class="w-full max-h-[75vh] overflow-y-auto" style="background:var(--md-sys-color-surface-container-high);border-radius:28px 28px 0 0">
-                    <div class="sticky top-0 p-5 pb-3 flex justify-between items-center" style="background:var(--md-sys-color-surface-container-high);border-radius:28px 28px 0 0">
-                        <div>
-                            <h3 id="filter-modal-title" class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">Category</h3>
-                            <p id="filter-modal-summary" class="text-xs mt-0.5" style="color:var(--md-sys-color-outline)"></p>
-                        </div>
-                        <button onclick="closeCategoryFilter()" class="p-1.5 rounded-full" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">
-                            <span class="material-symbols-rounded" style="font-size:20px">close</span>
-                        </button>
-                    </div>
-                    <div id="filter-modal-transactions" class="px-4 pb-6"></div>
-                </div>
-            </div>
-
-            <!-- Monthly Report -->
-            <div class="card p-4">
-                <button onclick="toggleMonthlyReport()" class="w-full flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px">summarize</span>
-                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">Monthly Report</span>
-                    </div>
-                    <span id="report-chevron" class="material-symbols-rounded transition-transform" style="color:var(--md-sys-color-outline);font-size:20px">expand_more</span>
-                </button>
-                <div id="monthly-report-details" class="hidden mt-4 flex gap-1">
-                    <div class="flex-1 py-2 px-2 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Spent</p>
-                        <p class="text-xs font-bold" id="report-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
-                    </div>
-                    <div class="flex-1 py-2 px-2 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Essential</p>
-                        <p class="text-xs font-bold" id="report-essential" style="color:var(--md-sys-color-outline)">$0</p>
-                    </div>
-                    <div class="flex-1 py-2 px-2 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Saved</p>
-                        <p class="text-xs font-bold" id="report-saved" style="color:var(--md-sys-color-primary)">$0</p>
-                    </div>
-                    <div class="flex-1 py-2 px-2 rounded-xl text-center" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-xs mb-1" style="color:var(--md-sys-color-outline)">Overall</p>
-                        <p class="text-xs font-bold" id="report-overall" style="color:var(--md-sys-color-on-surface)">$0</p>
-                    </div>
-                </div>
-            </div>
-
+            <div id="home-trip-teaser" class="hidden"></div>
+            <div id="home-month-hero"></div>
+            <div id="home-insight" class="hidden"></div>
+            <div id="home-habit"></div>
+            <div id="home-categories"></div>
+            <div id="home-trend"></div>
+            <div id="home-trend-popover" class="hidden"></div>
         </div>
     </div>
 
     <!-- ADD EXPENSE PAGE -->
     <div id="add-expense-page" class="page-content hidden">
-        <div class="max-w-lg mx-auto px-4 w-full">
-            <div class="mb-6">
-                <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">Add Expenses</h2>
-                <p class="text-sm mt-1" style="color:var(--md-sys-color-outline)">Type naturally or add manually</p>
+        <div class="add-page max-w-lg mx-auto pt-2 pb-24">
+            <div class="page-head px-4">
+                <button class="head-back" onclick="showPage('dashboard')" aria-label="Back"><span class="material-symbols-rounded">close</span></button>
+                <div class="head-title">Add expense</div>
+                <div class="head-spacer"></div>
             </div>
-
-            <!-- Smart Input -->
-            <div class="card p-5 mb-5">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded text-lg" style="color:var(--md-sys-color-primary)">auto_awesome</span>
-                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Smart Input</span>
-                    </div>
-                    <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">AI Powered</span>
-                </div>
-                <textarea id="smart-input" rows="5" placeholder="One per line, any order:&#10;&#10;100 at Castilla on food 02/18&#10;Coffee 5 yesterday&#10;Uber 23" class="w-full resize-none text-sm" style="background:var(--md-sys-color-surface-container-high);border:none;border-radius:12px;padding:16px;color:var(--md-sys-color-on-surface);line-height:1.6"></textarea>
-                <div class="flex items-center justify-between mt-4">
-                    <button type="button" id="toggle-manual-form" class="flex items-center gap-1 text-sm" style="color:var(--md-sys-color-outline)">
-                        <span class="material-symbols-rounded text-lg">edit_note</span>
-                        Manual
-                    </button>
-                    <button type="button" id="parse-smart-input" class="bg-primary-600 text-white font-medium px-6 py-2.5 rounded-full text-sm">Add Expenses</button>
-                </div>
-            </div>
-
-            <!-- Processing Status -->
-            <div id="processing-status" class="hidden mb-5 card p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Processing...</span>
-                    <span id="process-count" class="text-sm font-medium" style="color:var(--md-sys-color-primary)">0/0</span>
-                </div>
-                <div class="w-full rounded-full h-1.5" style="background:var(--md-sys-color-surface-container-highest)">
-                    <div id="process-progress" class="h-1.5 rounded-full transition-all" style="background:var(--accent-gradient);width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Recently Added -->
-            <div id="recent-added" class="hidden mb-5">
-                <h3 class="text-sm font-medium mb-3" style="color:var(--md-sys-color-on-surface-variant)">Just Added</h3>
-                <div id="recent-added-list" class="space-y-2"></div>
-            </div>
-
-            <!-- Gmail Pull -->
-            <div class="card p-5 mb-5" id="gmail-pull-card">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded text-lg" style="color:var(--md-sys-color-primary)">mark_email_read</span>
-                        <span class="text-sm font-medium" style="color:var(--md-sys-color-on-surface)">Gmail Import</span>
-                    </div>
-                    <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(102,126,234,0.12);color:var(--md-sys-color-primary)">Chase Alerts</span>
-                </div>
-                <p class="text-xs mb-4" style="color:var(--md-sys-color-outline)">Pull transactions from your Chase credit card alert emails.</p>
-                <div class="flex items-center justify-between">
-                    <span id="gmail-last-synced" class="text-xs" style="color:var(--md-sys-color-outline)">Never synced</span>
-                    <button id="gmail-sync-btn" onclick="window.emailParser && window.emailParser.sync()"
-                        class="px-5 py-2 rounded-full text-sm font-medium"
-                        style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">
-                        Pull from Gmail
-                    </button>
-                </div>
-                <button id="gmail-reconnect-btn"
-                    onclick="window.refreshGmailToken && window.refreshGmailToken().then(() => window.emailParser && window.emailParser.sync())"
-                    class="hidden w-full mt-3 py-2.5 rounded-full text-sm font-medium"
-                    style="background:rgba(255,180,171,0.1);color:#ffb4ab;border:1px solid rgba(255,180,171,0.2)">
-                    Reconnect Gmail
-                </button>
-            </div>
-
-            <!-- Manual Form -->
-            <div id="manual-form-container" class="hidden">
-                <div class="card p-5">
-                    <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Manual Entry</h3>
-                        <button type="button" id="close-manual-form" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
-                    </div>
-                    <form id="expense-form" class="space-y-5">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Amount</label>
-                                <div class="relative"><span class="input-prefix">$</span><input type="number" id="amount" step="0.01" placeholder="0.00" required class="has-prefix"></div>
-                            </div>
-                            <div>
-                                <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Date</label>
-                                <input type="date" id="expense-date" required>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Description</label>
-                            <input type="text" id="description" placeholder="What did you spend on?" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">Category</label>
-                            <input type="hidden" id="category" required>
-                            <div id="category-pills" class="flex flex-wrap gap-2"></div>
-                        </div>
-                        <button type="submit" class="w-full bg-primary-600 text-white font-medium py-3 rounded-full text-sm">Add Expense</button>
-                    </form>
-                </div>
+            <div class="add-page-body px-4 pt-6 flex flex-col gap-4">
+                <div id="add-trip-banner" class="hidden"></div>
+                <div id="add-smart-card"></div>
+                <div id="add-toggle"></div>
+                <div id="add-manual-card" class="hidden"></div>
             </div>
         </div>
     </div>
@@ -381,109 +140,33 @@
 
     <!-- HISTORY PAGE -->
     <div id="history-page" class="page-content hidden">
-        <div class="max-w-lg mx-auto px-4 py-6">
-            <div class="mb-6">
-                <h2 class="text-xl font-bold" style="color:var(--md-sys-color-on-surface)">History Analytics</h2>
-                <p class="text-sm" style="color:var(--md-sys-color-outline)">Spending insights and trends</p>
-            </div>
-            <!-- Month Navigation & Comparison -->
-            <div class="card p-4 mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <button onclick="navigateHistoryMonth('prev')" class="p-2 rounded-full" style="color:var(--md-sys-color-primary)">
-                        <span class="material-symbols-rounded text-lg">chevron_left</span>
-                    </button>
-                    <h3 id="history-current-month" class="text-lg font-semibold" style="color:var(--md-sys-color-on-surface)">April 2026</h3>
-                    <button onclick="navigateHistoryMonth('next')" class="p-2 rounded-full" style="color:var(--md-sys-color-primary)">
-                        <span class="material-symbols-rounded text-lg">chevron_right</span>
-                    </button>
-                </div>
-                
-                <div class="flex justify-between items-center mb-4">
-                    <div class="text-center">
-                        <p class="text-2xl font-bold" id="history-current-total" style="color:var(--md-sys-color-on-surface)">$0</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">This Month</p>
-                    </div>
-                    <div class="text-center" style="color:var(--md-sys-color-outline)">
-                        <span class="text-sm">vs</span>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-2xl font-bold" id="history-prev-total" style="color:var(--md-sys-color-on-surface)">$0</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Last Month</p>
-                    </div>
-                </div>
+        <div class="history-page max-w-lg mx-auto px-4 pt-2 pb-24 flex flex-col gap-4">
+            <div class="app-header" style="padding:8px 4px 4px"><h1 class="page-title f-serif">History</h1><div id="history-page-meta" class="page-meta f-mono"></div></div>
+            <div id="history-year-selector"></div>
+            <div id="history-year-stats"></div>
+            <div id="history-year-shape"></div>
+            <div id="history-month-rail"></div>
+            <div id="history-month-detail"></div>
+            <div id="history-categories"></div>
+            <div id="history-top-regulars"></div>
+        </div>
+    </div>
 
-                <div class="grid grid-cols-3 gap-2">
-                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="history-change-percent" style="color:var(--md-sys-color-on-surface)">—</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Change</p>
-                    </div>
-                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="history-active-days" style="color:var(--md-sys-color-on-surface)">0 days</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
-                    </div>
-                    <div class="text-center py-2 px-2 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                        <p class="text-sm font-bold" id="history-daily-avg" style="color:var(--md-sys-color-on-surface)">$0/day</p>
-                        <p class="text-xs" style="color:var(--md-sys-color-outline)">Average</p>
-                    </div>
-                </div>
-            </div>
-            <!-- Category Breakdown List -->
-            <div class="mb-6">
-                <h3 class="text-base font-semibold mb-3" style="color:var(--md-sys-color-on-surface)">Categories</h3>
-                <div id="history-category-grid" class="space-y-3">
-                    <div class="text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>
-                </div>
-            </div>
-            <!-- Year Overview -->
-            <details class="card mb-6">
-                <summary class="p-4 flex justify-between items-center cursor-pointer list-none">
-                    <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">calendar_today</span>
-                        <h3 class="text-base font-semibold" style="color:var(--md-sys-color-on-surface)">2026 Overview</h3>
-                    </div>
-                    <span class="material-symbols-rounded text-sm" style="color:var(--md-sys-color-outline)">expand_more</span>
-                </summary>
-                <div class="px-4 pb-4">
-                    <!-- 4-Pill Summary -->
-                    <div class="grid grid-cols-4 gap-2 mb-4">
-                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                            <p class="text-sm font-bold" id="year-total-spent" style="color:var(--md-sys-color-on-surface)">$0</p>
-                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Total</p>
-                        </div>
-                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                            <p class="text-sm font-bold" id="year-avg-month" style="color:var(--md-sys-color-on-surface)">$0</p>
-                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Avg/Mo</p>
-                        </div>
-                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                            <p class="text-sm font-bold" id="year-saved" style="color:var(--md-sys-color-on-surface)">$0</p>
-                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Saved</p>
-                        </div>
-                        <div class="text-center py-2 px-1 rounded-lg" style="background:var(--md-sys-color-surface-container-high)">
-                            <p class="text-sm font-bold" id="year-active-months" style="color:var(--md-sys-color-on-surface)">0 mos</p>
-                            <p class="text-xs" style="color:var(--md-sys-color-outline)">Active</p>
-                        </div>
-                    </div>
+    <!-- TRIP DASHBOARD -->
+    <div id="trip-dashboard-page" class="page-content hidden">
+        <div class="trip-page max-w-lg mx-auto px-4 pt-2 pb-24">
+            <div id="trip-dashboard-content"></div>
+        </div>
+    </div>
 
-                    <!-- Monthly Breakdown -->
-                    <div id="year-monthly-breakdown" class="space-y-2">
-                        <div class="text-center py-4 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
-                    </div>
-                </div>
-            </details>
-
-            <!-- Category Distribution with Toggle -->
-            <div class="card p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-semibold" style="color:var(--md-sys-color-on-surface)">Top Categories</h3>
-                    <div class="flex rounded-lg p-0.5" style="background:var(--md-sys-color-surface-container-high)">
-                        <button onclick="toggleCategoryView('month')" id="category-month-btn" class="category-toggle-btn active px-3 py-1 text-xs font-medium rounded-md" style="background:var(--md-sys-color-primary);color:white">Month</button>
-                        <button onclick="toggleCategoryView('year')" id="category-year-btn" class="category-toggle-btn px-3 py-1 text-xs font-medium rounded-md" style="color:var(--md-sys-color-outline)">Year</button>
-                    </div>
-                </div>
-                <div id="category-distribution" class="space-y-3">
-                    <div class="text-center py-6 text-sm" style="color:var(--md-sys-color-outline)">No data available</div>
-                </div>
-            </div>
+    <!-- TRIPS INDEX -->
+    <div id="trips-page" class="page-content hidden">
+        <div class="trips-page max-w-lg mx-auto px-4 pt-2 pb-24">
+            <div id="trips-page-content"></div>
+        </div>
+        <!-- New-trip modal -->
+        <div id="new-trip-modal" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)">
+            <div id="new-trip-modal-card" class="w-full max-w-lg mx-auto" style="background:var(--surface);border-radius:28px 28px 0 0;padding:20px"></div>
         </div>
     </div>
 
