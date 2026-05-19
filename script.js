@@ -3491,3 +3491,47 @@ ExpenseTracker.prototype.renderHomeInsight = function ({ monthName, aim, monthTo
     root.classList.remove('hidden');
     root.innerHTML = `<div class="insight"><span class="material-symbols-rounded">tips_and_updates</span><div class="text">${msg}</div></div>`;
 };
+
+ExpenseTracker.prototype.renderHomeTripTeaser = function () {
+    const root = document.getElementById('home-trip-teaser');
+    if (!root) return;
+    if (!window.tripsStore) { root.classList.add('hidden'); return; }
+    const today = this.getLocalDateString(new Date());
+    const active = window.tripsStore.getActiveTrip(today);
+    const upcoming = window.tripsStore.getUpcomingTrips(today).sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+    const trip = active || upcoming;
+    if (!trip) { root.classList.add('hidden'); return; }
+
+    const state = window.tripsStore.getState(trip, today);
+    let line2;
+    if (state === 'ACTIVE') {
+        const total = this.getTripExpenses(trip.id).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const day = this._tripDayNumber(trip, today);
+        const totalDays = this._tripTotalDays(trip);
+        line2 = `$${Math.round(total)} of $${trip.budget} · DAY ${day} / ${totalDays} · view trip →`;
+    } else {
+        const days = Math.max(0, Math.ceil((this.parseLocalDate(trip.startDate) - this.parseLocalDate(today)) / 86400000));
+        line2 = `STARTS IN ${days} DAYS · ${this._formatTripDates(trip)}`;
+    }
+    root.classList.remove('hidden');
+    root.innerHTML = `
+<div class="section-head"><h2 class="section-title">Coming up</h2><a href="#" class="section-link" onclick="event.preventDefault();showPage('trips')">All trips →</a></div>
+<div class="trip-teaser" onclick="window.tripsStore._focusTripId='${trip.id}';showPage('trip-dashboard')">
+    <div class="icon"><span class="material-symbols-rounded">flight_takeoff</span></div>
+    <div class="body"><div class="name">${this._escapeHtml(trip.name)}</div><div class="when">${line2}</div></div>
+    <span class="chev material-symbols-rounded">chevron_right</span>
+</div>`;
+};
+
+ExpenseTracker.prototype._tripDayNumber = function (trip, today) {
+    const start = this.parseLocalDate(trip.startDate);
+    const t = this.parseLocalDate(today);
+    return Math.max(1, Math.floor((t - start) / 86400000) + 1);
+};
+ExpenseTracker.prototype._tripTotalDays = function (trip) {
+    return Math.floor((this.parseLocalDate(trip.endDate) - this.parseLocalDate(trip.startDate)) / 86400000) + 1;
+};
+ExpenseTracker.prototype._formatTripDates = function (trip) {
+    const fmt = d => this.parseLocalDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    return `${fmt(trip.startDate)} – ${fmt(trip.endDate)}`;
+};
