@@ -2301,12 +2301,18 @@ class ExpenseTracker {
     // Idempotent: never overwrites an explicit tripId.
     backfillTripTags() {
         if (!window.tripsStore) return 0;
-        const trips = window.tripsStore.all();
-        if (trips.length === 0) return 0;
+        const today = this.getLocalDateString(new Date());
+        // Only auto-tag against trips that are currently ACTIVE per the state
+        // machine in trips.js. Ended trips (manual `endedAt` or past `endDate`)
+        // and upcoming trips are intentionally skipped: a trip that has ended
+        // is frozen in time, and an upcoming trip auto-tags via the on-submit
+        // path once it becomes active.
+        const activeTrips = window.tripsStore.all().filter(t => window.tripsStore.getState(t, today) === 'ACTIVE');
+        if (activeTrips.length === 0) return 0;
         const updated = [];
         for (const e of this.expenses) {
             if (e.tripId) continue;
-            const t = trips.find(t => e.date >= t.startDate && e.date <= t.endDate);
+            const t = activeTrips.find(t => e.date >= t.startDate && e.date <= t.endDate);
             if (t) { e.tripId = t.id; updated.push(e); }
         }
         if (updated.length > 0) {
