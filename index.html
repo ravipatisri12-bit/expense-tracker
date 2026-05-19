@@ -21,8 +21,10 @@
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/trips.js"></script>
+    <script src="js/wishlist.js"></script>
     <script src="js/forecast.js"></script>
     <script src="js/trip-dashboard.js"></script>
+    <script src="js/plan-page.js"></script>
     <script src="js/merchant-frequency.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/llm-integration.js"></script>
@@ -61,11 +63,12 @@
         </div>
     </header>
 
-    <!-- Bottom Navigation - 4 tabs -->
+    <!-- Bottom Navigation - 5 tabs -->
     <nav class="fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style="background:var(--surface);border-top:1px solid var(--line)">
-        <div class="grid grid-cols-4">
+        <div class="grid grid-cols-5">
             <button id="nav-home" onclick="showPage('dashboard')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">home</span><span class="text-xs">Home</span></button>
             <button id="nav-trips" onclick="showPage('trips')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">flight</span><span class="text-xs">Trips</span></button>
+            <button id="nav-plan" onclick="showPage('plan')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">event_note</span><span class="text-xs">Plan</span></button>
             <button id="nav-txns" onclick="showPage('transactions')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">receipt_long</span><span class="text-xs">Txns</span></button>
             <button id="nav-history" onclick="showPage('history')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">history</span><span class="text-xs">History</span></button>
         </div>
@@ -118,6 +121,23 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- PLAN PAGE -->
+    <div id="plan-page" class="page-content hidden">
+        <div class="plan-page max-w-lg mx-auto px-4 pt-2 pb-24 flex flex-col gap-4">
+            <div class="app-header" style="padding:8px 4px 4px"><h1 class="page-title f-serif">Plan</h1><div id="plan-page-meta" class="page-meta f-mono"></div></div>
+            <div id="plan-header-strip"></div>
+            <div id="plan-lane-section"></div>
+            <div id="plan-month-detail" class="hidden"></div>
+            <div id="plan-wishlist-section"></div>
+        </div>
+        <button id="plan-fab" class="fab-plan hidden" onclick="openWishModal()" aria-label="Add wish"><span class="material-symbols-rounded">add</span></button>
+    </div>
+
+    <!-- WISH ADD/EDIT MODAL -->
+    <div id="wish-modal" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this) closeWishModal()">
+        <div id="wish-modal-card" class="w-full max-w-lg mx-auto" style="background:var(--surface);border-radius:28px 28px 0 0;padding:20px"></div>
     </div>
 
     <!-- HISTORY PAGE -->
@@ -187,6 +207,21 @@
                         <div class="flex items-center gap-1"><span class="text-sm" style="color:var(--md-sys-color-outline)">$</span><input type="number" id="setting-insurance" step="0.01" placeholder="0" class="text-right text-sm font-semibold" style="background:transparent;border:none;outline:none;color:var(--md-sys-color-on-surface);width:80px"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Savings Target (Spending Planner) -->
+            <div class="card p-5">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-rounded" style="color:#ffb84d;font-size:20px">event_note</span>
+                    <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Savings target</h3>
+                </div>
+                <p class="text-xs mb-3 ml-7" style="color:var(--md-sys-color-outline)">Anchors the <a href="#" onclick="event.preventDefault();showPage('plan')" style="color:#ffb84d">Spending Planner</a>. We'll keep your year-end rate above this.</p>
+                <div class="flex items-center gap-3 px-1">
+                    <span class="text-xs" style="color:var(--md-sys-color-outline);font-family:'JetBrains Mono'">30%</span>
+                    <input type="range" min="30" max="70" step="1" id="setting-savings-target" oninput="document.getElementById('savings-target-display').textContent=this.value+'%'" style="flex:1;accent-color:#ffb84d;height:4px">
+                    <span class="text-xs" style="color:var(--md-sys-color-outline);font-family:'JetBrains Mono'">70%</span>
+                </div>
+                <div class="text-center text-sm font-semibold mt-2" style="color:#ffb84d" id="savings-target-display">50%</div>
             </div>
 
             <!-- Category Budgets (sliders) -->
