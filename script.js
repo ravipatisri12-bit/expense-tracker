@@ -3476,8 +3476,24 @@ ExpenseTracker.prototype._gmailLastSyncedLabel = function () {
     return `Synced ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 };
 
-window.onAutoAddTap = window.onAutoAddTap || function () {
-    if (window.emailParser && typeof window.emailParser.sync === 'function') window.emailParser.sync();
+window.onAutoAddTap = async function () {
+    const dot = document.querySelector('#dashboard-page .sync-dot');
+    const status = document.querySelector('#dashboard-page .sync-status');
+    if (status) status.querySelector('span:not(.sync-dot)') ? status.lastChild.textContent = ' Syncing…' : (status.textContent = ' Syncing…');
+    if (!window.emailParser || !window.emailParser.sync) {
+        if (typeof showNotification === 'function') showNotification('Gmail import not available', 'error');
+        return;
+    }
+    try {
+        await window.emailParser.sync();
+    } catch (e) {
+        // sync() handles 401 internally via refreshGmailToken; bubble any other error.
+        console.error('Auto-add sync error:', e);
+        if (dot) dot.classList.add('warn');
+        if (typeof showNotification === 'function') showNotification('Sync failed', 'error');
+        return;
+    }
+    if (window.expenseTracker) window.expenseTracker.updateDashboard();
 };
 
 ExpenseTracker.prototype.renderHomeInsight = function ({ monthName, aim, monthTotalRegular, SOFT }) {
