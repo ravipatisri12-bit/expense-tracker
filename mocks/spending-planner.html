@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgr — Spending Planner mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Inter+Tight:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded&display=swap">
+<style>
+:root {
+  --bg: #0a0c14;
+  --surface: #131520;
+  --surface-2: #1c1f2c;
+  --on-surface: #e6e8f0;
+  --on-surface-mute: #8b8fa3;
+  --on-surface-faint: #4a4f63;
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  --m-1: #8b9eff;
+  --m-grad: linear-gradient(120deg, #667eea 0%, #b66cff 100%);
+  --trip-2: #00f2fe;
+  --trip-grad: linear-gradient(120deg, #4facfe 0%, #00f2fe 100%);
+
+  /* Plan palette — deliberate warm yellow */
+  --plan-1: #ffb84d;
+  --plan-2: #ffd166;
+  --plan-grad: linear-gradient(120deg, #ffb84d 0%, #ffd166 100%);
+
+  --good: #43e97b;
+  --warn: #ffb84d;
+  --bad: #ff7080;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: 'Inter Tight', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body {
+  background:
+    radial-gradient(1100px 600px at 0% -10%, rgba(255,184,77,0.08), transparent 55%),
+    radial-gradient(900px 500px at 110% 30%, rgba(255,209,102,0.05), transparent 60%),
+    var(--bg);
+}
+
+.phone-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 32px 16px 64px; gap: 16px; }
+.phone-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--on-surface-faint); }
+.phone {
+  width: 393px; max-width: 100%;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 8px rgba(255,255,255,0.02), 0 60px 140px rgba(0,0,0,0.6);
+  overflow: hidden; position: relative;
+}
+
+/* Header */
+.status-bar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 13px; font-weight: 600; }
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.status-bar .right .material-symbols-rounded { font-size: 14px; }
+
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 14px; }
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand .glyph { width: 28px; height: 28px; border-radius: 8px; background: var(--m-grad); display: flex; align-items: center; justify-content: center; }
+.brand .glyph .material-symbols-rounded { color: #1a103a; font-size: 16px; font-variation-settings: 'FILL' 1, 'wght' 600; }
+.brand-name { font-weight: 300; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+.brand-name .accent { color: var(--m-1); font-weight: 600; }
+.user-pill { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4f3a8a, #7d4ec1); border: 1.5px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; }
+
+/* Plan page */
+.plan-page { padding: 0 16px 24px; }
+.page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px 14px; }
+.page-toolbar .page-title { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin: 0; }
+.page-toolbar-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-surface-mute); }
+
+/* Header strip */
+.plan-header {
+  background: linear-gradient(160deg, rgba(255,184,77,0.10), rgba(255,209,102,0.02) 60%), var(--surface);
+  border: 1px solid rgba(255,184,77,0.18);
+  border-radius: 22px;
+  padding: 18px 20px;
+}
+.plan-header-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.plan-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--plan-1); display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.plan-eyebrow .material-symbols-rounded { font-size: 13px; }
+.plan-headline { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; }
+.plan-headline strong { background: var(--plan-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; cursor: pointer; }
+.plan-meta { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--on-surface-mute); margin-top: 8px; letter-spacing: 0.04em; }
+.plan-meta .delta-good { color: var(--good); }
+.plan-meta .delta-bad { color: var(--bad); }
+
+/* Calendar lane */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 4px 10px; }
+.section-title { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; letter-spacing: -0.01em; }
+.section-meta { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--on-surface-mute); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.lane-wrap { margin: 0 -16px; padding: 0 16px 4px; overflow-x: auto; scrollbar-width: none; }
+.lane-wrap::-webkit-scrollbar { display: none; }
+.lane { display: flex; gap: 10px; padding-bottom: 8px; }
+.month-card {
+  flex: 0 0 auto;
+  width: 168px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.month-card.expanded {
+  border-color: rgba(255,184,77,0.4);
+  background: linear-gradient(160deg, rgba(255,184,77,0.08), rgba(255,209,102,0.02) 60%), var(--surface);
+}
+.month-card.empty { background: rgba(255,255,255,0.015); border: 1px dashed var(--line-strong); }
+
+.mc-head { display: flex; align-items: baseline; justify-content: space-between; }
+.mc-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+.mc-year { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--on-surface-faint); letter-spacing: 0.08em; }
+.mc-room {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 500;
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(67,233,123,0.08); color: var(--good);
+  border: 1px solid rgba(67,233,123,0.20);
+  align-self: flex-start;
+}
+.mc-room.tight { background: rgba(255,184,77,0.08); color: var(--warn); border-color: rgba(255,184,77,0.25); }
+.mc-room.over { background: rgba(255,112,128,0.08); color: var(--bad); border-color: rgba(255,112,128,0.25); }
+
+.mc-items { display: flex; flex-direction: column; gap: 4px; }
+.mc-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); font-size: 11.5px; }
+.mc-item .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-item .cost { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--on-surface-mute); flex: 0 0 auto; }
+.mc-item.must { border-color: rgba(255,184,77,0.30); }
+.mc-item.want { border-color: rgba(139,158,255,0.20); }
+.mc-empty-line { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-faint); padding: 4px 0; }
+
+.mc-bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.04); overflow: hidden; margin-top: auto; }
+.mc-bar > span { display: block; height: 100%; background: var(--plan-grad); border-radius: 999px; }
+.mc-foot { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--on-surface-faint); letter-spacing: 0.04em; }
+
+/* Expanded month detail (full-width) */
+.month-detail-card {
+  margin-top: 12px;
+  background: var(--surface);
+  border: 1px solid rgba(255,184,77,0.22);
+  border-radius: 22px;
+  padding: 20px;
+}
+.md-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--plan-1); }
+.md-name { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; letter-spacing: -0.02em; margin-top: 4px; }
+.md-name .yr { font-family: 'Inter Tight'; font-size: 14px; color: var(--on-surface-mute); margin-left: 6px; }
+.md-table { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.md-table .row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+.md-table .row.divider { border-top: 1px dashed var(--line-strong); padding-top: 10px; margin-top: 6px; }
+.md-table .row.divider.solid { border-top: 1px solid var(--line-strong); }
+.md-table .label { color: var(--on-surface-mute); }
+.md-table .value { color: var(--on-surface); }
+.md-table .row.total .label, .md-table .row.total .value { font-family: 'Fraunces', serif; font-size: 16px; }
+.md-table .row.total .value { font-weight: 500; }
+.md-items { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line); }
+.md-items-head { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-surface-mute); margin-bottom: 4px; }
+.md-item-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; background: rgba(255,255,255,0.025); border: 1px solid var(--line); border-radius: 10px; }
+.md-item-row .badge { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.06em; text-transform: uppercase; }
+.md-item-row .badge.must { background: rgba(255,184,77,0.10); color: var(--warn); border: 1px solid rgba(255,184,77,0.24); }
+.md-item-row .badge.want { background: rgba(139,158,255,0.10); color: var(--m-1); border: 1px solid rgba(139,158,255,0.20); }
+.md-item-row .badge.nice { background: rgba(255,255,255,0.05); color: var(--on-surface-mute); border: 1px solid var(--line); }
+.md-item-row .name { font-size: 13px; }
+.md-item-row .cost { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--on-surface-mute); }
+.md-item-row .x { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; color: var(--on-surface-faint); cursor: pointer; }
+.md-item-row .x .material-symbols-rounded { font-size: 14px; }
+
+/* Wishlist below */
+.wl-tabs { display: inline-flex; background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.wl-tabs button { background: transparent; border: 0; padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--on-surface-mute); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 7px; cursor: pointer; font-family: 'Inter Tight'; }
+.wl-tabs button.active { background: rgba(255,184,77,0.15); color: var(--plan-1); }
+
+.wl-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 8px 8px 12px; margin-top: 12px; }
+.wl-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px; align-items: center;
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(255,255,255,0.025); border: 1px solid var(--line);
+  margin-top: 6px;
+}
+.wl-row:first-child { margin-top: 4px; }
+.wl-row.unscheduled { border-color: rgba(255,184,77,0.18); }
+.wl-row.bought { opacity: 0.55; }
+.wl-row .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.wl-row .badge { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; padding: 3px 7px; border-radius: 5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.wl-row .badge.must { background: rgba(255,184,77,0.10); color: var(--warn); border: 1px solid rgba(255,184,77,0.24); }
+.wl-row .badge.want { background: rgba(139,158,255,0.10); color: var(--m-1); border: 1px solid rgba(139,158,255,0.20); }
+.wl-row .badge.nice { background: rgba(255,255,255,0.05); color: var(--on-surface-mute); border: 1px solid var(--line); }
+.wl-row .name { font-size: 14px; font-weight: 500; }
+.wl-row .name .note { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-mute); display: block; margin-top: 1px; letter-spacing: 0.04em; }
+.wl-row .cost { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+.wl-row .month-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 8px; border-radius: 6px; background: rgba(255,184,77,0.10); color: var(--plan-1); border: 1px solid rgba(255,184,77,0.22); letter-spacing: 0.08em; }
+.wl-row .month-chip.bought { background: rgba(67,233,123,0.10); color: var(--good); border-color: rgba(67,233,123,0.22); }
+.wl-row .find-spot {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; padding: 6px 10px; border-radius: 6px;
+  background: var(--plan-grad); color: #2a1d05; border: 0; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.wl-row .actions { display: flex; gap: 4px; }
+.wl-row .actions button { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--on-surface-mute); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.wl-row .actions button .material-symbols-rounded { font-size: 14px; }
+.wl-section-label { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--on-surface-faint); padding: 12px 8px 6px; display: flex; align-items: center; gap: 8px; }
+.wl-section-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, var(--line-strong), transparent); }
+
+/* FAB */
+.fab {
+  position: fixed; bottom: 88px; right: 16px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--plan-grad); color: #2a1d05;
+  border: 0; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 32px rgba(255,184,77,0.32);
+  z-index: 5;
+}
+.fab .material-symbols-rounded { font-size: 26px; font-variation-settings: 'FILL' 1, 'wght' 700; }
+
+/* Bottom nav (5 tabs) */
+.bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 4px 18px; background: var(--surface); border-top: 1px solid var(--line); position: relative; z-index: 4; }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 2px; border-radius: 12px; color: var(--on-surface-faint); font-size: 9.5px; letter-spacing: 0.04em; }
+.nav-btn .material-symbols-rounded { font-size: 21px; }
+.nav-btn.active { color: var(--plan-1); }
+.nav-btn.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+
+@media (min-width: 900px) {
+  .phone-wrap { flex-direction: row; justify-content: center; align-items: flex-start; gap: 32px; padding-top: 48px; }
+  .phone-stack { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-wrap">
+
+  <div class="phone-stack">
+    <div class="phone-label">Spending Planner · default view</div>
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </div>
+      </div>
+
+      <div class="app-header">
+        <div class="brand">
+          <div class="glyph"><span class="material-symbols-rounded">account_balance_wallet</span></div>
+          <div class="brand-name">LEDG<span class="accent">R</span></div>
+        </div>
+        <div class="user-pill">S</div>
+      </div>
+
+      <div class="plan-page">
+
+        <div class="page-toolbar">
+          <h1 class="page-title">Plan</h1>
+          <div class="page-toolbar-meta">May 19 · ‹ → Dec ›</div>
+        </div>
+
+        <div class="plan-header">
+          <div class="plan-eyebrow"><span class="material-symbols-rounded">event_note</span> Spending planner</div>
+          <div class="plan-headline">Targeting <strong>50% saved</strong> by Dec</div>
+          <div class="plan-meta">
+            on track <span class="delta-good">+1.2pt headroom</span> · 8 items planned · 3 unplaced
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title">Months ahead</h2>
+          <span class="section-meta">tap a month</span>
+        </div>
+
+        <div class="lane-wrap">
+          <div class="lane">
+
+            <div class="month-card expanded">
+              <div class="mc-head">
+                <div class="mc-name">May<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$870 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-item must"><span class="name">New York trip</span><span class="cost">$500</span></div>
+              </div>
+              <div class="mc-bar"><span style="width:42%"></span></div>
+              <div class="mc-foot">42% saved</div>
+            </div>
+
+            <div class="month-card">
+              <div class="mc-head">
+                <div class="mc-name">Jun<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$1,210 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-empty-line">— nothing planned —</div>
+              </div>
+              <div class="mc-bar"><span style="width:55%"></span></div>
+              <div class="mc-foot">55% saved</div>
+            </div>
+
+            <div class="month-card">
+              <div class="mc-head">
+                <div class="mc-name">Jul<span class="mc-year">  '26</span></div>
+                <div class="mc-room tight">$80 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-item want"><span class="name">iPad Air</span><span class="cost">$400</span></div>
+                <div class="mc-item want"><span class="name">Concert ticket</span><span class="cost">$80</span></div>
+              </div>
+              <div class="mc-bar"><span style="width:48%"></span></div>
+              <div class="mc-foot">48% saved</div>
+            </div>
+
+            <div class="month-card">
+              <div class="mc-head">
+                <div class="mc-name">Aug<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$680 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-item want"><span class="name">Tahoe weekend</span><span class="cost">$300</span></div>
+              </div>
+              <div class="mc-bar"><span style="width:52%"></span></div>
+              <div class="mc-foot">52% saved</div>
+            </div>
+
+            <div class="month-card empty">
+              <div class="mc-head">
+                <div class="mc-name">Sep<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$1,150 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-empty-line">— nothing planned —</div>
+              </div>
+              <div class="mc-bar"><span style="width:53%"></span></div>
+              <div class="mc-foot">53% saved</div>
+            </div>
+
+            <div class="month-card empty">
+              <div class="mc-head">
+                <div class="mc-name">Oct<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$1,150 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-empty-line">— nothing planned —</div>
+              </div>
+              <div class="mc-bar"><span style="width:53%"></span></div>
+              <div class="mc-foot">53% saved</div>
+            </div>
+
+            <div class="month-card empty">
+              <div class="mc-head">
+                <div class="mc-name">Nov<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$1,150 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-empty-line">— nothing planned —</div>
+              </div>
+              <div class="mc-bar"><span style="width:53%"></span></div>
+              <div class="mc-foot">53% saved</div>
+            </div>
+
+            <div class="month-card empty">
+              <div class="mc-head">
+                <div class="mc-name">Dec<span class="mc-year">  '26</span></div>
+                <div class="mc-room">$1,150 room</div>
+              </div>
+              <div class="mc-items">
+                <div class="mc-empty-line">— nothing planned —</div>
+              </div>
+              <div class="mc-bar"><span style="width:53%"></span></div>
+              <div class="mc-foot">53% saved</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Expanded month detail -->
+        <div class="month-detail-card">
+          <div class="md-eyebrow">EXPANDED · MAY 2026</div>
+          <div class="md-name">May<span class="yr">2026</span></div>
+          <div class="md-table">
+            <div class="row"><span class="label">Income</span><span class="value">$8,600</span></div>
+            <div class="row"><span class="label">− Fixed (rent + utilities + insurance)</span><span class="value">−$2,567</span></div>
+            <div class="row"><span class="label">− Typical variable (3-mo trailing avg)</span><span class="value">−$2,427</span></div>
+            <div class="row divider"><span class="label">Available room</span><span class="value">$3,606</span></div>
+            <div class="row"><span class="label">− Planted: New York trip</span><span class="value">−$500</span></div>
+            <div class="row divider solid total"><span class="label">After commitments</span><span class="value">$3,106  (36%)</span></div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title">Wishlist</h2>
+          <div class="wl-tabs">
+            <button class="active">Open</button>
+            <button>Bought</button>
+            <button>Cancelled</button>
+          </div>
+        </div>
+
+        <div class="wl-card">
+
+          <div class="wl-section-label">Unscheduled · 3</div>
+
+          <div class="wl-row unscheduled">
+            <div class="left">
+              <span class="badge nice">nice</span>
+              <div class="name">AirPods Max
+                <span class="note">won't fit until Oct at current pace</span>
+              </div>
+            </div>
+            <span class="cost">$549</span>
+            <button class="find-spot">FIND A SPOT</button>
+          </div>
+
+          <div class="wl-row unscheduled">
+            <div class="left">
+              <span class="badge want">want</span>
+              <div class="name">Couch upgrade
+                <span class="note">probably Sep or later</span>
+              </div>
+            </div>
+            <span class="cost">$1,200</span>
+            <button class="find-spot">FIND A SPOT</button>
+          </div>
+
+          <div class="wl-row unscheduled">
+            <div class="left">
+              <span class="badge nice">nice</span>
+              <div class="name">Ski trip Vermont</div>
+            </div>
+            <span class="cost">$800</span>
+            <button class="find-spot">FIND A SPOT</button>
+          </div>
+
+          <div class="wl-section-label">Scheduled · 4</div>
+
+          <div class="wl-row">
+            <div class="left">
+              <span class="badge must">must</span>
+              <div class="name">New York trip
+                <span class="note">May 25 → Jun 1</span>
+              </div>
+            </div>
+            <span class="cost">$500</span>
+            <span class="month-chip">MAY</span>
+            <div class="actions">
+              <button title="bought"><span class="material-symbols-rounded">check</span></button>
+              <button title="more"><span class="material-symbols-rounded">more_horiz</span></button>
+            </div>
+          </div>
+
+          <div class="wl-row">
+            <div class="left">
+              <span class="badge want">want</span>
+              <div class="name">iPad Air</div>
+            </div>
+            <span class="cost">$400</span>
+            <span class="month-chip">JUL</span>
+            <div class="actions">
+              <button title="bought"><span class="material-symbols-rounded">check</span></button>
+              <button title="more"><span class="material-symbols-rounded">more_horiz</span></button>
+            </div>
+          </div>
+
+          <div class="wl-row">
+            <div class="left">
+              <span class="badge want">want</span>
+              <div class="name">Concert ticket</div>
+            </div>
+            <span class="cost">$80</span>
+            <span class="month-chip">JUL</span>
+            <div class="actions">
+              <button title="bought"><span class="material-symbols-rounded">check</span></button>
+              <button title="more"><span class="material-symbols-rounded">more_horiz</span></button>
+            </div>
+          </div>
+
+          <div class="wl-row">
+            <div class="left">
+              <span class="badge want">want</span>
+              <div class="name">Tahoe weekend</div>
+            </div>
+            <span class="cost">$300</span>
+            <span class="month-chip">AUG</span>
+            <div class="actions">
+              <button title="bought"><span class="material-symbols-rounded">check</span></button>
+              <button title="more"><span class="material-symbols-rounded">more_horiz</span></button>
+            </div>
+          </div>
+
+          <div class="wl-section-label">Bought · 1</div>
+
+          <div class="wl-row bought">
+            <div class="left">
+              <span class="badge nice">nice</span>
+              <div class="name">Hair cut
+                <span class="note">May 6 · auto-imported</span>
+              </div>
+            </div>
+            <span class="cost">$60</span>
+            <span class="month-chip bought">DONE</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <button class="fab" aria-label="Add wish"><span class="material-symbols-rounded">add</span></button>
+
+      <div class="bottom-nav">
+        <div class="nav-btn"><span class="material-symbols-rounded">home</span><span>Home</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">flight</span><span>Trips</span></div>
+        <div class="nav-btn active"><span class="material-symbols-rounded">event_note</span><span>Plan</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">receipt_long</span><span>Txns</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">history</span><span>History</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
+</content>
+</invoke>
