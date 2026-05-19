@@ -3719,3 +3719,166 @@ window.showHomeTrendPopover = function (barEl) {
         const p = barEl.querySelector('.bar-popover'); if (p) p.remove();
     }
 };
+
+// ============================================================
+// Track C — Add Expense redesign
+// ============================================================
+
+ExpenseTracker.prototype.renderAddExpensePage = function () {
+    const trip = window.tripsStore && window.tripsStore.getActiveTrip(this.getLocalDateString(new Date()));
+    this._addPageState = this._addPageState || {};
+    if (this._addPageState.untag === undefined) this._addPageState.untag = false;
+    const tagging = trip && !this._addPageState.untag;
+
+    this._renderAddTripBanner(trip, tagging);
+    this._renderSmartCard();
+    this._renderAddToggle();
+    this._renderManualCard(tagging);
+};
+
+ExpenseTracker.prototype._renderAddTripBanner = function (trip, tagging) {
+    const root = document.getElementById('add-trip-banner');
+    if (!root) return;
+    if (!trip) { root.classList.add('hidden'); root.innerHTML = ''; return; }
+    root.classList.remove('hidden');
+    const day = this._tripDayNumber(trip, this.getLocalDateString(new Date()));
+    const totalDays = this._tripTotalDays(trip);
+    if (tagging) {
+        root.innerHTML = `<div class="trip-banner"><span class="material-symbols-rounded">flight</span> Auto-tagging to <strong>${this._escapeHtml(trip.name)}</strong> · day ${day} of ${totalDays} <span class="toggle" onclick="onToggleTripTag()">Untag</span></div>`;
+    } else {
+        root.innerHTML = `<div class="trip-banner muted"><span class="material-symbols-rounded">block</span> Saving as regular expenses <span class="toggle" onclick="onToggleTripTag()">Re-tag</span></div>`;
+    }
+};
+
+window.onToggleTripTag = function () {
+    if (!window.expenseTracker._addPageState) window.expenseTracker._addPageState = { untag: false };
+    window.expenseTracker._addPageState.untag = !window.expenseTracker._addPageState.untag;
+    window.expenseTracker.renderAddExpensePage();
+};
+
+ExpenseTracker.prototype._renderSmartCard = function () {
+    const root = document.getElementById('add-smart-card');
+    if (!root) return;
+    root.innerHTML = `
+<div class="smart-card">
+    <div class="smart-head">
+        <div class="smart-title"><div class="icon"><span class="material-symbols-rounded">bolt</span></div> Type it naturally</div>
+        <div class="smart-meta">SMART · GEMINI</div>
+    </div>
+    <textarea id="smart-input" class="smart-textarea" rows="4" placeholder="One per line — example:&#10;&#10;14 joes pizza&#10;subway 8&#10;moma 30 yesterday"></textarea>
+    <div id="smart-parse-preview" class="parse-preview hidden"></div>
+    <div class="smart-actions">
+        <button class="ghost" id="smart-clear-btn" onclick="onSmartClear()"><span class="material-symbols-rounded">backspace</span> Clear</button>
+        <button class="primary" id="parse-smart-input"><span class="material-symbols-rounded">check</span> <span id="smart-cta-label">Add expenses</span></button>
+    </div>
+    <div class="smart-examples">
+        <span class="ex" style="color:var(--on-surface-faint)">examples →</span>
+        <span class="ex" onclick="onSmartExampleTap('14 chipotle')">14 chipotle</span>
+        <span class="ex" onclick="onSmartExampleTap('uber 23')">uber 23</span>
+        <span class="ex" onclick="onSmartExampleTap('75 amazon 5/12')">75 amazon 5/12</span>
+    </div>
+</div>`;
+    if (window.smartInput && typeof window.smartInput.attachLivePreview === 'function') {
+        window.smartInput.attachLivePreview();
+    }
+};
+
+window.onSmartClear = function () {
+    const ta = document.getElementById('smart-input');
+    if (ta) { ta.value = ''; ta.dispatchEvent(new Event('input')); ta.focus(); }
+};
+window.onSmartExampleTap = function (txt) {
+    const ta = document.getElementById('smart-input'); if (!ta) return;
+    ta.value = (ta.value ? ta.value.trimEnd() + '\n' : '') + txt;
+    ta.dispatchEvent(new Event('input'));
+    ta.focus();
+};
+
+ExpenseTracker.prototype._renderAddToggle = function () {
+    const root = document.getElementById('add-toggle');
+    if (!root) return;
+    const expanded = this._addPageState && this._addPageState.manualOpen;
+    root.innerHTML = `
+<div class="or-toggle">
+    <div class="line"></div>
+    <button class="${expanded ? 'expanded' : ''}" onclick="onToggleManualForm()"><span class="material-symbols-rounded">${expanded ? 'expand_less' : 'tune'}</span> ${expanded ? 'Hide fields' : 'Use fields'}</button>
+    <div class="line"></div>
+</div>`;
+};
+
+window.onToggleManualForm = function () {
+    const t = window.expenseTracker;
+    t._addPageState = t._addPageState || {};
+    t._addPageState.manualOpen = !t._addPageState.manualOpen;
+    t._renderAddToggle();
+    const card = document.getElementById('add-manual-card');
+    if (card) card.classList.toggle('hidden', !t._addPageState.manualOpen);
+    if (t._addPageState.manualOpen) t._renderManualCard(t._addPageState.tagging || false);
+};
+
+ExpenseTracker.prototype._renderManualCard = function (tagging) {
+    const root = document.getElementById('add-manual-card');
+    if (!root) return;
+    if (!this._addPageState.manualOpen) { root.classList.add('hidden'); return; }
+    root.classList.remove('hidden');
+    const today = this.getLocalDateString(new Date());
+    const yest = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return this.getLocalDateString(d); })();
+    const named = (offset) => { const d = new Date(); d.setDate(d.getDate() - offset); return { date: this.getLocalDateString(d), label: d.toLocaleDateString('en-US', { weekday: 'short' }) }; };
+    const chips = [
+        { date: today, label: 'Today', icon: 'today' },
+        { date: yest, label: 'Yesterday' },
+        named(2), named(3)
+    ];
+    const sel = this._addPageState.date || today;
+    const chipHtml = chips.map(c => `<span class="chip ${c.date === sel ? 'active' : ''}" onclick="onPickAddDate('${c.date}')">${c.icon ? `<span class="material-symbols-rounded">${c.icon}</span>` : ''}${c.label}</span>`).join('');
+    const cats = [
+        ['Food', 'food', 'restaurant'], ['Coffee', 'coffee', 'local_cafe'], ['Transit', 'transit', 'directions_subway'],
+        ['Shopping', 'shop', 'shopping_bag'], ['Entertainment', 'fun', 'movie'], ['Bills', 'bills', 'receipt'], ['Other', 'other', 'more_horiz']
+    ];
+    const selCat = this._addPageState.category || '';
+    const catHtml = cats.map(([name, cls, icon]) => `<div class="cat-tile ${cls} ${selCat === name ? 'active' : ''}" onclick="onPickAddCategory('${name}')"><div class="glyph"><span class="material-symbols-rounded">${icon}</span></div>${name === 'Entertainment' ? 'Fun' : name === 'Shopping' ? 'Shop' : name}</div>`).join('');
+    const submitText = tagging ? 'Add to trip' : 'Add expense';
+    const submitCls = tagging ? 'submit-fab trip' : 'submit-fab';
+    root.innerHTML = `
+<div class="manual-card">
+    <div class="manual-row"><label class="manual-label">Amount</label><div class="amount-field"><span class="currency">$</span><input type="number" id="manual-amount" step="0.01" placeholder="0" inputmode="decimal"></div></div>
+    <div class="manual-row"><label class="manual-label">Description</label><input id="manual-desc" type="text" class="text-field" placeholder="What did you spend on?"></div>
+    <div class="manual-row"><label class="manual-label">When</label><div class="date-chips">${chipHtml}<label class="chip-pick"><span class="material-symbols-rounded">calendar_month</span><input type="date" id="manual-date-picker" value="${sel}" onchange="onPickAddDate(this.value)"></label></div></div>
+    <div class="manual-row"><label class="manual-label">Category</label><div class="cat-grid">${catHtml}</div></div>
+    <button class="${submitCls}" onclick="onManualSubmit()"><span class="material-symbols-rounded">add</span> ${submitText}</button>
+</div>`;
+};
+
+window.onPickAddDate = function (date) {
+    window.expenseTracker._addPageState.date = date;
+    window.expenseTracker._renderManualCard(window.expenseTracker._addPageState.tagging || false);
+};
+window.onPickAddCategory = function (cat) {
+    window.expenseTracker._addPageState.category = cat;
+    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(window.expenseTracker.getLocalDateString(new Date())) && !window.expenseTracker._addPageState.untag);
+    window.expenseTracker._renderManualCard(tagging);
+};
+window.onManualSubmit = async function () {
+    const t = window.expenseTracker;
+    const amount = parseFloat(document.getElementById('manual-amount').value);
+    const description = document.getElementById('manual-desc').value.trim();
+    const category = t._addPageState.category;
+    const date = t._addPageState.date || t.getLocalDateString(new Date());
+    if (!amount || !description || !category) { alert('Amount, description, and category are required.'); return; }
+    const activeTrip = window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date()));
+    const tripId = (activeTrip && !t._addPageState.untag) ? activeTrip.id : null;
+    const expense = { id: Date.now(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId };
+    t.expenses.push(expense);
+    t.saveExpenses();
+    if (window.currentUser) await t.saveExpenseToFirebase(expense);
+    t._addPageState.category = '';
+    document.getElementById('manual-amount').value = '';
+    document.getElementById('manual-desc').value = '';
+    if (window.gamification) { window.gamification.addXP(5, 'expense-logged'); window.gamification.updateStreak(); }
+    showNotification('Expense added!', 'success');
+    t.updateDashboard();
+    t.renderTransactions();
+    t.showPage(tripId ? 'trip-dashboard' : 'dashboard');
+};
+
+window.renderAddExpensePage = function () { if (window.expenseTracker) window.expenseTracker.renderAddExpensePage(); };
