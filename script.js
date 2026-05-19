@@ -3402,3 +3402,21 @@ function closeCategoryDetail() {
         modal.remove();
     }
 }
+
+// ====================================================================
+// TRACK A — Home page renderers
+// ====================================================================
+
+ExpenseTracker.prototype.renderHomeGreeting = function (now) {
+    const root = document.querySelector('#dashboard-page .greeting');
+    if (!root) return;
+    const hour = now.getHours();
+    const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const name = (window.currentUser && window.currentUser.displayName) ? window.currentUser.displayName.split(' ')[0] : 'there';
+    const dayLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    root.querySelector('.hi').innerHTML = `${greet}, <em>${this._escapeHtml(name)}</em>`;
+    root.querySelector('.day').textContent = dayLabel.replace(',', ' ·').toUpperCase();
+};
+ExpenseTracker.prototype._escapeHtml = function (s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+};
