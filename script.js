@@ -281,9 +281,9 @@ class ExpenseTracker {
 
     setupEventListeners() {
         // Form submission
-        document.getElementById('expense-form').addEventListener('submit', (e) => {
+        safeAddEventListener('expense-form', 'submit', async (e) => {
             e.preventDefault();
-            this.addExpense();
+            await this.addExpense();
         });
 
         // Edit form submission
@@ -570,7 +570,7 @@ class ExpenseTracker {
     }
 
     clearForm() {
-        document.getElementById('expense-form').reset();
+        const _f = document.getElementById('expense-form'); if (_f) _f.reset();
         // Reset date to today
         this.initializeDateField();
     }
