@@ -4246,10 +4246,18 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     const root = document.getElementById('history-year-stats');
     if (!root) return;
     const Y = this._historyState.year;
+    const now = new Date();
     const all = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
     const totalSpent = all.reduce((s, e) => s + Number(e.amount || 0), 0);
     const monthsActive = new Set(all.map(e => this.parseLocalDate(e.date).getMonth())).size;
-    const avgPerMo = monthsActive > 0 ? Math.round(totalSpent / monthsActive) : 0;
+    // Avg/mo uses ELAPSED months-of-year (current year up to current month;
+    // past year = 12; future year = 0). This matches how income is computed
+    // so the Spent / Saved / Income trio are all on the same denominator.
+    let monthsElapsed;
+    if (Y < now.getFullYear()) monthsElapsed = 12;
+    else if (Y === now.getFullYear()) monthsElapsed = now.getMonth() + 1;
+    else monthsElapsed = 0;
+    const avgPerMo = monthsElapsed > 0 ? Math.round(totalSpent / monthsElapsed) : 0;
     const income = (this.getYearIncome ? this.getYearIncome(Y) : 0) || 0;
     const saved = income - totalSpent;
     const rate = income > 0 ? Math.max(0, Math.round((saved / income) * 100)) : 0;
@@ -4258,7 +4266,7 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     <div class="stat-card spent">
         <div class="lbl">Spent · ${Y}</div>
         <div class="num"><span class="currency">$</span>${Math.round(totalSpent).toLocaleString()}</div>
-        <div class="sub">$${avgPerMo.toLocaleString()}/mo avg · ${monthsActive} mo${monthsActive === 1 ? '' : 's'}</div>
+        <div class="sub">$${avgPerMo.toLocaleString()}/mo avg · ${monthsActive} active mo${monthsActive === 1 ? '' : 's'}</div>
     </div>
     <div class="stat-card saved">
         ${income > 0 ? `<div class="rate">${rate}%</div>` : ''}
