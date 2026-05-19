@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgr — History redesign mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Inter+Tight:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded">
+<style>
+:root {
+  --bg: #0a0c14;
+  --surface: #131520;
+  --surface-2: #1c1f2c;
+  --surface-3: #262a39;
+  --on-surface: #e6e8f0;
+  --on-surface-mute: #8b8fa3;
+  --on-surface-faint: #4a4f63;
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  --m-1: #8b9eff;
+  --m-2: #c79bff;
+  --m-grad: linear-gradient(120deg, #667eea 0%, #b66cff 100%);
+
+  --trip-1: #4facfe;
+  --trip-2: #00f2fe;
+  --trip-grad: linear-gradient(120deg, #4facfe 0%, #00f2fe 100%);
+
+  --saved: #43e97b;
+  --saved-grad: linear-gradient(120deg, #43e97b 0%, #38f9d7 100%);
+
+  --cat-food: #ff9c66;
+  --cat-coffee: #ffd166;
+  --cat-transit: #66d9ff;
+  --cat-shop: #7ee7c1;
+  --cat-fun: #c89eff;
+  --cat-bills: #b0b6c8;
+  --cat-trips: #00f2fe;
+  --cat-other: #8b8fa3;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: 'Inter Tight', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  min-height: 100vh;
+}
+body {
+  background:
+    radial-gradient(1100px 600px at 0% -10%, rgba(102,126,234,0.08), transparent 55%),
+    radial-gradient(900px 500px at 110% 30%, rgba(67,233,123,0.05), transparent 60%),
+    var(--bg);
+}
+
+.phone-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 64px;
+  gap: 16px;
+}
+.phone-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}
+
+.phone {
+  width: 393px;
+  max-width: 100%;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 0 0 8px rgba(255,255,255,0.02),
+    0 60px 140px rgba(0,0,0,0.6);
+  overflow: hidden;
+  position: relative;
+}
+
+.status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.status-bar .right .material-symbols-rounded { font-size: 14px; }
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 20px 6px;
+}
+.page-title {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.page-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+}
+
+.history-page { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 18px; }
+
+/* ---- Year selector ---- */
+.year-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+.year-selector button {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--on-surface-mute);
+  display: flex; align-items: center; justify-content: center;
+}
+.year-selector button .material-symbols-rounded { font-size: 16px; }
+.year-selector button:disabled { opacity: 0.3; }
+.year-name {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Year stat cards ---- */
+.year-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.stat-card {
+  position: relative;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.stat-card.spent {
+  background:
+    linear-gradient(160deg, rgba(102,126,234,0.10), rgba(255,255,255,0) 60%),
+    var(--surface);
+  border-color: rgba(102,126,234,0.18);
+}
+.stat-card.saved {
+  background:
+    linear-gradient(160deg, rgba(67,233,123,0.10), rgba(255,255,255,0) 60%),
+    var(--surface);
+  border-color: rgba(67,233,123,0.18);
+}
+.stat-card .lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+}
+.stat-card .num {
+  font-family: 'Fraunces', serif;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  margin-top: 6px;
+  line-height: 1;
+}
+.stat-card .num .currency {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--on-surface-mute);
+  vertical-align: 0.4em;
+  margin-right: 2px;
+}
+.stat-card.spent .num {
+  background: linear-gradient(180deg, #ffffff, #d2c4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-card.saved .num {
+  background: linear-gradient(180deg, #ffffff, #b8f0d2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-card .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--on-surface-mute);
+  margin-top: 8px;
+  letter-spacing: 0.04em;
+}
+.stat-card .rate {
+  position: absolute;
+  top: 18px; right: 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--saved);
+  background: rgba(67,233,123,0.10);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Year shape (12 months as bars) ---- */
+.year-shape {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px 18px 14px;
+}
+.shape-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.shape-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.shape-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--on-surface-mute);
+  text-transform: uppercase;
+}
+
+.shape-bars {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+  align-items: end;
+  height: 100px;
+  margin-bottom: 6px;
+}
+.shape-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  position: relative;
+  cursor: pointer;
+}
+.shape-bar {
+  border-radius: 4px 4px 1px 1px;
+  background: linear-gradient(180deg, var(--m-1), #6655c8);
+  position: relative;
+  min-height: 3px;
+}
+.shape-bar.empty { background: rgba(255,255,255,0.04); border: 1px dashed var(--line-strong); border-bottom: 0; }
+.shape-col.selected .shape-bar {
+  background: var(--m-grad);
+  box-shadow: 0 0 14px rgba(139,158,255,0.45);
+}
+/* small trip overlay on a month — tiny cyan slice on top */
+.shape-col .trip-cap {
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;
+  background: var(--trip-grad);
+  border-radius: 2px;
+  bottom: var(--trip-bottom, 0);
+  pointer-events: none;
+}
+.shape-labels {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.shape-labels span {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--on-surface-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.shape-labels span.selected { color: var(--m-1); font-weight: 600; }
+
+.shape-foot {
+  display: flex; justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--on-surface-mute);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  letter-spacing: 0.04em;
+}
+.shape-foot .item { display: flex; flex-direction: column; gap: 2px; }
+.shape-foot .item .v { color: var(--on-surface); font-weight: 500; }
+
+/* ---- Month selector pill row ---- */
+.month-rail {
+  margin: 0 -16px;
+  padding: 4px 16px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.month-rail::-webkit-scrollbar { display: none; }
+.month-rail .pill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  margin-right: 6px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  min-width: 60px;
+}
+.month-rail .pill .m {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--on-surface);
+}
+.month-rail .pill .v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--on-surface-faint);
+}
+.month-rail .pill.empty { opacity: 0.5; }
+.month-rail .pill.empty .v { color: var(--on-surface-faint); }
+.month-rail .pill.active {
+  background: rgba(139,158,255,0.12);
+  border-color: rgba(139,158,255,0.4);
+  box-shadow: 0 0 0 3px rgba(139,158,255,0.06);
+}
+.month-rail .pill.active .m { color: var(--m-1); }
+.month-rail .pill.active .v { color: var(--m-1); }
+
+/* ---- Selected month detail ---- */
+.month-detail {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.month-detail::before {
+  content: "";
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(102,126,234,0.10), transparent 70%);
+  pointer-events: none;
+}
+.md-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--m-1);
+}
+.md-name {
+  font-family: 'Fraunces', serif;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+  background: linear-gradient(180deg, #ffffff, #d2c4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.md-name .yr { font-family: 'Inter Tight'; font-size: 16px; font-weight: 400; -webkit-text-fill-color: var(--on-surface-mute); margin-left: 6px; }
+
+.md-numbers {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+}
+.md-total {
+  font-family: 'Fraunces', serif;
+  font-size: 50px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.md-total .currency { font-family: 'Inter Tight'; font-size: 24px; color: var(--on-surface-mute); vertical-align: 0.36em; margin-right: 2px; font-weight: 400; }
+.md-vs {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--on-surface-mute);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+.md-vs strong { color: var(--on-surface); font-weight: 600; display: block; }
+
+.md-breakdown {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.md-breakdown .row {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+}
+.md-breakdown .row .swatch { width: 6px; height: 6px; border-radius: 50%; }
+.md-breakdown .row .name { color: var(--on-surface-mute); flex: 1; letter-spacing: 0.02em; }
+.md-breakdown .row .amt { color: var(--on-surface); }
+
+/* ---- Category breakdown for the year ---- */
+.cat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px 20px 8px;
+}
+.cat-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cat-head .title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+.cat-head .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--on-surface-mute);
+  text-transform: uppercase;
+}
+
+.cat-row {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.03);
+}
+.cat-row:last-child { border-bottom: 0; }
+.cat-name { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--on-surface); }
+.cat-name .dot { width: 8px; height: 8px; border-radius: 50%; }
+.cat-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.cat-bar > span { display: block; height: 100%; border-radius: 999px; }
+.cat-amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--on-surface); white-space: nowrap; }
+.cat-amt .pct { color: var(--on-surface-mute); margin-left: 6px; font-size: 11px; }
+
+/* Trips this year */
+.trips-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.trips-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.trips-head .title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+.trips-head .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--on-surface-mute);
+  text-transform: uppercase;
+}
+.trip-mini {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(0,242,254,0.04);
+  border: 1px solid rgba(0,242,254,0.12);
+}
+.trip-mini .icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--trip-grad);
+  display: flex; align-items: center; justify-content: center;
+}
+.trip-mini .icon .material-symbols-rounded { color: #001b1f; font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 600; }
+.trip-mini .body .name {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.trip-mini .body .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--on-surface-mute);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.trip-mini .amt { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: var(--on-surface); white-space: nowrap; }
+.trip-mini .amt .of { color: var(--on-surface-mute); font-weight: 400; }
+.trip-mini.over { border-color: rgba(255,184,77,0.25); background: rgba(255,184,77,0.04); }
+.trip-mini.over .amt { color: var(--warn); }
+
+/* Bottom nav */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px 8px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  color: var(--on-surface-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.nav-btn .material-symbols-rounded { font-size: 22px; }
+.nav-btn.active { color: var(--m-1); }
+.nav-btn.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+
+@media (min-width: 900px) {
+  .phone-wrap {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 32px;
+    padding-top: 48px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-wrap">
+
+  <div class="phone-stack">
+    <div class="phone-label">History · 2026 in review</div>
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </div>
+      </div>
+
+      <div class="app-header">
+        <h1 class="page-title">History</h1>
+        <div class="page-meta">2026</div>
+      </div>
+
+      <div class="history-page">
+
+        <!-- Year selector -->
+        <div class="year-selector">
+          <button><span class="material-symbols-rounded">chevron_left</span></button>
+          <span class="year-name">2026</span>
+          <button disabled><span class="material-symbols-rounded">chevron_right</span></button>
+        </div>
+
+        <!-- Year stats -->
+        <div class="year-stats">
+          <div class="stat-card spent">
+            <div class="lbl">Spent · 2026</div>
+            <div class="num"><span class="currency">$</span>4,820</div>
+            <div class="sub">$402/mo avg · 5 mos</div>
+          </div>
+          <div class="stat-card saved">
+            <div class="rate">24%</div>
+            <div class="lbl">Saved · 2026</div>
+            <div class="num"><span class="currency">$</span>1,580</div>
+            <div class="sub">income $6,400</div>
+          </div>
+        </div>
+
+        <!-- Year shape -->
+        <div class="year-shape">
+          <div class="shape-head">
+            <div class="shape-title">Year shape</div>
+            <div class="shape-meta">12 months · spent</div>
+          </div>
+          <div class="shape-bars">
+            <div class="shape-col"><div class="shape-bar" style="height:48%"></div><div class="trip-cap" style="--trip-bottom: 30%; height: 5%"></div></div>
+            <div class="shape-col"><div class="shape-bar" style="height:60%"></div><div class="trip-cap" style="--trip-bottom: 38%; height: 6%"></div></div>
+            <div class="shape-col"><div class="shape-bar" style="height:42%"></div></div>
+            <div class="shape-col"><div class="shape-bar" style="height:78%"></div><div class="trip-cap" style="--trip-bottom: 50%; height: 8%"></div></div>
+            <div class="shape-col selected"><div class="shape-bar" style="height:62%"></div><div class="trip-cap" style="--trip-bottom: 40%; height: 7%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+            <div class="shape-col"><div class="shape-bar empty" style="height:14%"></div></div>
+          </div>
+          <div class="shape-labels">
+            <span>JAN</span><span>FEB</span><span>MAR</span><span>APR</span>
+            <span class="selected">MAY</span><span>JUN</span><span>JUL</span><span>AUG</span>
+            <span>SEP</span><span>OCT</span><span>NOV</span><span>DEC</span>
+          </div>
+          <div class="shape-foot">
+            <div class="item"><span>HIGH</span><span class="v">$1,247 · APR</span></div>
+            <div class="item" style="text-align:center"><span>AVG</span><span class="v">$402/mo</span></div>
+            <div class="item" style="text-align:right"><span>LOW</span><span class="v">$390 · JAN</span></div>
+          </div>
+        </div>
+
+        <!-- Month picker pills -->
+        <div class="month-rail">
+          <div class="pill"><span class="m">JAN</span><span class="v">$390</span></div>
+          <div class="pill"><span class="m">FEB</span><span class="v">$485</span></div>
+          <div class="pill"><span class="m">MAR</span><span class="v">$340</span></div>
+          <div class="pill"><span class="m">APR</span><span class="v">$1,247</span></div>
+          <div class="pill active"><span class="m">MAY</span><span class="v">$920</span></div>
+          <div class="pill empty"><span class="m">JUN</span><span class="v">—</span></div>
+          <div class="pill empty"><span class="m">JUL</span><span class="v">—</span></div>
+          <div class="pill empty"><span class="m">AUG</span><span class="v">—</span></div>
+          <div class="pill empty"><span class="m">SEP</span><span class="v">—</span></div>
+        </div>
+
+        <!-- Selected month detail -->
+        <div class="month-detail">
+          <div class="md-eyebrow">SELECTED · 18 days in</div>
+          <div class="md-name">May<span class="yr">2026</span></div>
+
+          <div class="md-numbers">
+            <div class="md-total"><span class="currency">$</span>920</div>
+            <div class="md-vs">
+              <strong>+$580 vs Apr</strong>
+              <span style="opacity:0.7">↑ 70% higher</span>
+            </div>
+          </div>
+
+          <div class="md-breakdown">
+            <div class="row">
+              <span class="swatch" style="background:var(--m-1)"></span>
+              <span class="name">Regular spending</span>
+              <span class="amt">$640</span>
+            </div>
+            <div class="row">
+              <span class="swatch" style="background:var(--trip-2)"></span>
+              <span class="name">Trips · 1</span>
+              <span class="amt">$280</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories — year aggregated -->
+        <div class="cat-card">
+          <div class="cat-head">
+            <div class="title">Where the year went</div>
+            <div class="meta">2026 · all spend</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-name"><span class="dot" style="background:var(--cat-food)"></span>Food</div>
+            <div class="cat-bar"><span style="width:35%; background:var(--cat-food)"></span></div>
+            <div class="cat-amt">$1,720<span class="pct">35%</span></div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-name"><span class="dot" style="background:var(--cat-trips)"></span>Trips</div>
+            <div class="cat-bar"><span style="width:29%; background:var(--cat-trips)"></span></div>
+            <div class="cat-amt">$1,400<span class="pct">29%</span></div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-name"><span class="dot" style="background:var(--cat-coffee)"></span>Coffee</div>
+            <div class="cat-bar"><span style="width:18%; background:var(--cat-coffee)"></span></div>
+            <div class="cat-amt">$890<span class="pct">18%</span></div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-name"><span class="dot" style="background:var(--cat-transit)"></span>Transit</div>
+            <div class="cat-bar"><span style="width:13%; background:var(--cat-transit)"></span></div>
+            <div class="cat-amt">$640<span class="pct">13%</span></div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-name"><span class="dot" style="background:var(--cat-shop)"></span>Shopping</div>
+            <div class="cat-bar"><span style="width:5%; background:var(--cat-shop)"></span></div>
+            <div class="cat-amt">$170<span class="pct">5%</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-btn"><span class="material-symbols-rounded">home</span><span>Home</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">flight</span><span>Trips</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">receipt_long</span><span>Txns</span></div>
+        <div class="nav-btn active"><span class="material-symbols-rounded">history</span><span>History</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

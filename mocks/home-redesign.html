@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgr — Home redesign mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Inter+Tight:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded">
+<style>
+:root {
+  --bg: #0a0c14;
+  --surface: #131520;
+  --surface-2: #1c1f2c;
+  --surface-3: #262a39;
+  --on-surface: #e6e8f0;
+  --on-surface-mute: #8b8fa3;
+  --on-surface-faint: #4a4f63;
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  /* Monthly palette — violet / indigo */
+  --m-1: #8b9eff;
+  --m-2: #c79bff;
+  --m-grad: linear-gradient(120deg, #667eea 0%, #b66cff 100%);
+  --m-glow: 0 0 24px rgba(139,158,255,0.20);
+
+  /* Trip — cyan, used as secondary accent for the trip teaser card */
+  --trip-1: #4facfe;
+  --trip-2: #00f2fe;
+  --trip-grad: linear-gradient(120deg, #4facfe 0%, #00f2fe 100%);
+
+  /* Categories */
+  --cat-food: #ff9c66;
+  --cat-coffee: #ffd166;
+  --cat-transit: #66d9ff;
+  --cat-shop: #7ee7c1;
+  --cat-fun: #c89eff;
+  --cat-bills: #b0b6c8;
+  --cat-other: #8b8fa3;
+
+  /* Status / mood */
+  --good: #43e97b;
+  --warn: #ffb84d;
+  --bad: #ff7080;
+  --no-spend: #43e97b;
+  --essential: #8b9eff;
+  --wants: #ffb84d;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: 'Inter Tight', -apple-system, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  min-height: 100vh;
+}
+
+body {
+  background:
+    radial-gradient(1100px 600px at 0% -10%, rgba(102,126,234,0.10), transparent 55%),
+    radial-gradient(900px 500px at 110% 30%, rgba(182,108,255,0.06), transparent 60%),
+    var(--bg);
+}
+
+.phone-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 64px;
+  gap: 16px;
+}
+
+.phone-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}
+
+.phone {
+  width: 393px;
+  max-width: 100%;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 0 0 8px rgba(255,255,255,0.02),
+    0 60px 140px rgba(0,0,0,0.6);
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+.status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.status-bar .right .material-symbols-rounded { font-size: 14px; }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 14px;
+}
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand .glyph {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--m-grad);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--m-glow);
+}
+.brand .glyph .material-symbols-rounded { color: #1a103a; font-size: 16px; font-variation-settings: 'FILL' 1, 'wght' 600; }
+.brand-name {
+  font-weight: 300;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.brand-name .accent { color: var(--m-1); font-weight: 600; }
+
+.user-pill {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f3a8a, #7d4ec1);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+  color: white;
+}
+
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--on-surface-mute);
+  background: transparent;
+  border: 0;
+}
+.icon-btn .material-symbols-rounded { font-size: 22px; }
+
+/* ---------- Home page ---------- */
+.home-page { padding: 0 16px 24px; }
+
+/* Greeting band */
+.greeting {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px 14px;
+}
+.greeting .hi {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--on-surface);
+}
+.greeting .hi em {
+  font-style: italic;
+  font-weight: 500;
+  background: var(--m-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.greeting .day {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--on-surface-mute);
+}
+
+/* Hero — monthly identity */
+.month-hero {
+  position: relative;
+  padding: 22px 22px 20px;
+  border-radius: 28px;
+  background:
+    linear-gradient(160deg, rgba(102,126,234,0.16) 0%, rgba(182,108,255,0.04) 38%, transparent 70%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border: 1px solid rgba(102,126,234,0.18);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* atmospheric grain */
+.month-hero::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(400px 200px at 80% -10%, rgba(182,108,255,0.18), transparent 70%),
+    radial-gradient(300px 180px at -10% 110%, rgba(102,126,234,0.14), transparent 70%);
+  pointer-events: none;
+}
+.month-hero > * { position: relative; }
+
+.month-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--m-1);
+  margin-bottom: 8px;
+}
+.month-eyebrow .material-symbols-rounded { font-size: 13px; }
+
+.month-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #ffffff 0%, #d2c4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.month-name .year {
+  font-size: 18px;
+  color: var(--on-surface-mute);
+  -webkit-text-fill-color: var(--on-surface-mute);
+  background: none;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  margin-left: 8px;
+}
+
+.month-sub {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+.month-day-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--line-strong);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.month-meta { font-size: 12.5px; color: var(--on-surface-mute); }
+
+.month-numbers {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 12px;
+}
+.month-spent {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--on-surface);
+}
+.month-spent .currency { font-size: 30px; color: var(--on-surface-mute); margin-right: 2px; vertical-align: 0.34em; font-family: 'Inter Tight', sans-serif; font-weight: 400; }
+.month-of {
+  font-size: 12.5px;
+  color: var(--on-surface-mute);
+  text-align: right;
+  line-height: 1.5;
+}
+.month-of strong { color: var(--on-surface); font-weight: 600; }
+
+/* Dual-cap progress bar */
+.cap-bar {
+  margin-top: 18px;
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  overflow: visible;
+}
+.cap-bar .fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 64%;
+  border-radius: 999px;
+  background: var(--m-grad);
+  box-shadow: 0 0 18px rgba(139,158,255,0.5);
+}
+.cap-bar .marker-soft {
+  position: absolute;
+  top: -4px; bottom: -4px;
+  left: 50%;
+  width: 2px;
+  background: var(--good);
+  border-radius: 1px;
+}
+.cap-bar .marker-soft::after {
+  content: "$1k soft";
+  position: absolute;
+  top: -16px;
+  left: 50%; transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--good);
+  white-space: nowrap;
+}
+.cap-bar .marker-hard {
+  position: absolute;
+  top: -4px; bottom: -4px;
+  right: 0;
+  width: 2px;
+  background: var(--bad);
+  border-radius: 1px;
+}
+.cap-bar .marker-hard::after {
+  content: "$2k hard";
+  position: absolute;
+  top: -16px; right: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--bad);
+  white-space: nowrap;
+}
+
+/* Pace cells */
+.month-pace {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.pace-cell {
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.pace-cell .label {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+}
+.pace-cell .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.pace-cell.aim {
+  border-color: rgba(139,158,255,0.25);
+  background: rgba(139,158,255,0.05);
+}
+.pace-cell.aim .value { color: var(--m-1); }
+
+/* CTA row */
+.cta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.cta-primary, .cta-secondary {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 13px 10px;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: -0.005em;
+  border: 0; cursor: pointer;
+  white-space: nowrap;
+}
+.cta-primary {
+  background: var(--m-grad);
+  color: #1a103a;
+  box-shadow: 0 8px 30px rgba(102,126,234,0.25);
+}
+.cta-secondary {
+  background: rgba(255,255,255,0.04);
+  color: var(--m-1);
+  border: 1px solid var(--line-strong);
+}
+.cta-primary .material-symbols-rounded,
+.cta-secondary .material-symbols-rounded { font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 600; }
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--on-surface-mute);
+}
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 6px rgba(67,233,123,0.5);
+}
+
+/* Insight strip — same shape as trip mode */
+.insight {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(102,126,234,0.07), rgba(182,108,255,0.02));
+  border: 1px solid rgba(102,126,234,0.18);
+  border-radius: 18px;
+}
+.insight .material-symbols-rounded { color: var(--m-1); font-size: 22px; font-variation-settings: 'FILL' 1; }
+.insight .text { font-size: 13px; line-height: 1.45; }
+.insight .text strong { color: var(--m-1); font-weight: 600; }
+
+/* Section header */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 26px 4px 10px;
+}
+.section-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.section-meta {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--on-surface-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.section-link {
+  font-size: 11.5px;
+  color: var(--m-1);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Habit card — streak + tile row + check-in */
+.habit-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px 18px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.habit-card::after {
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,156,102,0.10), transparent 70%);
+  pointer-events: none;
+}
+.habit-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.habit-streak {
+  display: flex; align-items: center; gap: 8px;
+}
+.habit-streak .flame {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(255,156,102,0.16), rgba(255,209,102,0.06));
+  border: 1px solid rgba(255,156,102,0.22);
+  display: flex; align-items: center; justify-content: center;
+}
+.habit-streak .flame .material-symbols-rounded { color: var(--cat-food); font-size: 18px; font-variation-settings: 'FILL' 1; }
+.habit-streak .num {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.habit-streak .num span { font-family: 'Inter Tight'; font-size: 11px; color: var(--on-surface-mute); margin-left: 4px; font-weight: 400; }
+.habit-best {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}
+
+.habit-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 14px 0 0;
+}
+.habit-tile {
+  aspect-ratio: 1.2 / 1;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-faint);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  position: relative;
+}
+.habit-tile.no-spend { background: rgba(67,233,123,0.12); color: var(--no-spend); border-color: rgba(67,233,123,0.26); }
+.habit-tile.essential { background: rgba(139,158,255,0.12); color: var(--essential); border-color: rgba(139,158,255,0.26); }
+.habit-tile.wants { background: rgba(255,184,77,0.12); color: var(--wants); border-color: rgba(255,184,77,0.26); }
+.habit-tile.today { box-shadow: 0 0 0 2px rgba(255,255,255,0.1) inset; }
+.habit-day-label {
+  font-family: 'Inter Tight';
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+  position: absolute;
+  bottom: 3px;
+  font-weight: 500;
+}
+
+.checkin {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.checkin button {
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: 1px solid;
+  background: transparent;
+  font-family: 'Inter Tight';
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+.checkin .ck-no { border-color: rgba(67,233,123,0.25); color: var(--no-spend); background: rgba(67,233,123,0.06); }
+.checkin .ck-es { border-color: rgba(139,158,255,0.25); color: var(--essential); background: rgba(139,158,255,0.06); }
+.checkin .ck-wt { border-color: rgba(255,184,77,0.25); color: var(--wants); background: rgba(255,184,77,0.06); }
+.checkin button.suggested { box-shadow: 0 0 0 2px currentColor inset; opacity: 1; }
+
+/* Trip teaser strip */
+.trip-teaser {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(120deg, rgba(0,242,254,0.08), rgba(79,172,254,0.03) 60%, transparent),
+    var(--surface);
+  border: 1px solid rgba(0,242,254,0.18);
+  cursor: pointer;
+}
+.trip-teaser .icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--trip-grad);
+  display: flex; align-items: center; justify-content: center;
+}
+.trip-teaser .icon .material-symbols-rounded { color: #001b1f; font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 600; }
+.trip-teaser .body { display: flex; flex-direction: column; gap: 2px; }
+.trip-teaser .body .name {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.trip-teaser .body .when {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--trip-2);
+  letter-spacing: 0.04em;
+}
+.trip-teaser .chev {
+  color: var(--on-surface-faint);
+}
+
+/* Categories — donut + list */
+.cat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px 20px;
+}
+.cat-row { display: grid; grid-template-columns: 110px 1fr; gap: 18px; align-items: center; }
+.donut {
+  width: 110px; height: 110px;
+  position: relative;
+}
+.donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.donut .center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.donut .total {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.donut .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+}
+
+.cat-legend {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.cat-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 10px; align-items: center;
+}
+.cat-item .swatch { width: 10px; height: 10px; border-radius: 3px; }
+.cat-item .name { font-size: 12.5px; color: var(--on-surface); }
+.cat-item .amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--on-surface-mute); }
+
+/* Spending trend — bars with toggle, pace line, mini stats */
+.trend-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px 20px 18px;
+}
+.trend-toggle {
+  display: inline-flex;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 14px;
+}
+.trend-toggle button {
+  background: transparent;
+  border: 0;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: 'Inter Tight';
+}
+.trend-toggle button.active {
+  background: rgba(139,158,255,0.15);
+  color: var(--m-1);
+}
+
+.trend-compare {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 14px;
+  font-size: 11.5px;
+  color: var(--on-surface-mute);
+}
+.trend-compare .delta { color: var(--good); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.trend-compare .delta.over { color: var(--bad); }
+
+.trend-chart-wrap {
+  position: relative;
+  height: 110px;
+  padding: 16px 0 12px;
+}
+.trend-pace-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  border-top: 1px dashed rgba(139,158,255,0.4);
+  z-index: 1;
+}
+.trend-pace-label {
+  position: absolute;
+  right: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--m-1);
+  background: var(--surface);
+  padding: 0 4px;
+  letter-spacing: 0.04em;
+  transform: translateY(-50%);
+}
+
+.trend-bars {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 31), 1fr);
+  gap: 2px;
+  align-items: end;
+  z-index: 2;
+}
+.trend-bars.weekly { grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 0 16px; }
+
+.trend-bars > .b {
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, rgba(139,158,255,0.85), rgba(102,85,200,0.45));
+  position: relative;
+}
+.trend-bars > .b.over {
+  background: linear-gradient(180deg, rgba(255,112,128,0.9), rgba(255,140,140,0.4));
+}
+.trend-bars > .b.future { background: rgba(255,255,255,0.04); border: 1px dashed var(--line-strong); border-bottom: 0; }
+.trend-bars > .b.today {
+  background: var(--m-grad);
+  box-shadow: 0 0 12px rgba(139,158,255,0.5);
+}
+.trend-bars > .b.tapped {
+  background: linear-gradient(180deg, #ffffff, #c9d3ff);
+  box-shadow: 0 0 14px rgba(255,255,255,0.4);
+}
+.bar-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.95);
+  color: #16182a;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  z-index: 5;
+  pointer-events: none;
+}
+.bar-popover .day { color: #6e7383; font-weight: 500; margin-right: 6px; }
+.bar-popover::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border: 5px solid transparent;
+  border-top-color: rgba(255,255,255,0.95);
+}
+
+.trend-foot {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--on-surface-faint);
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+.trend-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.trend-stat .lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+}
+.trend-stat .val {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+}
+.trend-stat .meta {
+  font-size: 10px;
+  color: var(--on-surface-faint);
+  margin-top: 1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Recent transactions */
+.txn-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+}
+.txn-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.txn-row:last-child { border-bottom: 0; }
+.txn-row .swatch {
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+.txn-row .swatch .material-symbols-rounded { font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 500; }
+.swatch.food   { color: var(--cat-food);   background: rgba(255,156,102,0.10); }
+.swatch.coffee { color: var(--cat-coffee); background: rgba(255,209,102,0.10); }
+.swatch.transit{ color: var(--cat-transit);background: rgba(102,217,255,0.10); }
+.swatch.shop   { color: var(--cat-shop);   background: rgba(126,231,193,0.10); }
+.swatch.bills  { color: var(--cat-bills);  background: rgba(176,182,200,0.10); }
+.txn-row .desc { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.txn-row .desc .name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.txn-row .desc .meta { font-size: 11px; color: var(--on-surface-mute); }
+.txn-row .desc .meta .src { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 6px; background: rgba(255,255,255,0.04); border-radius: 4px; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-surface-faint); }
+.txn-row .amount { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; }
+
+/* Bottom nav */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px 8px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  color: var(--on-surface-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.nav-btn .material-symbols-rounded { font-size: 22px; }
+.nav-btn.active { color: var(--m-1); }
+.nav-btn.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+
+/* ----- desktop layout ----- */
+@media (min-width: 900px) {
+  .phone-wrap {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 32px;
+    padding-top: 48px;
+  }
+  .phone-stack { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-wrap">
+
+  <div class="phone-stack">
+    <div class="phone-label">Home · monthly mode (no active trip)</div>
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </div>
+      </div>
+
+      <div class="app-header">
+        <div class="brand">
+          <div class="glyph"><span class="material-symbols-rounded">account_balance_wallet</span></div>
+          <div class="brand-name">LEDG<span class="accent">R</span></div>
+        </div>
+        <div class="user-pill">S</div>
+      </div>
+
+      <div class="home-page">
+
+        <!-- Greeting -->
+        <div class="greeting">
+          <div class="hi">Good morning, <em>Sreekar</em></div>
+          <div class="day">MON · MAY 18</div>
+        </div>
+
+        <!-- Hero -->
+        <div class="month-hero">
+          <div class="month-eyebrow">
+            <span class="material-symbols-rounded">calendar_month</span>
+            Monthly view
+          </div>
+          <div class="month-name">May<span class="year">2026</span></div>
+          <div class="month-sub">
+            <div class="month-day-pill">DAY 18 / 31</div>
+            <div class="month-meta">13 days left this month</div>
+          </div>
+
+          <div class="month-numbers">
+            <div class="month-spent">
+              <span class="currency">$</span>640
+            </div>
+            <div class="month-of">
+              of <strong>$1,000</strong> soft target<br>
+              <span style="opacity:0.6">$360 left</span>
+            </div>
+          </div>
+
+          <div class="cap-bar">
+            <div class="fill"></div>
+            <div class="marker-soft"></div>
+            <div class="marker-hard"></div>
+          </div>
+
+          <div class="month-pace">
+            <div class="pace-cell">
+              <div class="label">Today's spend</div>
+              <div class="value">$42</div>
+            </div>
+            <div class="pace-cell">
+              <div class="label">Avg / day</div>
+              <div class="value">$36</div>
+            </div>
+            <div class="pace-cell aim">
+              <div class="label">Aim today</div>
+              <div class="value">$28</div>
+            </div>
+          </div>
+
+          <div class="cta-row">
+            <button class="cta-primary"><span class="material-symbols-rounded">add</span> Add</button>
+            <button class="cta-secondary"><span class="material-symbols-rounded">bolt</span> Auto add</button>
+          </div>
+          <div class="sync-status">
+            <span class="sync-dot"></span>
+            Synced 9:14 AM · 3 new from inbox
+          </div>
+        </div>
+
+        <!-- Insight -->
+        <div class="insight">
+          <span class="material-symbols-rounded">tips_and_updates</span>
+          <div class="text">You're <strong>$8/day over a steady pace</strong>. Spending under <strong>$28</strong> today keeps May under your $1k soft target.</div>
+        </div>
+
+        <!-- Trip teaser -->
+        <div class="section-head">
+          <h2 class="section-title">Coming up</h2>
+          <a href="#" class="section-link">All trips →</a>
+        </div>
+        <div class="trip-teaser">
+          <div class="icon"><span class="material-symbols-rounded">flight_takeoff</span></div>
+          <div class="body">
+            <div class="name">New York</div>
+            <div class="when">STARTS IN 7 DAYS · MAY 25 – JUN 1</div>
+          </div>
+          <span class="chev material-symbols-rounded">chevron_right</span>
+        </div>
+
+        <!-- Habit card -->
+        <div class="section-head">
+          <h2 class="section-title">Daily habit</h2>
+          <span class="section-meta">tap a day</span>
+        </div>
+        <div class="habit-card">
+          <div class="habit-row">
+            <div class="habit-streak">
+              <div class="flame"><span class="material-symbols-rounded">local_fire_department</span></div>
+              <div class="num">4 <span>day streak</span></div>
+            </div>
+            <div class="habit-best">BEST · 12 DAYS</div>
+          </div>
+
+          <div class="habit-week">
+            <div class="habit-tile no-spend">12<span class="habit-day-label">M</span></div>
+            <div class="habit-tile essential">13<span class="habit-day-label">T</span></div>
+            <div class="habit-tile wants">14<span class="habit-day-label">W</span></div>
+            <div class="habit-tile no-spend">15<span class="habit-day-label">T</span></div>
+            <div class="habit-tile essential">16<span class="habit-day-label">F</span></div>
+            <div class="habit-tile no-spend">17<span class="habit-day-label">S</span></div>
+            <div class="habit-tile today">18<span class="habit-day-label">S</span></div>
+          </div>
+
+          <div class="checkin">
+            <button class="ck-no">No spend</button>
+            <button class="ck-es suggested">Essentials</button>
+            <button class="ck-wt">Wants</button>
+          </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="section-head">
+          <h2 class="section-title">Where it goes</h2>
+          <span class="section-meta">May breakdown</span>
+        </div>
+        <div class="cat-card">
+          <div class="cat-row">
+            <div class="donut">
+              <svg viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3.6"/>
+                <!-- food 36% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#ff9c66" stroke-width="3.6" stroke-dasharray="36 100" stroke-dashoffset="0" stroke-linecap="round"/>
+                <!-- coffee 18% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#ffd166" stroke-width="3.6" stroke-dasharray="18 100" stroke-dashoffset="-36" stroke-linecap="round"/>
+                <!-- transit 14% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#66d9ff" stroke-width="3.6" stroke-dasharray="14 100" stroke-dashoffset="-54" stroke-linecap="round"/>
+                <!-- shop 12% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#7ee7c1" stroke-width="3.6" stroke-dasharray="12 100" stroke-dashoffset="-68" stroke-linecap="round"/>
+                <!-- fun 12% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#c89eff" stroke-width="3.6" stroke-dasharray="12 100" stroke-dashoffset="-80" stroke-linecap="round"/>
+                <!-- bills 8% -->
+                <circle cx="18" cy="18" r="15.92" fill="none" stroke="#b0b6c8" stroke-width="3.6" stroke-dasharray="8 100" stroke-dashoffset="-92" stroke-linecap="round"/>
+              </svg>
+              <div class="center">
+                <div class="total">$640</div>
+                <div class="label">spent</div>
+              </div>
+            </div>
+            <div class="cat-legend">
+              <div class="cat-item"><span class="swatch" style="background:#ff9c66"></span><span class="name">Food</span><span class="amt">$232 · 36%</span></div>
+              <div class="cat-item"><span class="swatch" style="background:#ffd166"></span><span class="name">Coffee</span><span class="amt">$116 · 18%</span></div>
+              <div class="cat-item"><span class="swatch" style="background:#66d9ff"></span><span class="name">Transit</span><span class="amt">$90 · 14%</span></div>
+              <div class="cat-item"><span class="swatch" style="background:#7ee7c1"></span><span class="name">Shopping</span><span class="amt">$76 · 12%</span></div>
+              <div class="cat-item"><span class="swatch" style="background:#c89eff"></span><span class="name">Entertainment</span><span class="amt">$74 · 12%</span></div>
+              <div class="cat-item"><span class="swatch" style="background:#b0b6c8"></span><span class="name">Bills</span><span class="amt">$52 · 8%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spending trend — daily/weekly toggle, adaptive pace line, comparison -->
+        <div class="section-head">
+          <h2 class="section-title">Spending trend</h2>
+          <span class="section-meta">tap a bar</span>
+        </div>
+        <div class="trend-card">
+          <div class="trend-toggle">
+            <button class="active">Daily</button>
+            <button>Weekly</button>
+          </div>
+
+          <div class="trend-compare">
+            <span>vs same point last May:</span>
+            <span class="delta">−$172 lower</span>
+          </div>
+
+          <div class="trend-chart-wrap">
+            <!-- Adaptive aim line — sits at ~28% from top (representing $28/day target) -->
+            <div class="trend-pace-line" style="top: 60%;">
+              <span class="trend-pace-label">aim · $28/day</span>
+            </div>
+            <div class="trend-bars" style="--cols: 31;">
+              <div class="b" style="height: 32%"></div>
+              <div class="b" style="height: 56%"></div>
+              <div class="b" style="height: 18%"></div>
+              <div class="b over" style="height: 78%"></div>
+              <div class="b" style="height: 40%"></div>
+              <div class="b tapped" style="height: 92%"><div class="bar-popover"><span class="day">MAY 9</span>$115</div></div>
+              <div class="b" style="height: 26%"></div>
+              <div class="b" style="height: 50%"></div>
+              <div class="b" style="height: 62%"></div>
+              <div class="b" style="height: 36%"></div>
+              <div class="b" style="height: 4%"></div>
+              <div class="b" style="height: 44%"></div>
+              <div class="b over" style="height: 80%"></div>
+              <div class="b" style="height: 30%"></div>
+              <div class="b" style="height: 56%"></div>
+              <div class="b" style="height: 22%"></div>
+              <div class="b" style="height: 48%"></div>
+              <div class="b today" style="height: 66%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+              <div class="b future" style="height: 14%"></div>
+            </div>
+          </div>
+
+          <div class="trend-foot">
+            <span>MAY 1</span>
+            <span>15</span>
+            <span style="color:var(--m-1)">today · 18</span>
+            <span>31</span>
+          </div>
+
+          <div class="trend-stats">
+            <div class="trend-stat">
+              <div class="lbl">Today</div>
+              <div class="val">$42</div>
+              <div class="meta">+$14 vs aim</div>
+            </div>
+            <div class="trend-stat">
+              <div class="lbl">Best day</div>
+              <div class="val">$0</div>
+              <div class="meta">May 11</div>
+            </div>
+            <div class="trend-stat">
+              <div class="lbl">Worst day</div>
+              <div class="val">$115</div>
+              <div class="meta">May 9</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-btn active"><span class="material-symbols-rounded">home</span><span>Home</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">flight</span><span>Trips</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">receipt_long</span><span>Txns</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">history</span><span>History</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

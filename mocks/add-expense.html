@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgr — Add Expense redesign</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Inter+Tight:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded">
+<style>
+:root {
+  --bg: #0a0c14;
+  --surface: #131520;
+  --surface-2: #1c1f2c;
+  --surface-3: #262a39;
+  --on-surface: #e6e8f0;
+  --on-surface-mute: #8b8fa3;
+  --on-surface-faint: #4a4f63;
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  --m-1: #8b9eff;
+  --m-2: #c79bff;
+  --m-grad: linear-gradient(120deg, #667eea 0%, #b66cff 100%);
+  --m-glow: 0 0 24px rgba(139,158,255,0.20);
+
+  --trip-2: #00f2fe;
+  --trip-grad: linear-gradient(120deg, #4facfe 0%, #00f2fe 100%);
+
+  --cat-food: #ff9c66;
+  --cat-coffee: #ffd166;
+  --cat-transit: #66d9ff;
+  --cat-shop: #7ee7c1;
+  --cat-fun: #c89eff;
+  --cat-bills: #b0b6c8;
+  --cat-other: #8b8fa3;
+
+  --good: #43e97b;
+  --warn: #ffb84d;
+  --bad: #ff7080;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: 'Inter Tight', -apple-system, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  min-height: 100vh;
+}
+
+body {
+  background:
+    radial-gradient(1100px 600px at 0% -10%, rgba(102,126,234,0.10), transparent 55%),
+    radial-gradient(900px 500px at 110% 30%, rgba(182,108,255,0.06), transparent 60%),
+    var(--bg);
+}
+
+.phone-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 64px;
+  gap: 16px;
+}
+.phone-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}
+
+.phone {
+  width: 393px;
+  max-width: 100%;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 0 0 8px rgba(255,255,255,0.02),
+    0 60px 140px rgba(0,0,0,0.6);
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+.status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.status-bar .right .material-symbols-rounded { font-size: 14px; }
+
+/* Page header */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 0;
+}
+.head-back {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--on-surface);
+}
+.head-back .material-symbols-rounded { font-size: 20px; }
+.head-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.head-spacer { width: 38px; }
+
+.add-page { padding: 24px 16px 32px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Trip context banner — when a trip is active */
+.trip-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, rgba(0,242,254,0.08), rgba(79,172,254,0.02));
+  border: 1px solid rgba(0,242,254,0.22);
+  font-size: 12px;
+  color: var(--trip-2);
+}
+.trip-banner .material-symbols-rounded { font-size: 16px; }
+.trip-banner strong { font-weight: 600; }
+.trip-banner .toggle {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---- Smart input hero ---- */
+.smart-card {
+  background: linear-gradient(165deg, rgba(102,126,234,0.10), rgba(255,255,255,0.01) 60%), var(--surface);
+  border: 1px solid rgba(102,126,234,0.18);
+  border-radius: 24px;
+  padding: 18px 18px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.smart-card::after {
+  content: "";
+  position: absolute;
+  top: -60px; right: -40px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(182,108,255,0.10), transparent 70%);
+  pointer-events: none;
+}
+.smart-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.smart-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+}
+.smart-title .icon {
+  width: 22px; height: 22px;
+  border-radius: 7px;
+  background: var(--m-grad);
+  display: flex; align-items: center; justify-content: center;
+}
+.smart-title .icon .material-symbols-rounded { font-size: 14px; color: #1a103a; font-variation-settings: 'FILL' 1, 'wght' 700; }
+.smart-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-1);
+  background: rgba(139,158,255,0.10);
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(139,158,255,0.2);
+}
+
+.smart-textarea {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-family: 'Inter Tight';
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--on-surface);
+  width: 100%;
+  resize: none;
+  outline: none;
+  min-height: 120px;
+}
+.smart-textarea::placeholder { color: var(--on-surface-faint); }
+.smart-textarea:focus { border-color: rgba(139,158,255,0.4); box-shadow: 0 0 0 3px rgba(139,158,255,0.08); }
+
+/* Live parse preview */
+.parse-preview {
+  margin-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 14px;
+}
+.parse-preview .ph {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-surface-mute);
+  margin-bottom: 10px;
+}
+.parse-preview .ph .pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--m-1);
+  animation: pulse 1.4s infinite ease-out;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(139,158,255,0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(139,158,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(139,158,255,0); }
+}
+
+.parse-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+.parse-row .amt {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.parse-row .desc { font-size: 12.5px; color: var(--on-surface); }
+.parse-row .desc .when {
+  display: block;
+  font-size: 10px;
+  color: var(--on-surface-mute);
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.parse-row .cat-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 7px;
+  letter-spacing: 0.02em;
+}
+.parse-row .cat-pill.food { color: var(--cat-food); background: rgba(255,156,102,0.10); border: 1px solid rgba(255,156,102,0.22); }
+.parse-row .cat-pill.coffee { color: var(--cat-coffee); background: rgba(255,209,102,0.10); border: 1px solid rgba(255,209,102,0.22); }
+.parse-row .cat-pill.transit { color: var(--cat-transit); background: rgba(102,217,255,0.10); border: 1px solid rgba(102,217,255,0.22); }
+.parse-row .cat-pill.shop { color: var(--cat-shop); background: rgba(126,231,193,0.10); border: 1px solid rgba(126,231,193,0.22); }
+
+.parse-row.unparsed {
+  background: rgba(255,184,77,0.04);
+  border: 1px dashed rgba(255,184,77,0.3);
+}
+.parse-row.unparsed .amt { color: var(--warn); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; }
+.parse-row.unparsed .desc { color: var(--warn); }
+
+.smart-actions {
+  display: flex; gap: 10px; margin-top: 14px;
+}
+.smart-actions .ghost {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--on-surface-mute);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.smart-actions .primary {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--m-grad);
+  color: #1a103a;
+  font-size: 14px;
+  font-weight: 600;
+  border: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 6px 24px rgba(102,126,234,0.25);
+}
+.smart-actions .primary .material-symbols-rounded { font-size: 18px; font-variation-settings: 'FILL' 1, 'wght' 700; }
+.smart-actions .ghost .material-symbols-rounded { font-size: 16px; }
+
+.smart-examples {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.smart-examples .ex {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--on-surface-mute);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.smart-examples .ex:hover { color: var(--m-1); border-color: rgba(139,158,255,0.3); }
+
+/* OR divider with toggle button */
+.or-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 4px;
+}
+.or-toggle .line { flex: 1; height: 1px; background: var(--line-strong); }
+.or-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line-strong);
+  color: var(--on-surface-mute);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.or-toggle button .material-symbols-rounded { font-size: 14px; }
+.or-toggle button.expanded {
+  color: var(--m-1);
+  border-color: rgba(139,158,255,0.3);
+  background: rgba(139,158,255,0.06);
+}
+
+/* Manual form */
+.manual-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 20px;
+}
+.manual-row { margin-bottom: 16px; }
+.manual-row:last-of-type { margin-bottom: 0; }
+.manual-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--on-surface-mute);
+  margin-bottom: 8px;
+}
+
+.amount-field {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+}
+.amount-field .currency {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--on-surface-mute);
+}
+.amount-field input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 38px;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  width: 100%;
+  caret-color: var(--m-1);
+}
+.amount-field input::placeholder { color: var(--on-surface-faint); }
+
+.text-field {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  color: var(--on-surface);
+  font-family: 'Inter Tight';
+  font-size: 14px;
+  outline: none;
+}
+.text-field:focus { border-color: rgba(139,158,255,0.4); box-shadow: 0 0 0 3px rgba(139,158,255,0.08); }
+
+/* Date chips */
+.date-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line-strong);
+  color: var(--on-surface);
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip.active {
+  background: rgba(139,158,255,0.12);
+  color: var(--m-1);
+  border-color: rgba(139,158,255,0.4);
+}
+.chip .material-symbols-rounded { font-size: 14px; }
+.chip-pick {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line-strong);
+  color: var(--on-surface-mute);
+}
+
+/* Category grid */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.cat-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--on-surface);
+  text-align: center;
+}
+.cat-tile .glyph {
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cat-tile .glyph .material-symbols-rounded { font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 500; }
+.cat-tile.active {
+  border-color: rgba(139,158,255,0.4);
+  background: rgba(139,158,255,0.08);
+  box-shadow: 0 0 0 3px rgba(139,158,255,0.06);
+}
+.cat-tile.food .glyph    { color: var(--cat-food);    background: rgba(255,156,102,0.12); }
+.cat-tile.coffee .glyph  { color: var(--cat-coffee);  background: rgba(255,209,102,0.12); }
+.cat-tile.transit .glyph { color: var(--cat-transit); background: rgba(102,217,255,0.12); }
+.cat-tile.shop .glyph    { color: var(--cat-shop);    background: rgba(126,231,193,0.12); }
+.cat-tile.fun .glyph     { color: var(--cat-fun);     background: rgba(200,158,255,0.12); }
+.cat-tile.bills .glyph   { color: var(--cat-bills);   background: rgba(176,182,200,0.12); }
+.cat-tile.other .glyph   { color: var(--cat-other);   background: rgba(139,143,163,0.12); }
+
+/* Submit */
+.submit-fab {
+  margin-top: 6px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--m-grad);
+  color: #1a103a;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  border: 0;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 8px 30px rgba(102,126,234,0.25);
+  cursor: pointer;
+}
+.submit-fab .material-symbols-rounded { font-size: 20px; font-variation-settings: 'FILL' 1, 'wght' 700; }
+
+/* Bottom nav (kept for context) */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px 8px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  color: var(--on-surface-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.nav-btn .material-symbols-rounded { font-size: 22px; }
+.nav-btn.active { color: var(--m-1); }
+.nav-btn.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+
+@media (min-width: 900px) {
+  .phone-wrap {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 32px;
+    padding-top: 48px;
+  }
+  .phone-stack { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-wrap">
+
+  <!-- Variant 1: Smart Input with live parse preview -->
+  <div class="phone-stack">
+    <div class="phone-label">Add Expense · smart input typing in progress</div>
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </div>
+      </div>
+
+      <div class="page-head">
+        <button class="head-back"><span class="material-symbols-rounded">close</span></button>
+        <div class="head-title">Add expense</div>
+        <div class="head-spacer"></div>
+      </div>
+
+      <div class="add-page">
+
+        <!-- Smart Input -->
+        <div class="smart-card">
+          <div class="smart-head">
+            <div class="smart-title">
+              <div class="icon"><span class="material-symbols-rounded">bolt</span></div>
+              Type it naturally
+            </div>
+            <div class="smart-meta">SMART · GEMINI</div>
+          </div>
+
+          <textarea class="smart-textarea" rows="4">12 mendocino farms lunch
+4.50 dutch bros
+8 subway pass yesterday
+groceries 67</textarea>
+
+          <!-- Live parse preview -->
+          <div class="parse-preview">
+            <div class="ph"><span class="pulse"></span> Parsed live · 3 of 4</div>
+
+            <div class="parse-row">
+              <span class="amt">$12</span>
+              <span class="desc">Mendocino Farms<span class="when">TODAY</span></span>
+              <span class="cat-pill food">Food</span>
+            </div>
+            <div class="parse-row">
+              <span class="amt">$4.50</span>
+              <span class="desc">Dutch Bros<span class="when">TODAY</span></span>
+              <span class="cat-pill coffee">Coffee</span>
+            </div>
+            <div class="parse-row">
+              <span class="amt">$8</span>
+              <span class="desc">Subway pass<span class="when">YESTERDAY</span></span>
+              <span class="cat-pill transit">Transit</span>
+            </div>
+            <div class="parse-row unparsed">
+              <span class="amt">?</span>
+              <span class="desc">"groceries 67" — couldn't pick a date</span>
+              <span style="color:var(--warn);font-size:18px;">✎</span>
+            </div>
+          </div>
+
+          <div class="smart-actions">
+            <button class="ghost"><span class="material-symbols-rounded">backspace</span> Clear</button>
+            <button class="primary"><span class="material-symbols-rounded">check</span> Add 3 expenses</button>
+          </div>
+
+          <div class="smart-examples">
+            <span class="ex" style="color:var(--on-surface-faint)">examples →</span>
+            <span class="ex">14 chipotle</span>
+            <span class="ex">uber 23</span>
+            <span class="ex">75 amazon 5/12</span>
+          </div>
+        </div>
+
+        <!-- Manual collapsed by default -->
+        <div class="or-toggle">
+          <div class="line"></div>
+          <button><span class="material-symbols-rounded">tune</span> Use fields</button>
+          <div class="line"></div>
+        </div>
+
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-btn"><span class="material-symbols-rounded">home</span><span>Home</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">flight</span><span>Trips</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">receipt_long</span><span>Txns</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">history</span><span>History</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 2: Same page but with active trip banner -->
+  <div class="phone-stack">
+    <div class="phone-label">Add Expense · trip mode + manual fields expanded</div>
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </div>
+      </div>
+
+      <div class="page-head">
+        <button class="head-back"><span class="material-symbols-rounded">close</span></button>
+        <div class="head-title">Add expense</div>
+        <div class="head-spacer"></div>
+      </div>
+
+      <div class="add-page">
+
+        <!-- Trip context banner -->
+        <div class="trip-banner">
+          <span class="material-symbols-rounded">flight</span>
+          Auto-tagging to <strong>New York</strong> · day 3 of 7
+          <span class="toggle">Untag</span>
+        </div>
+
+        <!-- Smart Input — empty state -->
+        <div class="smart-card">
+          <div class="smart-head">
+            <div class="smart-title">
+              <div class="icon"><span class="material-symbols-rounded">bolt</span></div>
+              Type it naturally
+            </div>
+            <div class="smart-meta">SMART · GEMINI</div>
+          </div>
+
+          <textarea class="smart-textarea" rows="4" placeholder="One per line — example:&#10;&#10;14 joes pizza&#10;subway 8&#10;moma 30 yesterday"></textarea>
+
+          <div class="smart-examples" style="margin-top:14px">
+            <span class="ex" style="color:var(--on-surface-faint)">try →</span>
+            <span class="ex">14 joes pizza</span>
+            <span class="ex">subway 8</span>
+            <span class="ex">moma 30 yesterday</span>
+          </div>
+        </div>
+
+        <!-- Manual expanded (after toggle tap) -->
+        <div class="or-toggle">
+          <div class="line"></div>
+          <button class="expanded"><span class="material-symbols-rounded">expand_less</span> Hide fields</button>
+          <div class="line"></div>
+        </div>
+
+        <!-- Manual Form — empty -->
+        <div class="manual-card">
+          <div class="manual-row">
+            <label class="manual-label">Amount</label>
+            <div class="amount-field">
+              <span class="currency">$</span>
+              <input type="text" placeholder="0">
+            </div>
+          </div>
+
+          <div class="manual-row">
+            <label class="manual-label">Description</label>
+            <input type="text" class="text-field" placeholder="What did you spend on?">
+          </div>
+
+          <div class="manual-row">
+            <label class="manual-label">When</label>
+            <div class="date-chips">
+              <span class="chip active"><span class="material-symbols-rounded">today</span> Today</span>
+              <span class="chip">Yesterday</span>
+              <span class="chip">Mon</span>
+              <span class="chip">Sun</span>
+              <span class="chip-pick"><span class="material-symbols-rounded">calendar_month</span></span>
+            </div>
+          </div>
+
+          <div class="manual-row">
+            <label class="manual-label">Category</label>
+            <div class="cat-grid">
+              <div class="cat-tile food"><div class="glyph"><span class="material-symbols-rounded">restaurant</span></div>Food</div>
+              <div class="cat-tile coffee"><div class="glyph"><span class="material-symbols-rounded">local_cafe</span></div>Coffee</div>
+              <div class="cat-tile transit"><div class="glyph"><span class="material-symbols-rounded">directions_subway</span></div>Transit</div>
+              <div class="cat-tile shop"><div class="glyph"><span class="material-symbols-rounded">shopping_bag</span></div>Shop</div>
+              <div class="cat-tile fun"><div class="glyph"><span class="material-symbols-rounded">movie</span></div>Fun</div>
+              <div class="cat-tile bills"><div class="glyph"><span class="material-symbols-rounded">receipt</span></div>Bills</div>
+              <div class="cat-tile other"><div class="glyph"><span class="material-symbols-rounded">more_horiz</span></div>Other</div>
+            </div>
+          </div>
+
+          <button class="submit-fab"><span class="material-symbols-rounded">add</span> Add to trip</button>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-btn"><span class="material-symbols-rounded">home</span><span>Home</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">flight</span><span>Trips</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">receipt_long</span><span>Txns</span></div>
+        <div class="nav-btn"><span class="material-symbols-rounded">history</span><span>History</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
