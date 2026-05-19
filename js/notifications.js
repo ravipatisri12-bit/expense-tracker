@@ -146,6 +146,7 @@ function previewMessage(slot, ctx) {
     const fmt = n => '$' + Math.round(n);
     const totalRoom = Math.max(0, PREVIEW_MONTHLY_TOTAL_SOFT - ctx.monthTotal);
     const foodRoom = Math.max(0, PREVIEW_MONTHLY_FOOD - ctx.monthFood);
+    const monthlyRoom = Math.max(0, PREVIEW_MONTHLY_TOTAL_SOFT - ctx.monthTotal);
     const dailyTotalTarget = Math.round(totalRoom / Math.max(1, ctx.daysLeft));
     const dailyFoodTarget = Math.round(foodRoom / Math.max(1, ctx.daysLeft));
     const overHard = ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_HARD;
@@ -154,12 +155,12 @@ function previewMessage(slot, ctx) {
     if (slot === 'morning') {
         if (overHard) {
             return {
-                title: `Heads up — over your ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} cap`,
-                body: `Tighten food today: ${fmt(dailyFoodTarget)} budget left\n${ctx.daysLeft} days to go in ${ctx.monthName}`
+                title: `! Over ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} cap — slow down`,
+                body: `Food only: ${fmt(dailyFoodTarget)} left\n${ctx.daysLeft} days to go in ${ctx.monthName}`
             };
         }
         return {
-            title: `You can spend ${fmt(dailyTotalTarget)} today`,
+            title: `→ ${fmt(dailyTotalTarget)} to spend today`,
             body: `${fmt(dailyFoodTarget)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
         };
     }
@@ -167,28 +168,29 @@ function previewMessage(slot, ctx) {
     if (slot === 'afternoon') {
         if (ctx.todayCount === 0) {
             return {
-                title: 'Quiet day so far',
-                body: `Nothing logged yet\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
+                title: `· ${fmt(0)} today so far`,
+                body: `${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month\n${fmt(monthlyRoom)} left, ${ctx.daysLeft} days`
             };
         }
         return {
-            title: `${fmt(ctx.todayTotal)} spent so far today`,
-            body: `Food: ${fmt(ctx.todayFood)} of ${fmt(PREVIEW_MONTHLY_FOOD)} month cap\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} monthly target`
+            title: `· ${fmt(ctx.todayTotal)} today, ${fmt(ctx.todayFood)} on food`,
+            body: `Month: ${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)}\n${fmt(monthlyRoom)} left, ${ctx.daysLeft} days`
         };
     }
 
     // evening
-    const paceWord = overHard ? 'over hard cap' : overSoft ? 'over pace' : 'under pace';
     if (!ctx.checkedIn) {
         return {
-            title: 'Tag today before bed',
-            body: `Tap to log: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
+            title: `? ${fmt(ctx.todayTotal)} today — tag it`,
+            body: `Tap: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
         };
     }
+    const symbol = overHard || overSoft ? '!' : '✓';
+    const paceWord = overHard ? 'over hard cap' : overSoft ? 'over pace' : 'under pace';
     const moodLabel = MOOD_LABEL[ctx.mood] || 'Logged';
     const streakBit = ctx.streak ? `${ctx.streak} day streak` : 'first day';
     return {
-        title: `${fmt(ctx.todayTotal)} today — ${paceWord}`,
+        title: `${symbol} ${fmt(ctx.todayTotal)} today — ${paceWord}`,
         body: `Tagged "${moodLabel}" — ${streakBit}\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
     };
 }
