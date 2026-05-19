@@ -379,6 +379,8 @@ class EmailParser {
                 const bodyText = this.extractTextFromPayload(fullMsg.payload);
                 const parsed = this.parseChaseRegex(bodyText, subject);
                 if (!this.isValidTransaction(parsed)) continue;
+                const tripId = (window.tripsStore && window.tripsStore.pickTripIdForDate)
+                    ? window.tripsStore.pickTripIdForDate(parsed.date) : null;
                 toAdd.push({
                     id: Date.now() + Math.floor(Math.random() * 10000),
                     amount: parseFloat(parsed.amount),
@@ -387,7 +389,8 @@ class EmailParser {
                     date: parsed.date,
                     timestamp: Date.now(),
                     excludeFromBudget: false,
-                    source: 'gmail'
+                    source: 'gmail',
+                    tripId
                 });
             }
             const imported = toAdd.length;
