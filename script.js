@@ -4292,7 +4292,7 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     // Fold fixed monthly obligations (rent + utilities + car/insurance from Settings)
     // into Spent. Without this, Saved looks artificially high because rent never
     // shows up in the logged-expense ledger.
-    const fixedMonthly = (this.settings?.rent || 0) + (this.settings?.utilities || 0) + (this.settings?.insurance || 0);
+    const fixedMonthly = this._monthlyFixedTotal();
     const fixedYear = fixedMonthly * monthsElapsed;
     const totalSpent = loggedSpent + fixedYear;
     const avgPerMo = monthsElapsed > 0 ? Math.round(totalSpent / monthsElapsed) : 0;
@@ -4331,6 +4331,14 @@ ExpenseTracker.prototype.renderHistoryYearShape = function () {
         const m = d.getMonth();
         totals[m] += Number(e.amount || 0);
         if (e.tripId != null) tripPart[m] += Number(e.amount || 0);
+    }
+    // Add fixed obligations to elapsed months so bar heights reflect what
+    // the month-detail card and Spent stat-card use.
+    const fixedMonthly = this._monthlyFixedTotal();
+    if (fixedMonthly > 0) {
+        for (let m = 0; m < 12; m++) {
+            if (this._isMonthElapsed(Y, m)) totals[m] += fixedMonthly;
+        }
     }
     const max = Math.max(1, ...totals);
     const isFuture = m => Y > now.getFullYear() || (Y === now.getFullYear() && m > now.getMonth());
@@ -4382,6 +4390,13 @@ ExpenseTracker.prototype.renderHistoryMonthRail = function () {
         const d = this.parseLocalDate(e.date);
         if (d.getFullYear() === Y) totals[d.getMonth()] += Number(e.amount || 0);
     }
+    // Match the month-detail card: include fixed obligations for elapsed months.
+    const fixedMonthly = this._monthlyFixedTotal();
+    if (fixedMonthly > 0) {
+        for (let m = 0; m < 12; m++) {
+            if (this._isMonthElapsed(Y, m)) totals[m] += fixedMonthly;
+        }
+    }
     const labels = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     const isFuture = m => Y > now.getFullYear() || (Y === now.getFullYear() && m > now.getMonth());
     const pills = labels.map((l, m) => {
@@ -4391,6 +4406,20 @@ ExpenseTracker.prototype.renderHistoryMonthRail = function () {
         return `<div class="pill ${active ? 'active' : ''} ${empty ? 'empty' : ''}" onclick="onHistoryMonthSelect(${m})"><span class="m">${l}</span><span class="v">${v}</span></div>`;
     }).join('');
     root.innerHTML = `<div class="month-rail">${pills}</div>`;
+};
+
+// True for any (year, month) <= today. Fixed obligations only "count" for
+// months that have actually elapsed — we don't pre-charge a future March's rent.
+ExpenseTracker.prototype._isMonthElapsed = function (year, month) {
+    const now = new Date();
+    if (year < now.getFullYear()) return true;
+    if (year > now.getFullYear()) return false;
+    return month <= now.getMonth();
+};
+
+// Monthly fixed obligation total from Settings. Single source of truth.
+ExpenseTracker.prototype._monthlyFixedTotal = function () {
+    return (this.settings?.rent || 0) + (this.settings?.utilities || 0) + (this.settings?.insurance || 0);
 };
 
 ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
@@ -4404,17 +4433,22 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
     const monthAll = this.expenses.filter(e => {
         const d = this.parseLocalDate(e.date); return d.getFullYear() === Y && d.getMonth() === M;
     });
-    const total = monthAll.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const logged = monthAll.reduce((s, e) => s + Number(e.amount || 0), 0);
     const regular = monthAll.filter(e => e.tripId == null).reduce((s, e) => s + Number(e.amount || 0), 0);
-    const tripTotal = total - regular;
+    const tripTotal = logged - regular;
     const tripCount = new Set(monthAll.filter(e => e.tripId != null).map(e => e.tripId)).size;
+    // Fixed obligations only count for elapsed months.
+    const fixedThisMonth = this._isMonthElapsed(Y, M) ? this._monthlyFixedTotal() : 0;
+    const total = logged + fixedThisMonth;
 
-    // vs prior month
+    // vs prior month — must use the same total formula (logged + fixed) for both.
     const prevY = M === 0 ? Y - 1 : Y;
     const prevM = M === 0 ? 11 : M - 1;
-    const prevTotal = this.expenses
+    const prevLogged = this.expenses
         .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === prevY && d.getMonth() === prevM; })
         .reduce((s, e) => s + Number(e.amount || 0), 0);
+    const prevFixed = this._isMonthElapsed(prevY, prevM) ? this._monthlyFixedTotal() : 0;
+    const prevTotal = prevLogged + prevFixed;
     const prevName = new Date(prevY, prevM, 1).toLocaleDateString('en-US', { month: 'short' });
     let vsLine = '';
     if (prevTotal > 0) {
@@ -4428,14 +4462,16 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
     else if (Y === now.getFullYear() && M === now.getMonth()) eyebrow = `SELECTED · ${now.getDate()} days in`;
     else eyebrow = 'UPCOMING';
 
+    const showBreakdown = regular > 0 || tripTotal > 0 || fixedThisMonth > 0;
     root.innerHTML = `
 <div class="month-detail">
     <div class="md-eyebrow">${eyebrow}</div>
     <div class="md-name">${monthName}<span class="yr">${Y}</span></div>
     <div class="md-numbers"><div class="md-total"><span class="currency">$</span>${Math.round(total).toLocaleString()}</div><div class="md-vs">${vsLine}</div></div>
-    ${(regular > 0 || tripTotal > 0) ? `<div class="md-breakdown">
-        <div class="row"><span class="swatch" style="background:var(--m-1)"></span><span class="name">Regular spending</span><span class="amt">$${Math.round(regular).toLocaleString()}</span></div>
+    ${showBreakdown ? `<div class="md-breakdown">
+        ${regular > 0 ? `<div class="row"><span class="swatch" style="background:var(--m-1)"></span><span class="name">Regular spending</span><span class="amt">$${Math.round(regular).toLocaleString()}</span></div>` : ''}
         ${tripTotal > 0 ? `<div class="row"><span class="swatch" style="background:var(--trip-2)"></span><span class="name">Trips · ${tripCount}</span><span class="amt">$${Math.round(tripTotal).toLocaleString()}</span></div>` : ''}
+        ${fixedThisMonth > 0 ? `<div class="row"><span class="swatch" style="background:#b0b6c8"></span><span class="name">Fixed obligations</span><span class="amt">$${Math.round(fixedThisMonth).toLocaleString()}</span></div>` : ''}
     </div>` : ''}
 </div>`;
 };
@@ -4452,15 +4488,31 @@ ExpenseTracker.prototype.renderHistoryCategories = function () {
         totals[key] = (totals[key] || 0) + Number(e.amount || 0);
         grand += Number(e.amount || 0);
     }
+    // Add a synthetic "Fixed" bucket so the year totals here line up with the
+    // Spent stat-card (which now includes rent/utilities/insurance × elapsed months).
+    const now = new Date();
+    let monthsElapsed;
+    if (Y < now.getFullYear()) monthsElapsed = 12;
+    else if (Y === now.getFullYear()) monthsElapsed = now.getMonth() + 1;
+    else monthsElapsed = 0;
+    const fixedYear = this._monthlyFixedTotal() * monthsElapsed;
+    if (fixedYear > 0) {
+        totals['Fixed'] = fixedYear;
+        grand += fixedYear;
+    }
     const ordered = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-    const color = name => name === 'Trips' ? '#00f2fe' : this._categoryColor(name);
+    const color = name => name === 'Trips' ? '#00f2fe' : name === 'Fixed' ? '#b0b6c8' : this._categoryColor(name);
     const rows = ordered.length === 0
         ? `<div style="text-align:center;padding:20px 0;color:var(--on-surface-mute);font-size:13px">No expenses for ${Y} yet.</div>`
         : ordered.map(([name, amt]) => {
             const pct = grand > 0 ? Math.round((amt / grand) * 100) : 0;
             const safe = this._escapeHtml(name).replace(/'/g, "\\'");
             // 'Trips' is its own bucket — drilldown isn't meaningful for it (use Trips page instead).
-            const onclick = name === 'Trips' ? `onclick="showPage('trips')"` : `onclick="openCategoryFilter('${safe}', {reset:true})"`;
+            // 'Fixed' is computed from Settings, no per-txn list to drill into.
+            let onclick = '';
+            if (name === 'Trips') onclick = `onclick="showPage('trips')"`;
+            else if (name === 'Fixed') onclick = `onclick="showPage('settings')"`;
+            else onclick = `onclick="openCategoryFilter('${safe}', {reset:true})"`;
             return `<div class="h-row" style="cursor:pointer" ${onclick}><div class="h-name"><span class="dot" style="background:${color(name)}"></span>${this._escapeHtml(name)}</div><div class="h-bar"><span style="width:${pct}%;background:${color(name)}"></span></div><div class="h-amt">$${Math.round(amt).toLocaleString()}<span class="pct">${pct}%</span></div></div>`;
         }).join('');
     root.innerHTML = `<div class="cat-card history"><div class="cat-head"><div class="title">Where the year went</div><div class="meta">${Y} · all spend</div></div>${rows}</div>`;
