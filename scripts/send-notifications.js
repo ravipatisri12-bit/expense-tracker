@@ -80,38 +80,83 @@ async function fetchGamification(uid) {
     } catch { return null; }
 }
 
+// Pick the tightest budget cap that is still achievable, then derive a
+// realistic per-day target toward that cap. Switching caps as earlier ones
+// blow keeps the copy honest instead of saying "$0 left" forever.
+function getActiveTarget(ctx) {
+    const dl = Math.max(1, ctx.daysLeft);
+    if (ctx.monthTotal > MONTHLY_TOTAL_HARD) {
+        return { state: 'HARD_OVER', dailyTotal: 0, dailyFood: 0 };
+    }
+    if (ctx.monthTotal > MONTHLY_TOTAL_SOFT) {
+        const dailyTotal = Math.round((MONTHLY_TOTAL_HARD - ctx.monthTotal) / dl);
+        return { state: 'SOFT_OVER', dailyTotal, dailyFood: 0 };
+    }
+    if (ctx.monthFood > MONTHLY_FOOD) {
+        const dailyTotal = Math.round((MONTHLY_TOTAL_SOFT - ctx.monthTotal) / dl);
+        return { state: 'FOOD_OVER', dailyTotal, dailyFood: 0 };
+    }
+    return {
+        state: 'HEALTHY',
+        dailyTotal: Math.round((MONTHLY_TOTAL_SOFT - ctx.monthTotal) / dl),
+        dailyFood: Math.round((MONTHLY_FOOD - ctx.monthFood) / dl)
+    };
+}
+
 function buildMessage(slot, ctx) {
-    const totalRoom = Math.max(0, MONTHLY_TOTAL_SOFT - ctx.monthTotal);
-    const foodRoom = Math.max(0, MONTHLY_FOOD - ctx.monthFood);
-    const monthlyRoom = Math.max(0, MONTHLY_TOTAL_SOFT - ctx.monthTotal);
-    const dailyTotalTarget = Math.round(totalRoom / Math.max(1, ctx.daysLeft));
-    const dailyFoodTarget = Math.round(foodRoom / Math.max(1, ctx.daysLeft));
-    const overHard = ctx.monthTotal > MONTHLY_TOTAL_HARD;
-    const overSoft = ctx.monthTotal > MONTHLY_TOTAL_SOFT;
+    const t = getActiveTarget(ctx);
 
     if (slot === SLOT_BUDGET_ROOM) {
-        if (overHard) {
+        if (t.state === 'HARD_OVER') {
             return {
-                title: `! Over ${fmt(MONTHLY_TOTAL_HARD)} cap — slow down`,
-                body: `Food only: ${fmt(dailyFoodTarget)} left\n${ctx.daysLeft} days to go in ${ctx.monthName}`
+                title: `! Over ${fmt(MONTHLY_TOTAL_HARD)} cap — reset soon`,
+                body: `What's spent is gone — log the day\n${ctx.daysLeft} days to wrap up ${ctx.monthName}`
+            };
+        }
+        if (t.state === 'SOFT_OVER') {
+            return {
+                title: `! Over ${fmt(MONTHLY_TOTAL_SOFT)} — aim ${fmt(t.dailyTotal)}/day`,
+                body: `Stay under ${fmt(MONTHLY_TOTAL_HARD)} hard cap\n${ctx.daysLeft} days left in ${ctx.monthName}`
+            };
+        }
+        if (t.state === 'FOOD_OVER') {
+            return {
+                title: `→ ${fmt(t.dailyTotal)} to spend today`,
+                body: `Food cap blown — needs only\n${ctx.daysLeft} days left in ${ctx.monthName}`
             };
         }
         return {
-            title: `→ ${fmt(dailyTotalTarget)} to spend today`,
-            body: `${fmt(dailyFoodTarget)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
+            title: `→ ${fmt(t.dailyTotal)} to spend today`,
+            body: `${fmt(t.dailyFood)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
         };
     }
 
     if (slot === SLOT_AFTERNOON) {
-        if (ctx.todayCount === 0) {
+        const todayLine = ctx.todayCount === 0
+            ? `· ${fmt(0)} today so far`
+            : `· ${fmt(ctx.todayTotal)} today, ${fmt(ctx.todayFood)} on food`;
+        if (t.state === 'HARD_OVER') {
             return {
-                title: `· ${fmt(0)} today so far`,
-                body: `${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} this month\n${fmt(monthlyRoom)} left, ${ctx.daysLeft} days`
+                title: todayLine.replace('·', '!'),
+                body: `${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_HARD)} hard ceiling\nReset starts ${ctx.daysLeft} days from now`
             };
         }
+        if (t.state === 'SOFT_OVER') {
+            return {
+                title: todayLine.replace('·', '!'),
+                body: `${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_HARD)} hard cap\nAim ${fmt(t.dailyTotal)}/day to stay under`
+            };
+        }
+        if (t.state === 'FOOD_OVER') {
+            return {
+                title: todayLine,
+                body: `Food cap blown — needs only\n${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} this month`
+            };
+        }
+        const room = t.dailyTotal * ctx.daysLeft;
         return {
-            title: `· ${fmt(ctx.todayTotal)} today, ${fmt(ctx.todayFood)} on food`,
-            body: `Month: ${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)}\n${fmt(monthlyRoom)} left, ${ctx.daysLeft} days`
+            title: todayLine,
+            body: `Month: ${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)}\n${fmt(room)} left, ${ctx.daysLeft} days`
         };
     }
 
@@ -122,10 +167,13 @@ function buildMessage(slot, ctx) {
             body: `Tap: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
         };
     }
-    const symbol = overHard || overSoft ? '!' : '✓';
-    const paceWord = overHard ? 'over hard cap' : overSoft ? 'over pace' : 'under pace';
     const moodLabel = MOOD_LABEL[ctx.mood] || 'Logged';
     const streakBit = ctx.streak ? `${ctx.streak} day streak` : 'first day';
+    let symbol, paceWord;
+    if (t.state === 'HARD_OVER') { symbol = '!'; paceWord = 'over hard cap'; }
+    else if (t.state === 'SOFT_OVER') { symbol = '!'; paceWord = `over ${fmt(MONTHLY_TOTAL_SOFT)} target`; }
+    else if (t.state === 'FOOD_OVER') { symbol = '·'; paceWord = 'food cap blown'; }
+    else { symbol = '✓'; paceWord = 'under pace'; }
     return {
         title: `${symbol} ${fmt(ctx.todayTotal)} today — ${paceWord}`,
         body: `Tagged "${moodLabel}" — ${streakBit}\n${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} this month`
