@@ -86,10 +86,12 @@ class Gamification {
     // === STREAKS ===
 
     updateStreak() {
-        const today = new Date().toISOString().split('T')[0];
+        const localStr = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        const today = localStr(new Date());
         if (this.data.streak.lastDate === today) return this.data.streak;
 
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const y = new Date(); y.setDate(y.getDate() - 1);
+        const yesterday = localStr(y);
         if (this.data.streak.lastDate === yesterday) {
             this.data.streak.current++;
         } else if (this.data.streak.lastDate !== today) {

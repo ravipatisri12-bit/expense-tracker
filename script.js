@@ -3560,7 +3560,7 @@ ExpenseTracker.prototype.renderHomeHabit = function () {
     if (!root) return;
     const g = window.gamification;
     const streak = g?.data?.streak?.current || 0;
-    const best = g?.data?.streak?.longest || 0;
+    const best = g?.data?.streak?.best || 0;
     const today = this.getLocalDateString(new Date());
 
     const days = [];
@@ -3610,7 +3610,12 @@ window.onHabitCheckin = function (mood) {
     if (!window.gamification) return;
     const today = window.expenseTracker.getLocalDateString(new Date());
     window.gamification.data.dailyLog = window.gamification.data.dailyLog || {};
+    const wasCheckedIn = !!window.gamification.data.dailyLog[today]?.checkedIn;
     window.gamification.data.dailyLog[today] = { ...(window.gamification.data.dailyLog[today] || {}), mood, checkedIn: true };
+    // Advance the streak the FIRST time a user checks in today.
+    if (!wasCheckedIn && typeof window.gamification.updateStreak === 'function') {
+        window.gamification.updateStreak();
+    }
     window.gamification.save();
     window.expenseTracker.renderHomeHabit();
 };

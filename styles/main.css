@@ -433,12 +433,12 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .habit-streak .num span { font-family: 'Inter Tight'; font-size: 11px; color: var(--on-surface-mute); margin-left: 4px; font-weight: 400; }
 .habit-best { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-surface-faint); }
 .habit-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 14px 0 0; }
-.habit-tile { aspect-ratio: 1.2 / 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--on-surface-faint); background: rgba(255,255,255,0.03); border: 1px solid var(--line); position: relative; }
+.habit-tile { aspect-ratio: 1 / 1.15; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--on-surface-faint); background: rgba(255,255,255,0.03); border: 1px solid var(--line); position: relative; line-height: 1; }
 .habit-tile.no-spend { background: rgba(67,233,123,0.12); color: var(--no-spend); border-color: rgba(67,233,123,0.26); }
 .habit-tile.essential { background: rgba(139,158,255,0.12); color: var(--essential); border-color: rgba(139,158,255,0.26); }
 .habit-tile.wants { background: rgba(255,184,77,0.12); color: var(--wants); border-color: rgba(255,184,77,0.26); }
 .habit-tile.today { box-shadow: 0 0 0 2px rgba(255,255,255,0.1) inset; }
-.habit-day-label { font-family: 'Inter Tight'; font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-surface-faint); position: absolute; bottom: 3px; font-weight: 500; }
+.habit-day-label { font-family: 'Inter Tight'; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-surface-faint); font-weight: 500; opacity: 0.7; }
 .checkin { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .checkin button { padding: 10px 6px; border-radius: 12px; border: 1px solid; background: transparent; font-family: 'Inter Tight'; font-size: 12px; font-weight: 600; cursor: pointer; }
 .checkin .ck-no { border-color: rgba(67,233,123,0.25); color: var(--no-spend); background: rgba(67,233,123,0.06); }
