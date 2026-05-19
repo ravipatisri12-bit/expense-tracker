@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>tripId helper tests</title></head>
+<body>
+<pre id="out"></pre>
+<script>
+const fixtures = [
+  { id: 1, amount: 100, date: '2026-05-01', category: 'Food', tripId: null },
+  { id: 2, amount: 200, date: '2026-05-02', category: 'Food', tripId: null },
+  { id: 3, amount: 300, date: '2026-05-25', category: 'Food', tripId: 'nyc' },
+  { id: 4, amount: 50, date: '2026-04-15', category: 'Food', tripId: null }
+];
+function getRegularMonthExpenses(expenses, year, month) {
+  return expenses.filter(e => {
+    if (e.tripId != null) return false;
+    const [y, m] = e.date.split('-').map(Number);
+    return y === year && (m - 1) === month;
+  });
+}
+function getTripExpenses(expenses, tripId) {
+  return expenses.filter(e => e.tripId === tripId);
+}
+const reg = getRegularMonthExpenses(fixtures, 2026, 4); // May = month 4
+const trip = getTripExpenses(fixtures, 'nyc');
+const out = document.getElementById('out');
+out.textContent =
+  'Regular May total: ' + reg.reduce((s,e)=>s+e.amount,0) + ' (expect 300)\n' +
+  'Trip nyc total: ' + trip.reduce((s,e)=>s+e.amount,0) + ' (expect 300)\n' +
+  'Regular excludes trip: ' + (reg.find(e=>e.tripId) ? 'FAIL' : 'OK') + '\n';
+</script>
+</body></html>

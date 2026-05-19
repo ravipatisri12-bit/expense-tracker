@@ -12,6 +12,7 @@
 class ExpenseTracker {
     constructor() {
         this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        this.expenses = this.expenses.map(e => (e.tripId === undefined ? { ...e, tripId: null } : e));
         this.settings = JSON.parse(localStorage.getItem('settings')) || this.getDefaultSettings();
         this.currentPage = 'dashboard';
         this.currentTrendsOffset = 0; // For navigating through time periods
@@ -356,7 +357,8 @@ class ExpenseTracker {
             category: category,
             date: expenseDate,
             timestamp: Date.now(),
-            excludeFromBudget: false
+            excludeFromBudget: false,
+            tripId: null
         };
 
         // Add to local array
@@ -389,6 +391,7 @@ class ExpenseTracker {
     }
 
     addExpenseProgrammatically(expense) {
+        if (expense.tripId === undefined) expense.tripId = null;
         this.expenses.push(expense);
         if (currentUser) {
             this.saveExpenseToFirebase(expense);
@@ -400,6 +403,9 @@ class ExpenseTracker {
     }
 
     addExpensesBatch(expenses) {
+        for (const e of expenses) {
+            if (e.tripId === undefined) e.tripId = null;
+        }
         this.expenses.push(...expenses);
         if (currentUser && expenses.length > 0) {
             const batch = db.batch();
@@ -1502,6 +1508,7 @@ class ExpenseTracker {
     loadLocalData() {
         // Load from localStorage when not signed in
         this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        this.expenses = this.expenses.map(e => (e.tripId === undefined ? { ...e, tripId: null } : e));
         this.settings = JSON.parse(localStorage.getItem('settings')) || this.getDefaultSettings();
         
         this.loadSettings();
@@ -1564,7 +1571,8 @@ class ExpenseTracker {
                     id: doc.id,
                     ...doc.data()
                 }));
-                
+                this.expenses = this.expenses.map(e => (e.tripId === undefined ? { ...e, tripId: null } : e));
+
                 this.updateDashboard();
                 this.renderTransactions();
             }, (error) => {
@@ -2331,6 +2339,26 @@ class ExpenseTracker {
         const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})T/);
         if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]));
         return new Date(s);
+    }
+
+    getRegularMonthExpenses(year, month) {
+        return this.expenses.filter(e => {
+            if (e.tripId != null) return false;
+            if (e.excludeFromBudget) return false;
+            const d = this.parseLocalDate(e.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+    }
+
+    getTripExpenses(tripId) {
+        return this.expenses.filter(e => e.tripId === tripId);
+    }
+
+    getMonthCombinedExpenses(year, month) {
+        return this.expenses.filter(e => {
+            const d = this.parseLocalDate(e.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
     }
 
     animateCount(el, target) {
