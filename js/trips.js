@@ -73,7 +73,27 @@
             return t ? t.id : null;
         }
 
+        // Returns the first non-ENDED trip whose [startDate, endDate] window
+        // overlaps the given [start, end]. ENDED trips are frozen history and
+        // are excluded from overlap checks. `excludeId` lets callers ignore a
+        // trip-being-edited.
+        findOverlap(start, end, excludeId = null) {
+            const today = todayLocalDateString();
+            return this.trips.find(t => {
+                if (t.id === excludeId) return false;
+                if (this.getState(t, today) === 'ENDED') return false;
+                return start <= t.endDate && end >= t.startDate;
+            }) || null;
+        }
+
         async create({ name, budget, startDate, endDate }) {
+            const overlap = this.findOverlap(startDate, endDate);
+            if (overlap) {
+                const err = new Error(`Trip dates overlap with "${overlap.name}" (${overlap.startDate} – ${overlap.endDate}).`);
+                err.code = 'TRIP_OVERLAP';
+                err.overlap = overlap;
+                throw err;
+            }
             const trip = {
                 id: genId(),
                 name, budget: Number(budget),

@@ -227,6 +227,7 @@ ${all.length === 0 ? `<div class="today-empty" style="padding:40px 16px"><div>No
     <input id="nt-name" placeholder="Trip name (e.g. New York)" required maxlength="40">
     <input id="nt-budget" type="number" step="1" min="1" placeholder="Budget ($)" required>
     <div class="row2"><input id="nt-start" type="date" value="${today}" required><input id="nt-end" type="date" value="${next7}" required></div>
+    <div id="nt-error" class="nt-error hidden" role="alert"></div>
     <button type="submit" class="primary">Create trip</button>
     <button type="button" class="ghost" onclick="closeNewTripModal()">Cancel</button>
 </form>`;
@@ -242,13 +243,43 @@ ${all.length === 0 ? `<div class="today-empty" style="padding:40px 16px"><div>No
         const budget = Number($('nt-budget').value);
         const startDate = $('nt-start').value;
         const endDate = $('nt-end').value;
-        if (!name || !budget || !startDate || !endDate) return;
-        if (endDate < startDate) { alert('End date must be on or after start date.'); return; }
-        await window.tripsStore.create({ name, budget, startDate, endDate });
+        const errEl = $('nt-error');
+        if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+        if (!name || !budget || !startDate || !endDate) {
+            showTripFormError('All fields are required.');
+            return;
+        }
+        if (endDate < startDate) {
+            showTripFormError('End date must be on or after start date.');
+            return;
+        }
+        const overlap = window.tripsStore.findOverlap(startDate, endDate);
+        if (overlap) {
+            showTripFormError(`Dates overlap with "${overlap.name}" (${overlap.startDate} – ${overlap.endDate}).`);
+            return;
+        }
+        try {
+            await window.tripsStore.create({ name, budget, startDate, endDate });
+        } catch (e) {
+            // Defense-in-depth: trips.js also enforces the rule.
+            if (e && e.code === 'TRIP_OVERLAP') {
+                showTripFormError(`Dates overlap with "${e.overlap.name}" (${e.overlap.startDate} – ${e.overlap.endDate}).`);
+                return;
+            }
+            showTripFormError('Could not save trip. Try again.');
+            return;
+        }
         window.closeNewTripModal();
         window.renderTripsIndex();
         if (window.expenseTracker) window.expenseTracker.updateDashboard();
     };
+
+    function showTripFormError(msg) {
+        const el = document.getElementById('nt-error');
+        if (!el) { alert(msg); return; }
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
 
     window.onStartTrip = async function (id) {
         if (!confirm('Start this trip now?')) return;

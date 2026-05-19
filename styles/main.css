@@ -581,6 +581,7 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .new-trip-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .new-trip-form button.primary { background: var(--trip-grad); color: #001b1f; border: 0; padding: 14px; border-radius: 14px; font-weight: 600; font-size: 14px; }
 .new-trip-form button.ghost { background: transparent; border: 1px solid var(--line-strong); color: var(--on-surface-mute); padding: 14px; border-radius: 14px; font-size: 14px; }
+.new-trip-form .nt-error { background: rgba(255,184,77,0.08); border: 1px solid rgba(255,184,77,0.32); color: var(--warn); padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; }
 
 /* ===== Add expense ===== */
 .page-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 0; }
