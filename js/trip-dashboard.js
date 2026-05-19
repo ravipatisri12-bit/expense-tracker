@@ -100,10 +100,10 @@
             : `Aim under <strong>$${aimToday}/day</strong> for the rest to land on budget.`;
 
         root.innerHTML = `
-<div class="app-header">
-    <div class="brand"><div class="glyph" style="background:var(--trip-grad)"><span class="material-symbols-rounded" style="color:#001b1f">flight_takeoff</span></div><div class="brand-name">LEDG<span class="accent" style="color:var(--trip-2)">R</span></div></div>
-    ${state === 'ACTIVE' ? '<div class="trip-pill">on trip</div>' : ''}
-    <button class="icon-btn" onclick="showPage('trips')" aria-label="All trips"><span class="material-symbols-rounded">list</span></button>
+<div class="page-toolbar">
+    <button class="page-toolbar-back" onclick="showPage('trips')" aria-label="All trips"><span class="material-symbols-rounded">arrow_back</span></button>
+    ${state === 'ACTIVE' ? '<div class="trip-pill">on trip</div>' : '<div class="page-toolbar-spacer"></div>'}
+    <div class="page-toolbar-spacer"></div>
 </div>
 <div class="trip-hero">
     <div class="trip-eyebrow"><span class="material-symbols-rounded">explore</span> ${escapeHtml(trip.name)} · ${state}</div>
@@ -166,11 +166,10 @@ ${actionBtn}`;
         }
 
         root.innerHTML = `
-<div class="app-header">
-    <div class="brand"><div class="glyph" style="background:var(--trip-grad)"><span class="material-symbols-rounded" style="color:#001b1f">map</span></div><div class="brand-name">LEDG<span class="accent" style="color:var(--trip-2)">R</span></div></div>
-    <button class="icon-btn" onclick="openNewTripModal()" aria-label="New trip"><span class="material-symbols-rounded">add</span></button>
+<div class="page-toolbar">
+    <h1 class="page-title">Your trips</h1>
+    <button class="page-toolbar-action" onclick="openNewTripModal()" aria-label="New trip"><span class="material-symbols-rounded">add</span></button>
 </div>
-<h1 class="page-title">Your trips</h1>
 <div class="page-subtitle">${Y} · ${yearTrips.length} trip${yearTrips.length === 1 ? '' : 's'} planned</div>
 <div class="year-summary">
     <div class="ys-label">Spent on trips this year</div>
