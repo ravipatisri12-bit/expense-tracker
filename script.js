@@ -3544,10 +3544,17 @@ ExpenseTracker.prototype.renderHomeMonthHero = function (ctx) {
     const { monthName, year, dayOfMonth, daysInMonth, daysLeft, monthTotalRegular, todayTotal, avgPerDay, aim, tripExpensesThisMonth, SOFT, HARD } = ctx;
     const fillPct = Math.min(100, (monthTotalRegular / HARD) * 100);
     const softLeftPct = (SOFT / HARD) * 100;
-    const overSoft = aim.state === 'HARD_OVER' || aim.state === 'SOFT_OVER';
-    const ofText = overSoft
-        ? `over <strong>$${SOFT.toLocaleString()}</strong> soft target<br><span style="opacity:.6">aim $${aim.dailyTotal}/day to stay under $${HARD}</span>`
-        : `of <strong>$${SOFT.toLocaleString()}</strong> soft target<br><span style="opacity:.6">$${(SOFT - monthTotalRegular).toLocaleString()} left</span>`;
+    // Single-line caption next to the big spent number. The dual-cap bar
+    // already labels $1k soft and $2k hard; the pace strip already shows
+    // "Aim today". So this caption only carries the headline number.
+    let ofText;
+    if (aim.state === 'HARD_OVER') {
+        ofText = `<strong>$${Math.round(monthTotalRegular - HARD).toLocaleString()}</strong> over hard cap`;
+    } else if (aim.state === 'SOFT_OVER') {
+        ofText = `<strong>$${Math.round(monthTotalRegular - SOFT).toLocaleString()}</strong> over soft target`;
+    } else {
+        ofText = `<strong>$${(SOFT - monthTotalRegular).toLocaleString()}</strong> left`;
+    }
     const compositionLine = tripExpensesThisMonth > 0
         ? `<div class="month-composition">+ $${tripExpensesThisMonth.toLocaleString()} on trips · TOTAL $${(monthTotalRegular + tripExpensesThisMonth).toLocaleString()}</div>` : '';
     const forecastLine = window.Forecast
