@@ -152,6 +152,11 @@
         </div>
     </div>
 
+    <!-- Category drill-down sheet (used from Home, History, Trip dashboard) -->
+    <div id="cat-sheet" class="hidden fixed inset-0 z-50 flex items-end" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this) closeCatSheet()">
+        <div id="cat-sheet-card" class="w-full max-w-lg mx-auto"></div>
+    </div>
+
     <!-- SETTINGS PAGE -->
     <div id="settings-page" class="page-content hidden">
         <div class="max-w-lg mx-auto px-4 py-6 space-y-4">

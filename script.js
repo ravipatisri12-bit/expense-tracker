@@ -3090,47 +3090,135 @@ ExpenseTracker.prototype.renderPieChart = function(monthlyExpenses) {
 // NEW: CATEGORY FILTER MODAL
 // ====================================================================
 
-function openCategoryFilter(category) {
-    const modal = document.getElementById('category-filter-modal');
-    const title = document.getElementById('filter-modal-title');
-    const summary = document.getElementById('filter-modal-summary');
-    const container = document.getElementById('filter-modal-transactions');
-    if (!modal || !container) return;
+// Category drill-down sheet — shows the underlying transactions for a single
+// category in the current month context. Mirrors the cap-math used by the
+// Home donut: regular spend only (tripId == null, !excludeFromBudget).
+function openCategoryFilter(category, options) {
+    options = options || {};
+    const sheet = document.getElementById('cat-sheet');
+    const card = document.getElementById('cat-sheet-card');
+    if (!sheet || !card) return;
+    const t = window.expenseTracker; if (!t) return;
 
-    title.textContent = category;
-
-    const filtered = expenseTracker.expenses
-        .filter(e => e.category === category)
-        .sort((a, b) => expenseTracker.parseLocalDate(b.date) - expenseTracker.parseLocalDate(a.date));
-
-    const total = filtered.reduce((s, e) => s + e.amount, 0);
-    summary.textContent = `${filtered.length} transaction${filtered.length !== 1 ? 's' : ''} · ${formatCurrency(total)} total`;
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="py-8 text-center text-sm" style="color:var(--md-sys-color-outline)">No transactions</div>';
+    // State: which month the sheet is showing (default = current month).
+    if (!t._catSheetState) t._catSheetState = {};
+    if (options.reset) {
+        const now = new Date();
+        t._catSheetState = { category, year: now.getFullYear(), month: now.getMonth(), search: '', includeTrips: false };
     } else {
-        const grouped = expenseTracker.groupTransactionsByDate(filtered);
-        container.innerHTML = grouped.map(g => `
-            <div class="mb-3">
-                <div class="flex justify-between items-center py-2 px-1">
-                    <span class="text-xs font-medium" style="color:var(--md-sys-color-outline)">${g.dateLabel}</span>
-                    <span class="text-xs font-medium" style="color:var(--md-sys-color-outline)">${formatCurrency(g.totalAmount)}</span>
-                </div>
-                ${g.transactions.map(e => `
-                    <div class="flex justify-between items-center px-3 py-3 mb-1 rounded-xl" style="background:var(--md-sys-color-surface-container)">
-                        <span class="text-sm" style="color:var(--md-sys-color-on-surface)">${e.description}</span>
-                        <span class="text-sm font-semibold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(e.amount)}</span>
-                    </div>
-                `).join('')}
-            </div>
-        `).join('');
+        t._catSheetState.category = category;
     }
-
-    modal.classList.remove('hidden');
+    renderCatSheet();
+    sheet.classList.remove('hidden');
 }
 
-function closeCategoryFilter() {
-    document.getElementById('category-filter-modal')?.classList.add('hidden');
+function closeCatSheet() {
+    document.getElementById('cat-sheet')?.classList.add('hidden');
+}
+
+function onCatSheetMonthStep(delta) {
+    const t = window.expenseTracker; if (!t || !t._catSheetState) return;
+    const s = t._catSheetState;
+    const next = new Date(s.year, s.month + delta, 1);
+    const now = new Date();
+    if (next.getFullYear() > now.getFullYear() || (next.getFullYear() === now.getFullYear() && next.getMonth() > now.getMonth())) return;
+    s.year = next.getFullYear(); s.month = next.getMonth();
+    renderCatSheet();
+}
+function onCatSheetSearch(v) {
+    const t = window.expenseTracker; if (!t || !t._catSheetState) return;
+    t._catSheetState.search = (v || '').toLowerCase();
+    renderCatSheet();
+}
+function onCatSheetIncludeTripsToggle() {
+    const t = window.expenseTracker; if (!t || !t._catSheetState) return;
+    t._catSheetState.includeTrips = !t._catSheetState.includeTrips;
+    renderCatSheet();
+}
+
+function renderCatSheet() {
+    const card = document.getElementById('cat-sheet-card');
+    const t = window.expenseTracker;
+    if (!card || !t || !t._catSheetState) return;
+    const { category, year, month, search, includeTrips } = t._catSheetState;
+    const monthLabel = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const isCurrent = year === new Date().getFullYear() && month === new Date().getMonth();
+    const color = t._categoryColor(category);
+
+    // Filter
+    let rows = t.expenses.filter(e => e.category === category)
+        .filter(e => {
+            const d = t.parseLocalDate(e.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+    if (!includeTrips) rows = rows.filter(e => e.tripId == null);
+    if (search) rows = rows.filter(e => (e.description || '').toLowerCase().includes(search));
+    rows.sort((a, b) => b.date.localeCompare(a.date) || (b.timestamp || 0) - (a.timestamp || 0));
+
+    const monthTotal = rows.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const avgPerTxn = rows.length ? monthTotal / rows.length : 0;
+    const merchants = {};
+    for (const e of rows) {
+        const k = (e.description || 'Unknown').trim();
+        merchants[k] = (merchants[k] || 0) + Number(e.amount || 0);
+    }
+    const topMerchant = Object.entries(merchants).sort((a, b) => b[1] - a[1])[0];
+
+    // Group by date
+    const groups = {};
+    for (const e of rows) (groups[e.date] = groups[e.date] || []).push(e);
+    const groupKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+    const dayCard = (date, items) => {
+        const d = t.parseLocalDate(date);
+        const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const total = items.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const txns = items.map(e => {
+            const tripBadge = e.tripId ? `<span class="cs-trip-badge">trip</span>` : '';
+            return `<div class="cs-txn"><div class="cs-txn-desc">${t._escapeHtml(e.description || 'Expense')}${tripBadge}</div><div class="cs-txn-amt">$${Number(e.amount).toFixed(2)}</div></div>`;
+        }).join('');
+        return `<div class="cs-day"><div class="cs-day-head"><span class="cs-day-label">${label}</span><span class="cs-day-total">$${Math.round(total).toLocaleString()}</span></div>${txns}</div>`;
+    };
+
+    const empty = `<div class="cs-empty"><span class="material-symbols-rounded">filter_list_off</span><div>No ${t._escapeHtml(category)} transactions${search ? ' match your search' : ''} for ${monthLabel}.</div></div>`;
+
+    card.innerHTML = `
+<div class="cs-card">
+    <div class="cs-grip"></div>
+    <div class="cs-head">
+        <div class="cs-head-left">
+            <div class="cs-dot" style="background:${color}"></div>
+            <div class="cs-head-titles">
+                <div class="cs-title">${t._escapeHtml(category)}</div>
+                <div class="cs-sub">${rows.length} txn${rows.length === 1 ? '' : 's'} · $${Math.round(monthTotal).toLocaleString()}</div>
+            </div>
+        </div>
+        <button class="cs-close" onclick="closeCatSheet()" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="cs-month-nav">
+        <button class="cs-nav-btn" onclick="onCatSheetMonthStep(-1)" aria-label="Previous month"><span class="material-symbols-rounded">chevron_left</span></button>
+        <span class="cs-month-label">${monthLabel}${isCurrent ? ' · current' : ''}</span>
+        <button class="cs-nav-btn" onclick="onCatSheetMonthStep(1)" ${isCurrent ? 'disabled' : ''} aria-label="Next month"><span class="material-symbols-rounded">chevron_right</span></button>
+    </div>
+    <div class="cs-stats">
+        <div class="cs-stat"><div class="cs-stat-lbl">Total</div><div class="cs-stat-val">$${Math.round(monthTotal).toLocaleString()}</div></div>
+        <div class="cs-stat"><div class="cs-stat-lbl">Avg / txn</div><div class="cs-stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div></div>
+        <div class="cs-stat"><div class="cs-stat-lbl">Top</div><div class="cs-stat-val cs-stat-merchant">${topMerchant ? t._escapeHtml(topMerchant[0]) : '—'}</div></div>
+    </div>
+    <div class="cs-controls">
+        <label class="cs-search">
+            <span class="material-symbols-rounded">search</span>
+            <input type="text" placeholder="Search merchant or note…" oninput="onCatSheetSearch(this.value)" value="${t._escapeHtml(search || '')}">
+        </label>
+        <label class="cs-toggle">
+            <input type="checkbox" ${includeTrips ? 'checked' : ''} onchange="onCatSheetIncludeTripsToggle()">
+            <span>Include trip-tagged</span>
+        </label>
+    </div>
+    <div class="cs-body">
+        ${rows.length === 0 ? empty : groupKeys.map(d => dayCard(d, groups[d])).join('')}
+    </div>
+</div>`;
 }
 
 // ====================================================================
@@ -3683,7 +3771,8 @@ ExpenseTracker.prototype.renderHomeCategories = function (monthExpenses) {
     }).join('');
     const legend = ordered.map(([cat, amt]) => {
         const pct = Math.round((amt / grand) * 100);
-        return `<div class="cat-item" onclick="openCategoryFilter('${cat}')"><span class="swatch" style="background:${this._categoryColor(cat)}"></span><span class="name">${this._escapeHtml(cat)}</span><span class="amt">$${Math.round(amt)} · ${pct}%</span></div>`;
+        const safeCat = this._escapeHtml(cat).replace(/'/g, "\\'");
+        return `<div class="cat-item" onclick="openCategoryFilter('${safeCat}', {reset:true})"><span class="swatch" style="background:${this._categoryColor(cat)}"></span><span class="name">${this._escapeHtml(cat)}</span><span class="amt">$${Math.round(amt)} · ${pct}%</span></div>`;
     }).join('');
 
     root.innerHTML = `
@@ -4292,7 +4381,10 @@ ExpenseTracker.prototype.renderHistoryCategories = function () {
         ? `<div style="text-align:center;padding:20px 0;color:var(--on-surface-mute);font-size:13px">No expenses for ${Y} yet.</div>`
         : ordered.map(([name, amt]) => {
             const pct = grand > 0 ? Math.round((amt / grand) * 100) : 0;
-            return `<div class="h-row"><div class="h-name"><span class="dot" style="background:${color(name)}"></span>${this._escapeHtml(name)}</div><div class="h-bar"><span style="width:${pct}%;background:${color(name)}"></span></div><div class="h-amt">$${Math.round(amt).toLocaleString()}<span class="pct">${pct}%</span></div></div>`;
+            const safe = this._escapeHtml(name).replace(/'/g, "\\'");
+            // 'Trips' is its own bucket — drilldown isn't meaningful for it (use Trips page instead).
+            const onclick = name === 'Trips' ? `onclick="showPage('trips')"` : `onclick="openCategoryFilter('${safe}', {reset:true})"`;
+            return `<div class="h-row" style="cursor:pointer" ${onclick}><div class="h-name"><span class="dot" style="background:${color(name)}"></span>${this._escapeHtml(name)}</div><div class="h-bar"><span style="width:${pct}%;background:${color(name)}"></span></div><div class="h-amt">$${Math.round(amt).toLocaleString()}<span class="pct">${pct}%</span></div></div>`;
         }).join('');
     root.innerHTML = `<div class="cat-card history"><div class="cat-head"><div class="title">Where the year went</div><div class="meta">${Y} · all spend</div></div>${rows}</div>`;
 };
