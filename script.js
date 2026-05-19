@@ -298,41 +298,37 @@ class ExpenseTracker {
     // ====================================================================
 
     showPage(pageId, clickedElement = null) {
-        // Hide all pages
-        document.querySelectorAll('.page-content').forEach(page => {
-            page.classList.add('hidden');
-        });
-        
-        // Show selected page
-        document.getElementById(pageId + '-page').classList.remove('hidden');
-        
-        // Update navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('text-primary-600', 'active-nav');
-            btn.style.color='var(--md-sys-color-outline)';
-            const icon = btn.querySelector('.material-symbols-rounded');
-            if (icon) icon.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
-        });
-        
-        // Highlight active nav button
-        const activeBtn = document.querySelector(`[onclick="showPage('${pageId}')"]`);
-        if (activeBtn) {
-            activeBtn.style.color='';
-            activeBtn.classList.add('text-primary-600', 'active-nav');
-            const icon = activeBtn.querySelector('.material-symbols-rounded');
-            if (icon) icon.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
+        // pageId can be 'dashboard' | 'trips' | 'trip-dashboard' | 'transactions' | 'history' | 'add-expense' | 'settings'
+        document.querySelectorAll('.page-content').forEach(page => { page.classList.add('hidden'); });
+        const map = {
+            'dashboard': 'dashboard-page',
+            'trips': 'trips-page',
+            'trip-dashboard': 'trip-dashboard-page',
+            'transactions': 'transactions-page',
+            'history': 'history-page',
+            'add-expense': 'add-expense-page',
+            'settings': 'settings-page'
+        };
+        const elId = map[pageId];
+        if (elId) {
+            const el = document.getElementById(elId);
+            if (el) el.classList.remove('hidden');
         }
-        
+        // Update nav active state
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        const navBtnId = { dashboard: 'nav-home', trips: 'nav-trips', 'trip-dashboard': 'nav-trips', transactions: 'nav-txns', history: 'nav-history' }[pageId];
+        if (navBtnId) {
+            const btn = document.getElementById(navBtnId);
+            if (btn) btn.classList.add('active');
+        }
+        // Renderer hooks
+        if (pageId === 'trips' && typeof renderTripsIndex === 'function') renderTripsIndex();
+        if (pageId === 'trip-dashboard' && typeof renderTripDashboard === 'function') renderTripDashboard();
+        if (pageId === 'history' && typeof renderHistoryPage === 'function') renderHistoryPage();
+        if (pageId === 'add-expense' && typeof renderAddExpensePage === 'function') renderAddExpensePage();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+
         this.currentPage = pageId;
-        
-        // Initialize page-specific content
-        if (pageId === 'history') {
-            console.log('Showing history page, initializing analytics...');
-            this.updateHistoryAnalytics();
-        }
-        if (pageId === 'add-expense' && window.emailParser) {
-            window.emailParser.updateLastSyncedUI();
-        }
     }
 
     // ====================================================================

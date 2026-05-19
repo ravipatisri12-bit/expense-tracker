@@ -59,20 +59,12 @@
     </header>
 
     <!-- Bottom Navigation - 4 tabs -->
-    <nav class="fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style="background:var(--md-sys-color-surface-container)">
-        <div class="flex">
-            <button onclick="showPage('dashboard')" class="nav-btn active-nav flex-1 flex flex-col items-center py-2 px-1 text-primary-600">
-                <span class="material-symbols-rounded text-2xl mb-0.5">home</span>
-                <span class="text-xs font-medium">Home</span>
-            </button>
-            <button onclick="showPage('transactions')" class="nav-btn flex-1 flex flex-col items-center py-2 px-1 " style="color:var(--md-sys-color-outline)">
-                <span class="material-symbols-rounded text-2xl mb-0.5">receipt_long</span>
-                <span class="text-xs">Transactions</span>
-            </button>
-            <button onclick="showPage('history')" class="nav-btn flex-1 flex flex-col items-center py-2 px-1 " style="color:var(--md-sys-color-outline)">
-                <span class="material-symbols-rounded text-2xl mb-0.5">history</span>
-                <span class="text-xs">History</span>
-            </button>
+    <nav class="fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style="background:var(--surface);border-top:1px solid var(--line)">
+        <div class="grid grid-cols-4">
+            <button id="nav-home" onclick="showPage('dashboard')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">home</span><span class="text-xs">Home</span></button>
+            <button id="nav-trips" onclick="showPage('trips')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">flight</span><span class="text-xs">Trips</span></button>
+            <button id="nav-txns" onclick="showPage('transactions')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">receipt_long</span><span class="text-xs">Txns</span></button>
+            <button id="nav-history" onclick="showPage('history')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">history</span><span class="text-xs">History</span></button>
         </div>
     </nav>
 
