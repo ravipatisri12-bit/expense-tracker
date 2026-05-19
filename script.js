@@ -3813,7 +3813,8 @@ window.onToggleManualForm = function () {
     t._renderAddToggle();
     const card = document.getElementById('add-manual-card');
     if (card) card.classList.toggle('hidden', !t._addPageState.manualOpen);
-    if (t._addPageState.manualOpen) t._renderManualCard(t._addPageState.tagging || false);
+    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    if (t._addPageState.manualOpen) t._renderManualCard(tagging);
 };
 
 ExpenseTracker.prototype._renderManualCard = function (tagging) {
@@ -3850,18 +3851,40 @@ ExpenseTracker.prototype._renderManualCard = function (tagging) {
 };
 
 window.onPickAddDate = function (date) {
-    window.expenseTracker._addPageState.date = date;
-    window.expenseTracker._renderManualCard(window.expenseTracker._addPageState.tagging || false);
+    const t = window.expenseTracker;
+    const amt = document.getElementById('manual-amount');
+    const desc = document.getElementById('manual-desc');
+    const savedAmt = amt ? amt.value : '';
+    const savedDesc = desc ? desc.value : '';
+    t._addPageState.date = date;
+    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    t._renderManualCard(tagging);
+    const newAmt = document.getElementById('manual-amount');
+    const newDesc = document.getElementById('manual-desc');
+    if (newAmt) newAmt.value = savedAmt;
+    if (newDesc) newDesc.value = savedDesc;
 };
 window.onPickAddCategory = function (cat) {
-    window.expenseTracker._addPageState.category = cat;
-    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(window.expenseTracker.getLocalDateString(new Date())) && !window.expenseTracker._addPageState.untag);
-    window.expenseTracker._renderManualCard(tagging);
+    const t = window.expenseTracker;
+    const amt = document.getElementById('manual-amount');
+    const desc = document.getElementById('manual-desc');
+    const savedAmt = amt ? amt.value : '';
+    const savedDesc = desc ? desc.value : '';
+    t._addPageState.category = cat;
+    const tagging = !!(window.tripsStore && window.tripsStore.getActiveTrip(t.getLocalDateString(new Date())) && !t._addPageState.untag);
+    t._renderManualCard(tagging);
+    const newAmt = document.getElementById('manual-amount');
+    const newDesc = document.getElementById('manual-desc');
+    if (newAmt) newAmt.value = savedAmt;
+    if (newDesc) newDesc.value = savedDesc;
 };
 window.onManualSubmit = async function () {
     const t = window.expenseTracker;
-    const amount = parseFloat(document.getElementById('manual-amount').value);
-    const description = document.getElementById('manual-desc').value.trim();
+    const amountEl = document.getElementById('manual-amount');
+    const descEl = document.getElementById('manual-desc');
+    if (!amountEl || !descEl) return;
+    const amount = parseFloat(amountEl.value);
+    const description = descEl.value.trim();
     const category = t._addPageState.category;
     const date = t._addPageState.date || t.getLocalDateString(new Date());
     if (!amount || !description || !category) { alert('Amount, description, and category are required.'); return; }
@@ -3872,8 +3895,8 @@ window.onManualSubmit = async function () {
     t.saveExpenses();
     if (window.currentUser) await t.saveExpenseToFirebase(expense);
     t._addPageState.category = '';
-    document.getElementById('manual-amount').value = '';
-    document.getElementById('manual-desc').value = '';
+    amountEl.value = '';
+    descEl.value = '';
     if (window.gamification) { window.gamification.addXP(5, 'expense-logged'); window.gamification.updateStreak(); }
     showNotification('Expense added!', 'success');
     t.updateDashboard();

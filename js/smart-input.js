@@ -349,8 +349,15 @@ class SmartTransactionInput {
                     return `<div class="parse-row unparsed"><span class="amt">?</span><span class="desc">"${p.description}" — couldn't parse</span><span style="color:var(--warn);font-size:18px">!</span></div>`;
                 }
                 const cls = (p.category || 'other').toLowerCase().replace(/transportation/, 'transit').replace(/shopping/, 'shop').replace(/entertainment/, 'fun');
-                const todayStr = new Date().toISOString().slice(0, 10);
-                const yest = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
+                const todayStr = window.expenseTracker
+                    ? window.expenseTracker.getLocalDateString(new Date())
+                    : (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+                const yest = (() => {
+                    const d = new Date(); d.setDate(d.getDate() - 1);
+                    return window.expenseTracker
+                        ? window.expenseTracker.getLocalDateString(d)
+                        : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                })();
                 const whenLabel = p.date === todayStr ? 'TODAY' : p.date === yest ? 'YESTERDAY' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
                 return `<div class="parse-row"><span class="amt">$${p.amount}</span><span class="desc">${p.description}<span class="when">${whenLabel}</span></span><span class="cat-pill ${cls}">${p.category}</span></div>`;
             }).join('');
