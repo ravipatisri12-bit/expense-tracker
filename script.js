@@ -3637,3 +3637,85 @@ ExpenseTracker.prototype.renderHomeCategories = function (monthExpenses) {
     <div class="cat-legend">${legend}</div>
 </div></div>`;
 };
+
+ExpenseTracker.prototype.renderHomeTrend = function ({ regularThisMonth, daysInMonth, dayOfMonth, monthName, aim }) {
+    const root = document.getElementById('home-trend');
+    if (!root) return;
+    const perDay = new Array(daysInMonth).fill(0);
+    for (const e of regularThisMonth) {
+        const d = this.parseLocalDate(e.date).getDate();
+        if (d >= 1 && d <= daysInMonth) perDay[d - 1] += Number(e.amount || 0);
+    }
+    const max = Math.max(1, ...perDay);
+
+    const Y = new Date().getFullYear() - 1;
+    const M = new Date().getMonth();
+    const lastYearTotalSamePoint = this.expenses
+        .filter(e => e.tripId == null)
+        .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === Y && d.getMonth() === M && d.getDate() <= dayOfMonth; })
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+    const thisPointTotal = perDay.slice(0, dayOfMonth).reduce((s, v) => s + v, 0);
+    const compareDelta = thisPointTotal - lastYearTotalSamePoint;
+    const compareCls = compareDelta < 0 ? '' : 'over';
+    const compareText = lastYearTotalSamePoint === 0
+        ? `<span style="opacity:.7">vs same point last ${monthName}: no data</span>`
+        : `<span>vs same point last ${monthName}:</span><span class="delta ${compareCls}">${compareDelta < 0 ? '−' : '+'}$${Math.abs(Math.round(compareDelta))} ${compareDelta < 0 ? 'lower' : 'higher'}</span>`;
+
+    const aimY = aim.dailyTotal > 0 && max > 0 ? Math.max(0, Math.min(100, 100 - (aim.dailyTotal / max) * 100)) : 60;
+
+    const bars = perDay.map((v, i) => {
+        const day = i + 1;
+        const h = Math.max(2, (v / max) * 100);
+        let cls = 'b';
+        if (day > dayOfMonth) cls += ' future';
+        if (day === dayOfMonth) cls += ' today';
+        return `<div class="${cls}" style="height:${day > dayOfMonth ? 14 : h}%" data-day="${day}" data-amt="${v}" onclick="showHomeTrendPopover(this)"></div>`;
+    }).join('');
+
+    const today = perDay[dayOfMonth - 1] || 0;
+    const sliced = perDay.slice(0, Math.max(1, dayOfMonth));
+    const bestIdx = sliced.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0])[0] || [0, 0];
+    const worstIdx = sliced.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0])[0] || [0, 0];
+    const todayDeltaText = today > aim.dailyTotal ? `+$${Math.round(today - aim.dailyTotal)} vs aim` : `−$${Math.round(aim.dailyTotal - today)} vs aim`;
+    const monthAbbr = monthName.slice(0, 3).toUpperCase();
+
+    root.innerHTML = `
+<div class="section-head"><h2 class="section-title">Spending trend</h2><span class="section-meta">tap a bar</span></div>
+<div class="trend-card">
+    <div class="trend-toggle"><button class="active">Daily</button><button>Weekly</button></div>
+    <div class="trend-compare">${compareText}</div>
+    <div class="trend-chart-wrap">
+        <div class="trend-pace-line" style="top:${aimY}%"><span class="trend-pace-label">aim · $${aim.dailyTotal}/day</span></div>
+        <div class="trend-bars" style="--cols:${daysInMonth}">${bars}</div>
+    </div>
+    <div class="trend-foot">
+        <span>${monthAbbr} 1</span>
+        <span>${Math.round(daysInMonth / 2)}</span>
+        <span style="color:var(--m-1)">today · ${dayOfMonth}</span>
+        <span>${daysInMonth}</span>
+    </div>
+    <div class="trend-stats">
+        <div class="trend-stat"><div class="lbl">Today</div><div class="val">$${Math.round(today)}</div><div class="meta">${todayDeltaText}</div></div>
+        <div class="trend-stat"><div class="lbl">Best day</div><div class="val">$${Math.round(bestIdx[0])}</div><div class="meta">${monthName} ${bestIdx[1] + 1}</div></div>
+        <div class="trend-stat"><div class="lbl">Worst day</div><div class="val">$${Math.round(worstIdx[0])}</div><div class="meta">${monthName} ${worstIdx[1] + 1}</div></div>
+    </div>
+</div>`;
+};
+
+window.showHomeTrendPopover = function (barEl) {
+    document.querySelectorAll('#home-trend .trend-bars .b .bar-popover').forEach(p => p.remove());
+    document.querySelectorAll('#home-trend .trend-bars .b').forEach(b => b.classList.remove('tapped'));
+    barEl.classList.add('tapped');
+    const day = barEl.dataset.day;
+    const amt = Math.round(Number(barEl.dataset.amt));
+    const monthAbbr = new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    barEl.insertAdjacentHTML('afterbegin', `<div class="bar-popover"><span class="day">${monthAbbr} ${day}</span>$${amt}</div>`);
+    setTimeout(() => {
+        document.addEventListener('click', dismissOnce, { once: true, capture: true });
+    }, 0);
+    function dismissOnce(e) {
+        if (e.target.closest('.b') === barEl) return;
+        barEl.classList.remove('tapped');
+        const p = barEl.querySelector('.bar-popover'); if (p) p.remove();
+    }
+};
