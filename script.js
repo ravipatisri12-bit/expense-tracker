@@ -4093,3 +4093,39 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
     </div>` : ''}
 </div>`;
 };
+
+ExpenseTracker.prototype.renderHistoryCategories = function () {
+    const root = document.getElementById('history-categories');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const yearAll = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
+    const totals = {};
+    let grand = 0;
+    for (const e of yearAll) {
+        const key = e.tripId != null ? 'Trips' : (e.category || 'Other');
+        totals[key] = (totals[key] || 0) + Number(e.amount || 0);
+        grand += Number(e.amount || 0);
+    }
+    const ordered = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    const color = name => name === 'Trips' ? '#00f2fe' : this._categoryColor(name);
+    const rows = ordered.length === 0
+        ? `<div style="text-align:center;padding:20px 0;color:var(--on-surface-mute);font-size:13px">No expenses for ${Y} yet.</div>`
+        : ordered.map(([name, amt]) => {
+            const pct = grand > 0 ? Math.round((amt / grand) * 100) : 0;
+            return `<div class="h-row"><div class="h-name"><span class="dot" style="background:${color(name)}"></span>${this._escapeHtml(name)}</div><div class="h-bar"><span style="width:${pct}%;background:${color(name)}"></span></div><div class="h-amt">$${Math.round(amt).toLocaleString()}<span class="pct">${pct}%</span></div></div>`;
+        }).join('');
+    root.innerHTML = `<div class="cat-card history"><div class="cat-head"><div class="title">Where the year went</div><div class="meta">${Y} · all spend</div></div>${rows}</div>`;
+};
+
+ExpenseTracker.prototype.renderHistoryTopRegulars = function () {
+    const root = document.getElementById('history-top-regulars');
+    if (!root) return;
+    if (!window.MerchantFrequency) { root.innerHTML = ''; return; }
+    const Y = this._historyState.year;
+    const list = window.MerchantFrequency.aggregate(this.expenses, Y);
+    if (list.length === 0) { root.innerHTML = ''; return; }
+    const top = list.slice(0, 8);
+    const rows = top.map(r => `<div class="row"><span class="ic">·</span><span class="nm">${this._escapeHtml(r.name)}</span><span class="ct">${r.visits} visits</span><span class="amt">$${Math.round(r.total).toLocaleString()}</span></div>`).join('');
+    const more = list.length > 8 ? `<div class="more">+ ${list.length - 8} more</div>` : '';
+    root.innerHTML = `<div class="regulars-card"><div class="head"><div class="title">Top regulars</div><div class="meta">${Y} · by visits</div></div>${rows}${more}</div>`;
+};
