@@ -194,13 +194,18 @@
             return Math.max(0, (yearIncome - yearSpend) / yearIncome);
         }
 
-        // First-fit auto-placement (spec §5.1). Does NOT mutate the item.
+        // Priority-aware first-fit auto-placement (spec §5.1).
+        //   must → walk months forward (earliest fit) so urgent items grab early months
+        //   want / nice → walk backward (latest fit) so they sit at year-end and
+        //     leave breathing room up front for incoming must items.
+        // Does NOT mutate the item.
         findSpot(item) {
             const t = window.expenseTracker;
             if (!t) return null;
             const target = (t.settings && t.settings.savingsTargetRate) || 0.50;
             const months = this.computeHeadroom();
-            for (const m of months) {
+            const order = item.priority === 'must' ? months : months.slice().reverse();
+            for (const m of order) {
                 if (m.headroom < item.cost) continue;
                 const before = item.scheduledMonth;
                 item.scheduledMonth = m.ym;
