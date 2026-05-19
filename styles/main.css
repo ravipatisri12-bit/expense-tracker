@@ -1,3 +1,56 @@
+/* ===== Redesign tokens (2026-05) ===== */
+:root {
+  --bg: #0a0c14;
+  --surface: #131520;
+  --surface-2: #1c1f2c;
+  --surface-3: #262a39;
+  --on-surface: #e6e8f0;
+  --on-surface-mute: #8b8fa3;
+  --on-surface-faint: #4a4f63;
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  /* Monthly palette — violet / indigo */
+  --m-1: #8b9eff;
+  --m-2: #c79bff;
+  --m-grad: linear-gradient(120deg, #667eea 0%, #b66cff 100%);
+  --m-glow: 0 0 24px rgba(139,158,255,0.20);
+
+  /* Trip palette — cyan */
+  --trip-1: #4facfe;
+  --trip-2: #00f2fe;
+  --trip-grad: linear-gradient(120deg, #4facfe 0%, #00f2fe 100%);
+  --trip-glow: 0 0 24px rgba(0, 242, 254, 0.18);
+
+  /* Saved (history only) */
+  --saved: #43e97b;
+  --saved-grad: linear-gradient(120deg, #43e97b 0%, #38f9d7 100%);
+
+  /* Categories */
+  --cat-food: #ff9c66;
+  --cat-coffee: #ffd166;
+  --cat-transit: #66d9ff;
+  --cat-shop: #7ee7c1;
+  --cat-fun: #c89eff;
+  --cat-bills: #b0b6c8;
+  --cat-trips: #00f2fe;
+  --cat-other: #8b8fa3;
+
+  /* Status */
+  --good: #43e97b;
+  --warn: #ffb84d;
+  --bad: #ff7080;
+  --no-spend: #43e97b;
+  --essential: #8b9eff;
+  --wants: #ffb84d;
+}
+
+html.fonts-loaded body { font-family: 'Inter Tight', -apple-system, sans-serif; }
+body { background: radial-gradient(1100px 600px at 0% -10%, rgba(102,126,234,0.10), transparent 55%), radial-gradient(900px 500px at 110% 30%, rgba(182,108,255,0.06), transparent 60%), var(--bg); color: var(--on-surface); }
+
+.f-serif { font-family: 'Fraunces', serif; }
+.f-mono { font-family: 'JetBrains Mono', monospace; }
+
 /* Modern Expense Tracker - Material Design 3 Dark Theme */
 
 /* MD3 Color Tokens (Dark) */
