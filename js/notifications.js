@@ -238,6 +238,27 @@ function previewMessage(slot, ctx) {
     };
 }
 
+function _activeTripForPreview() {
+    if (!window.tripsStore) return null;
+    const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    return window.tripsStore.getActiveTrip(today);
+}
+function _buildTripPreview(slot, trip) {
+    const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const expenses = window.expenseTracker.getTripExpenses(trip.id);
+    const tripSpent = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const todayTotal = expenses.filter(e => e.date === today).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const totalDays = window.expenseTracker._tripTotalDays(trip);
+    const dayNum = Math.min(totalDays, window.expenseTracker._tripDayNumber(trip, today));
+    const remaining = Math.max(0, trip.budget - tripSpent);
+    const aim = Math.round(remaining / Math.max(1, totalDays - dayNum + 1));
+    if (slot === 'morning') return { title: `→ $${aim} to spend on the trip today`, body: `Day ${dayNum} of ${totalDays} · $${Math.round(remaining)} left of $${trip.budget} budget` };
+    if (slot === 'afternoon') return { title: todayTotal > 0 ? `· $${Math.round(todayTotal)} today` : `· $0 today so far`, body: `${trip.name}: $${Math.round(tripSpent)} of $${trip.budget} · ${Math.max(0, totalDays - dayNum)} days left` };
+    const symbol = tripSpent > trip.budget ? '!' : todayTotal <= aim ? '✓' : '·';
+    const word = tripSpent > trip.budget ? 'over trip budget' : todayTotal <= aim ? 'under trip pace' : 'over trip pace';
+    return { title: `${symbol} $${Math.round(todayTotal)} today — ${word}`, body: `Day ${dayNum} done · $${Math.round(remaining)} left of $${trip.budget} budget` };
+}
+
 async function fireNotificationPreview(slot = 'evening') {
     try {
         if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -251,8 +272,14 @@ async function fireNotificationPreview(slot = 'evening') {
                 return;
             }
         }
-        const ctx = previewBuildContext();
-        const { title, body } = previewMessage(slot, ctx);
+        const trip = _activeTripForPreview();
+        let title, body;
+        if (trip) {
+            ({ title, body } = _buildTripPreview(slot, trip));
+        } else {
+            const ctx = previewBuildContext();
+            ({ title, body } = previewMessage(slot, ctx));
+        }
         const reg = await navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js')
             || await navigator.serviceWorker.ready;
         await reg.showNotification(title, { body, icon: 'icon_192.png', badge: 'icon_128.png', tag: 'ledgr-preview' });
