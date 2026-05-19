@@ -31,6 +31,7 @@ The codebase uses safe wrappers (`safeGetElement`, `safeAddEventListener`, `safe
 - Auth via `js/auth.js` (Google sign-in, LOCAL persistence so sessions survive refresh).
 - Gmail auto-import is an external Google Apps Script (`gmail-import/apps-script.js`) that writes directly to Firestore with `source: "chase-gmail"`. See `gmail-import/README.md`.
 - Dates are stored as `YYYY-MM-DD` strings and parsed via `parseLocalDate()` to avoid UTC timezone shifts. Use this helper — never `new Date('YYYY-MM-DD')` directly (that parses as UTC midnight and shifts a day in negative timezones).
+- **Timezone footgun, repeatedly hit**: every place that derives a "today" date string from `Date` MUST use the user's local time, never UTC. When adding an expense, the default date is the device's local `YYYY-MM-DD` (`new Date()` then read year/month/date components — not `.toISOString().slice(0,10)` which is UTC). For Gmail-imported transactions, Chase emails report ET; convert to UTC instant first, then read the device's local calendar parts (see `_parseDate` in `js/email-parser.js` for the canonical pattern). Past bugs have caused expenses logged at 11pm Pacific to appear on the next day.
 
 ### LLM integration (`js/llm-integration.js`)
 

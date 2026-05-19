@@ -22,6 +22,12 @@ dist/
 *serviceAccount*.json
 *service-account*.json
 
+# Playwright MCP runtime artifacts
+.playwright-mcp/
+
+# Mock screenshots — generated, not source
+mocks/screenshots/
+
 # Test files (keep in repo but document)
 # test-*.html files are kept for development
 
