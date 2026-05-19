@@ -323,6 +323,54 @@ class SmartTransactionInput {
             }
         });
     }
+
+    attachLivePreview() {
+        const ta = document.getElementById('smart-input');
+        const preview = document.getElementById('smart-parse-preview');
+        const ctaLabel = document.getElementById('smart-cta-label');
+        const submitBtn = document.getElementById('parse-smart-input');
+        if (!ta || !preview) return;
+        let timer = null;
+        const render = () => {
+            const text = ta.value;
+            if (!text.trim()) {
+                preview.classList.add('hidden');
+                if (ctaLabel) ctaLabel.textContent = 'Add expenses';
+                if (submitBtn) submitBtn.disabled = true;
+                return;
+            }
+            preview.classList.remove('hidden');
+            // Use existing regex parser; never call Gemini for live preview.
+            const parsed = window.llmParser.fallbackParseMultiple(text);
+            const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+            const ok = parsed.filter(p => p.amount && p.amount > 0);
+            const rows = parsed.map(p => {
+                if (!p.amount || p.amount <= 0) {
+                    return `<div class="parse-row unparsed"><span class="amt">?</span><span class="desc">"${p.description}" — couldn't parse</span><span style="color:var(--warn);font-size:18px">!</span></div>`;
+                }
+                const cls = (p.category || 'other').toLowerCase().replace(/transportation/, 'transit').replace(/shopping/, 'shop').replace(/entertainment/, 'fun');
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const yest = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
+                const whenLabel = p.date === todayStr ? 'TODAY' : p.date === yest ? 'YESTERDAY' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+                return `<div class="parse-row"><span class="amt">$${p.amount}</span><span class="desc">${p.description}<span class="when">${whenLabel}</span></span><span class="cat-pill ${cls}">${p.category}</span></div>`;
+            }).join('');
+            preview.innerHTML = `<div class="ph"><span class="pulse"></span> Parsed live · ${ok.length} of ${lines.length}</div>${rows}`;
+            if (ctaLabel) ctaLabel.textContent = ok.length === 0 ? 'Add expenses' : `Add ${ok.length} expense${ok.length === 1 ? '' : 's'}`;
+            if (submitBtn) submitBtn.disabled = ok.length === 0;
+        };
+        ta.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(render, 300);
+        });
+        // Re-attach submit (renderAddExpensePage replaced the button)
+        if (submitBtn && !submitBtn.dataset.bound) {
+            submitBtn.dataset.bound = '1';
+            submitBtn.addEventListener('click', async () => {
+                await this.parseAndAddMultiple(ta.value);
+            });
+        }
+        render();
+    }
 }
 
 // Initialize when DOM is ready
