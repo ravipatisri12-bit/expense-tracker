@@ -12,7 +12,6 @@ class Gamification {
             xp: 0,
             level: 1,
             streak: { current: 0, best: 0, lastDate: null },
-            antiPortfolio: [],  // { id, description, amount, date, category }
             achievements: [],   // unlocked achievement IDs
             dailyLog: {},       // { "2026-02-18": { logged: true, underBudget: true, mood?, checkedIn? } }
             weeklyQuest: null   // { weekId, type, target, completed, xpRewarded }
@@ -103,38 +102,6 @@ class Gamification {
         return this.data.streak;
     }
 
-    // === ANTI-PORTFOLIO ===
-
-    addAntiPortfolioEntry(description, amount, category = 'General') {
-        const entry = {
-            id: Date.now(),
-            description,
-            amount: parseFloat(amount),
-            date: new Date().toISOString().split('T')[0],
-            category
-        };
-        this.data.antiPortfolio.push(entry);
-        this.save();
-        const xpResult = this.addXP(15, 'anti-portfolio');
-        this.updateStreak();
-        return { entry, ...xpResult };
-    }
-
-    getDailySavings(date) {
-        const d = date || new Date().toISOString().split('T')[0];
-        return this.data.antiPortfolio
-            .filter(e => e.date === d)
-            .reduce((sum, e) => sum + e.amount, 0);
-    }
-
-    getTotalSavings() {
-        return this.data.antiPortfolio.reduce((sum, e) => sum + e.amount, 0);
-    }
-
-    getRecentAntiPortfolio(limit = 5) {
-        return this.data.antiPortfolio.slice(-limit).reverse();
-    }
-
     // === DAILY LOG ===
 
     logDay(underBudget) {
@@ -192,22 +159,6 @@ class Gamification {
         this.save();
     }
 
-    checkSavingsAchievements() {
-        const total = this.getTotalSavings();
-        const unlocks = [
-            [100, 'saved-100', 'First $100 Saved'],
-            [500, 'saved-500', '$500 Club'],
-            [1000, 'saved-1k', 'Thousand Dollar Saver'],
-        ];
-        unlocks.forEach(([amount, id, name]) => {
-            if (total >= amount && !this.data.achievements.includes(id)) {
-                this.data.achievements.push(id);
-                this.onAchievement(id, name);
-            }
-        });
-        this.save();
-    }
-
     // === CALLBACKS (override these) ===
 
     onLevelUp(level) {
@@ -227,10 +178,7 @@ class Gamification {
             xpProgress: this.getXPProgress(),
             xpToNext: this.getXPForNextLevel(),
             streak: this.data.streak,
-            totalSaved: this.getTotalSavings(),
-            todaySaved: this.getDailySavings(),
-            achievements: this.data.achievements,
-            antiPortfolioCount: this.data.antiPortfolio.length
+            achievements: this.data.achievements
         };
     }
 }
@@ -256,40 +204,6 @@ function updateGreeting() {
 
 function updateGamificationUI() {
     renderHabitCard();
-}
-
-// === ANTI-PORTFOLIO HANDLERS ===
-
-function openAntiPortfolio() {
-    document.getElementById('anti-portfolio-modal').style.display = 'flex';
-    document.getElementById('anti-desc').focus();
-}
-
-function closeAntiPortfolio() {
-    document.getElementById('anti-portfolio-modal').style.display = 'none';
-    document.getElementById('anti-desc').value = '';
-    document.getElementById('anti-amount').value = '';
-}
-
-function submitAntiPortfolio() {
-    const descEl = document.getElementById('anti-desc');
-    const amountEl = document.getElementById('anti-amount');
-    const desc = descEl.value.trim();
-    const amount = parseFloat(amountEl.value);
-
-    // Reset styles
-    descEl.style.borderColor = 'rgba(255,255,255,0.1)';
-    amountEl.style.borderColor = 'rgba(255,255,255,0.1)';
-
-    let valid = true;
-    if (!desc) { descEl.style.borderColor = '#ef4444'; valid = false; }
-    if (!amount || amount <= 0) { amountEl.style.borderColor = '#ef4444'; valid = false; }
-    if (!valid) return;
-
-    const result = window.gamification.addAntiPortfolioEntry(desc, amount);
-    window.gamification.checkSavingsAchievements();
-    closeAntiPortfolio();
-    updateGamificationUI();
 }
 
 // === HABIT CARD — streak + 7-day trail + daily check-in (merged) ===

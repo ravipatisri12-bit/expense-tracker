@@ -655,12 +655,6 @@ class ExpenseTracker {
             if (pct >= 5) wins.push({ msg: `Food spending down ${pct}% vs last month — great control`, weight: 20 });
         }
 
-        // Anti-portfolio (avoided spending)
-        const totalAvoided = window.gamification?.getTotalSavings() || 0;
-        if (totalAvoided >= 10) {
-            wins.push({ msg: `You've logged $${Math.round(totalAvoided)} in avoided spending — real discipline`, weight: 15 });
-        }
-
         // Days tracked this month
         const daysLogged = Object.keys(g?.dailyLog || {}).filter(d => {
             const date = new Date(d + 'T00:00:00');
