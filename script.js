@@ -3882,3 +3882,43 @@ window.onManualSubmit = async function () {
 };
 
 window.renderAddExpensePage = function () { if (window.expenseTracker) window.expenseTracker.renderAddExpensePage(); };
+
+// ===== Track D — History =====
+
+ExpenseTracker.prototype._historyState = null;
+ExpenseTracker.prototype._initHistoryState = function () {
+    if (!this._historyState) {
+        const now = new Date();
+        this._historyState = { year: now.getFullYear(), month: now.getMonth() };
+    }
+};
+ExpenseTracker.prototype.renderHistoryPage = function () {
+    this._initHistoryState();
+    this.renderHistoryYearSelector();
+    this.renderHistoryYearStats();
+    this.renderHistoryYearShape();
+    this.renderHistoryMonthRail();
+    this.renderHistoryMonthDetail();
+    this.renderHistoryCategories();
+    this.renderHistoryTopRegulars();
+    const meta = document.getElementById('history-page-meta');
+    if (meta) meta.textContent = String(this._historyState.year);
+};
+window.renderHistoryPage = function () { if (window.expenseTracker) window.expenseTracker.renderHistoryPage(); };
+
+window.onHistoryYearStep = function (delta) {
+    const t = window.expenseTracker; if (!t) return;
+    t._initHistoryState();
+    const next = t._historyState.year + delta;
+    if (next > new Date().getFullYear()) return;
+    t._historyState.year = next;
+    t._historyState.month = next === new Date().getFullYear() ? new Date().getMonth() : 0;
+    t.renderHistoryPage();
+};
+window.onHistoryMonthSelect = function (month) {
+    const t = window.expenseTracker; if (!t) return;
+    t._historyState.month = month;
+    t.renderHistoryMonthRail();
+    t.renderHistoryMonthDetail();
+    t.renderHistoryYearShape();
+};
