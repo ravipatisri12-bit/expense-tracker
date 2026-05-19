@@ -4024,3 +4024,72 @@ ExpenseTracker.prototype.renderHistoryYearShape = function () {
     </div>
 </div>`;
 };
+
+ExpenseTracker.prototype.renderHistoryMonthRail = function () {
+    const root = document.getElementById('history-month-rail');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const sel = this._historyState.month;
+    const now = new Date();
+    const totals = new Array(12).fill(0);
+    for (const e of this.expenses) {
+        const d = this.parseLocalDate(e.date);
+        if (d.getFullYear() === Y) totals[d.getMonth()] += Number(e.amount || 0);
+    }
+    const labels = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const isFuture = m => Y > now.getFullYear() || (Y === now.getFullYear() && m > now.getMonth());
+    const pills = labels.map((l, m) => {
+        const empty = isFuture(m);
+        const active = m === sel;
+        const v = empty ? '—' : `$${Math.round(totals[m]).toLocaleString()}`;
+        return `<div class="pill ${active ? 'active' : ''} ${empty ? 'empty' : ''}" onclick="onHistoryMonthSelect(${m})"><span class="m">${l}</span><span class="v">${v}</span></div>`;
+    }).join('');
+    root.innerHTML = `<div class="month-rail">${pills}</div>`;
+};
+
+ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
+    const root = document.getElementById('history-month-detail');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const M = this._historyState.month;
+    const now = new Date();
+    const monthName = new Date(Y, M, 1).toLocaleDateString('en-US', { month: 'long' });
+
+    const monthAll = this.expenses.filter(e => {
+        const d = this.parseLocalDate(e.date); return d.getFullYear() === Y && d.getMonth() === M;
+    });
+    const total = monthAll.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const regular = monthAll.filter(e => e.tripId == null).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const tripTotal = total - regular;
+    const tripCount = new Set(monthAll.filter(e => e.tripId != null).map(e => e.tripId)).size;
+
+    // vs prior month
+    const prevY = M === 0 ? Y - 1 : Y;
+    const prevM = M === 0 ? 11 : M - 1;
+    const prevTotal = this.expenses
+        .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === prevY && d.getMonth() === prevM; })
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+    const prevName = new Date(prevY, prevM, 1).toLocaleDateString('en-US', { month: 'short' });
+    let vsLine = '';
+    if (prevTotal > 0) {
+        const delta = total - prevTotal;
+        const pct = Math.round(Math.abs(delta) / prevTotal * 100);
+        vsLine = `<strong>${delta >= 0 ? '+' : '−'}$${Math.abs(Math.round(delta)).toLocaleString()} vs ${prevName}</strong><span style="opacity:.7">${delta >= 0 ? '↑' : '↓'} ${pct}% ${delta >= 0 ? 'higher' : 'lower'}</span>`;
+    }
+
+    let eyebrow;
+    if (Y < now.getFullYear() || (Y === now.getFullYear() && M < now.getMonth())) eyebrow = 'COMPLETED';
+    else if (Y === now.getFullYear() && M === now.getMonth()) eyebrow = `SELECTED · ${now.getDate()} days in`;
+    else eyebrow = 'UPCOMING';
+
+    root.innerHTML = `
+<div class="month-detail">
+    <div class="md-eyebrow">${eyebrow}</div>
+    <div class="md-name">${monthName}<span class="yr">${Y}</span></div>
+    <div class="md-numbers"><div class="md-total"><span class="currency">$</span>${Math.round(total).toLocaleString()}</div><div class="md-vs">${vsLine}</div></div>
+    ${(regular > 0 || tripTotal > 0) ? `<div class="md-breakdown">
+        <div class="row"><span class="swatch" style="background:var(--m-1)"></span><span class="name">Regular spending</span><span class="amt">$${Math.round(regular).toLocaleString()}</span></div>
+        ${tripTotal > 0 ? `<div class="row"><span class="swatch" style="background:var(--trip-2)"></span><span class="name">Trips · ${tripCount}</span><span class="amt">$${Math.round(tripTotal).toLocaleString()}</span></div>` : ''}
+    </div>` : ''}
+</div>`;
+};
