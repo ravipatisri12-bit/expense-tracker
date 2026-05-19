@@ -3956,6 +3956,7 @@ window.onHistoryYearStep = function (delta) {
 };
 window.onHistoryMonthSelect = function (month) {
     const t = window.expenseTracker; if (!t) return;
+    if (!t._historyState) t._initHistoryState();
     t._historyState.month = month;
     t.renderHistoryMonthRail();
     t.renderHistoryMonthDetail();
@@ -4045,8 +4046,9 @@ ExpenseTracker.prototype.renderHistoryYearShape = function () {
     const past = totals.slice(0, Y < now.getFullYear() ? 12 : now.getMonth() + 1);
     const high = past.length ? Math.max(...past) : 0;
     const highIdx = past.indexOf(high);
-    const low = past.length ? Math.min(...past.filter(v => v > 0)) : 0;
-    const lowIdx = past.indexOf(low);
+    const lowFiltered = past.filter(v => v > 0);
+    const low = lowFiltered.length ? Math.min(...lowFiltered) : 0;
+    const lowIdx = lowFiltered.length ? past.indexOf(low) : -1;
     const sumPast = past.reduce((s, v) => s + v, 0);
     const avg = past.length ? Math.round(sumPast / past.length) : 0;
     const monthName = i => ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][i] || '';
