@@ -2,9 +2,10 @@
 // For each registered FCM token, checks the device's local hour and sends:
 //   09:00 → daily budget room
 //   18:00 → afternoon check-in
-//   22:00 → end-of-day summary + streak
+//   22:00 → end-of-day summary + streak / check-in nudge
 //
 // Required env: FIREBASE_SERVICE_ACCOUNT (full JSON of a service-account key).
+// Optional env: FORCE_SLOT=morning|afternoon|evening|<hour-int> bypasses the local-hour gate.
 
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -19,6 +20,8 @@ const SLOT_BUDGET_ROOM = 9;
 const SLOT_AFTERNOON = 18;
 const SLOT_END_OF_DAY = 22;
 
+const MOOD_LABEL = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
+
 const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 initializeApp({ credential: cert(sa), projectId: sa.project_id });
 const db = getFirestore();
@@ -31,7 +34,11 @@ function localHour(tz) {
 
 function localDateString(tz) {
     const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
-    return fmt.format(new Date()); // YYYY-MM-DD
+    return fmt.format(new Date());
+}
+
+function localMonthName(tz) {
+    return new Intl.DateTimeFormat('en-US', { timeZone: tz, month: 'long' }).format(new Date());
 }
 
 function startOfMonthString(tz) {
@@ -66,52 +73,64 @@ async function fetchUserExpenses(uid, fromDate, toDate) {
     return snap.docs.map(d => d.data());
 }
 
-function calcFoodStreak(expenses, todayStr) {
-    const foodDays = new Set(expenses.filter(isFood).map(e => e.date));
-    let streak = 0;
-    const cursor = new Date(todayStr + 'T00:00:00');
-    while (true) {
-        const ds = cursor.toISOString().slice(0, 10);
-        if (foodDays.has(ds)) break;
-        streak++;
-        cursor.setDate(cursor.getDate() - 1);
-        if (streak > 365) break;
-    }
-    return streak;
+async function fetchGamification(uid) {
+    try {
+        const doc = await db.collection('users').doc(uid).collection('state').doc('gamification').get();
+        return doc.exists ? doc.data() : null;
+    } catch { return null; }
 }
 
 function buildMessage(slot, ctx) {
-    const { todayTotal, todayFood, monthTotal, monthFood, daysLeft, streak, todayCount } = ctx;
-    const totalRoom = Math.max(0, MONTHLY_TOTAL_SOFT - monthTotal);
-    const foodRoom = Math.max(0, MONTHLY_FOOD - monthFood);
-    const dailyTotalTarget = Math.round(totalRoom / Math.max(1, daysLeft));
-    const dailyFoodTarget = Math.round(foodRoom / Math.max(1, daysLeft));
+    const totalRoom = Math.max(0, MONTHLY_TOTAL_SOFT - ctx.monthTotal);
+    const foodRoom = Math.max(0, MONTHLY_FOOD - ctx.monthFood);
+    const dailyTotalTarget = Math.round(totalRoom / Math.max(1, ctx.daysLeft));
+    const dailyFoodTarget = Math.round(foodRoom / Math.max(1, ctx.daysLeft));
+    const overHard = ctx.monthTotal > MONTHLY_TOTAL_HARD;
+    const overSoft = ctx.monthTotal > MONTHLY_TOTAL_SOFT;
 
     if (slot === SLOT_BUDGET_ROOM) {
+        if (overHard) {
+            return {
+                title: `Heads up — over your ${fmt(MONTHLY_TOTAL_HARD)} cap`,
+                body: `Tighten food today: ${fmt(dailyFoodTarget)} budget left\n${ctx.daysLeft} days to go in ${ctx.monthName}`
+            };
+        }
         return {
-            title: 'Daily target',
-            body: `Room: ${fmt(dailyTotalTarget)} total · ${fmt(dailyFoodTarget)} food\n${daysLeft} days left in month`
+            title: `You can spend ${fmt(dailyTotalTarget)} today`,
+            body: `${fmt(dailyFoodTarget)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
         };
     }
+
     if (slot === SLOT_AFTERNOON) {
+        if (ctx.todayCount === 0) {
+            return {
+                title: 'Quiet day so far',
+                body: `Nothing logged yet\n${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} this month`
+            };
+        }
         return {
-            title: 'Day so far',
-            body: `Today: ${fmt(todayTotal)} · food ${fmt(todayFood)}\nMonth: ${fmt(monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)}`
+            title: `${fmt(ctx.todayTotal)} spent so far today`,
+            body: `Food: ${fmt(ctx.todayFood)} of ${fmt(MONTHLY_FOOD)} month cap\n${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} monthly target`
         };
     }
-    // End of day
-    const noSpend = todayCount === 0 ? ' · no-spend day' : '';
-    let pace;
-    if (monthTotal > MONTHLY_TOTAL_HARD) pace = 'Over hard cap';
-    else if (monthTotal > MONTHLY_TOTAL_SOFT) pace = 'Over soft pace';
-    else pace = 'Under pace';
+
+    // evening
+    const paceWord = overHard ? 'over hard cap' : overSoft ? 'over pace' : 'under pace';
+    if (!ctx.checkedIn) {
+        return {
+            title: 'Tag today before bed',
+            body: `Tap to log: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
+        };
+    }
+    const moodLabel = MOOD_LABEL[ctx.mood] || 'Logged';
+    const streakBit = ctx.streak ? `${ctx.streak} day streak` : 'first day';
     return {
-        title: 'Day done',
-        body: `${fmt(todayTotal)} today · food ${fmt(todayFood)}${noSpend}\nStreak: Day ${streak} · ${pace}`
+        title: `${fmt(ctx.todayTotal)} today — ${paceWord}`,
+        body: `Tagged "${moodLabel}" — ${streakBit}\n${fmt(ctx.monthTotal)} of ${fmt(MONTHLY_TOTAL_SOFT)} this month`
     };
 }
 
-async function processToken(uid, tokenDoc, forceSlot) {
+async function processToken(uid, tokenDoc, gamification, forceSlot) {
     const data = tokenDoc.data();
     const tz = data.tz || 'America/Los_Angeles';
     const hour = forceSlot ?? localHour(tz);
@@ -127,16 +146,16 @@ async function processToken(uid, tokenDoc, forceSlot) {
         monthTotal: sumExpenses(expenses),
         monthFood: sumExpenses(expenses, isFood),
         daysLeft: daysLeftInMonth(tz),
-        streak: calcFoodStreak(expenses, today),
-        todayCount: todayExpenses.length
+        todayCount: todayExpenses.length,
+        monthName: localMonthName(tz),
+        streak: gamification?.streak?.current || 0,
+        checkedIn: !!gamification?.dailyLog?.[today]?.checkedIn,
+        mood: gamification?.dailyLog?.[today]?.mood || null
     };
     const { title, body } = buildMessage(hour, ctx);
 
     try {
-        await messaging.send({
-            token: data.token,
-            notification: { title, body }
-        });
+        await messaging.send({ token: data.token, notification: { title, body } });
         console.log(`Sent ${hour}h to ${uid} / ${data.token.slice(0, 12)}…`);
     } catch (err) {
         const code = err.errorInfo?.code;
@@ -158,8 +177,10 @@ async function main() {
     const users = await db.collection('users').get();
     for (const userDoc of users.docs) {
         const tokens = await userDoc.ref.collection('fcmTokens').get();
+        if (tokens.empty) continue;
+        const gamification = await fetchGamification(userDoc.id);
         for (const tokenDoc of tokens.docs) {
-            await processToken(userDoc.id, tokenDoc, forceSlot);
+            await processToken(userDoc.id, tokenDoc, gamification, forceSlot);
         }
     }
 }

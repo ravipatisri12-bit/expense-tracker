@@ -210,6 +210,12 @@ function initAuth() {
         if (user && window.expenseTracker) {
             window.expenseTracker.loadUserData();
         }
+        if (user && window.gamification?.hydrateFromCloud) {
+            window.gamification.hydrateFromCloud();
+        }
+        if (user && typeof refreshFcmTokenSilently === 'function') {
+            refreshFcmTokenSilently();
+        }
     });
 }
 

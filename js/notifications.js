@@ -3,6 +3,30 @@
 
 const VAPID_KEY = 'BAa26BRj2zy9cHSkOSZDqQB_9Ys4GBUlyUWhnk_A_ErUv_cK355aFNhuaTFANFIWJAdikqQCNkgv4cbpoGQ6BKY';
 
+const PREVIEW_MONTHLY_TOTAL_SOFT = 1000;
+const PREVIEW_MONTHLY_TOTAL_HARD = 2000;
+const PREVIEW_MONTHLY_FOOD = 400;
+const PREVIEW_FOOD_CATEGORIES = new Set(['Food']);
+
+// Save the token, then delete any other tokens registered to the same device
+// (same userAgent), so refresh-token doesn't accumulate duplicates.
+async function saveTokenAndDedupe(uid, token) {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
+    const ua = navigator.userAgent;
+    const tokensRef = window.firebaseDb.collection('users').doc(uid).collection('fcmTokens');
+    await tokensRef.doc(token).set({
+        token,
+        userAgent: ua,
+        tz,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    const snap = await tokensRef.where('userAgent', '==', ua).get();
+    const stale = snap.docs.filter(d => d.id !== token);
+    await Promise.all(stale.map(d => d.ref.delete()));
+    if (stale.length) console.log(`Removed ${stale.length} stale token(s) for this device`);
+}
+
 async function enableNotifications() {
     try {
         if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -13,7 +37,7 @@ async function enableNotifications() {
             showNotification('Messaging SDK not loaded', 'error');
             return;
         }
-        if (!window.firebaseAuth || !window.firebaseAuth.currentUser) {
+        if (!window.firebaseAuth?.currentUser) {
             showNotification('Sign in first', 'error');
             return;
         }
@@ -33,18 +57,7 @@ async function enableNotifications() {
             return;
         }
 
-        const uid = window.firebaseAuth.currentUser.uid;
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
-        await window.firebaseDb
-            .collection('users').doc(uid)
-            .collection('fcmTokens').doc(token)
-            .set({
-                token,
-                userAgent: navigator.userAgent,
-                tz,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
+        await saveTokenAndDedupe(window.firebaseAuth.currentUser.uid, token);
         console.log('FCM token saved:', token.slice(0, 12) + '...');
         showNotification('Notifications enabled', 'success');
         updateNotificationsUI('granted');
@@ -54,13 +67,32 @@ async function enableNotifications() {
     }
 }
 
+// Silently rotate the token on every app load when permission is already granted.
+// iOS aggressively recycles APNs bindings; refreshing on each open keeps delivery
+// reliable without the user tapping anything.
+async function refreshFcmTokenSilently() {
+    try {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        if (typeof firebase === 'undefined' || !firebase.messaging) return;
+        if (!window.firebaseAuth?.currentUser) return;
+        const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        const messaging = firebase.messaging();
+        const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+        if (!token) return;
+        await saveTokenAndDedupe(window.firebaseAuth.currentUser.uid, token);
+        console.log('FCM token refreshed silently');
+    } catch (err) {
+        console.warn('silent token refresh failed:', err.message);
+    }
+}
+
 function updateNotificationsUI(permission) {
     const status = safeGetElement('notif-status');
     const btn = safeGetElement('enable-notif-btn');
     if (!status || !btn) return;
     if (permission === 'granted') {
-        status.textContent = 'Enabled on this device';
-        btn.textContent = 'Refresh token';
+        status.textContent = 'Enabled · refreshes automatically each visit';
+        btn.textContent = 'Refresh now';
     } else if (permission === 'denied') {
         status.textContent = 'Blocked — enable in iOS Settings → Ledgr → Notifications';
         btn.textContent = 'Try again';
@@ -71,13 +103,6 @@ function updateNotificationsUI(permission) {
 }
 
 // --- Local preview ("fire now") ---
-// Mirrors scripts/send-notifications.js logic but uses in-memory expense data
-// and the local Notification API, so taps fire instantly without going through FCM.
-const PREVIEW_MONTHLY_TOTAL_SOFT = 1000;
-const PREVIEW_MONTHLY_TOTAL_HARD = 2000;
-const PREVIEW_MONTHLY_FOOD = 400;
-const PREVIEW_FOOD_CATEGORIES = new Set(['Food']);
-
 function previewLocalDateString() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -88,33 +113,34 @@ function previewDaysLeft() {
     return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate() + 1;
 }
 
+function previewMonthName() {
+    return new Date().toLocaleString('en-US', { month: 'long' });
+}
+
 function previewBuildContext() {
     const today = previewLocalDateString();
     const monthPrefix = today.slice(0, 7);
-    const all = (window.expenseTracker && window.expenseTracker.expenses) || [];
+    const all = (window.expenseTracker?.expenses) || [];
     const month = all.filter(e => (e.date || '').startsWith(monthPrefix));
     const todays = month.filter(e => e.date === today);
     const sum = (arr, pred = () => true) => arr.reduce((s, e) => s + (pred(e) ? Number(e.amount || 0) : 0), 0);
     const isFood = e => PREVIEW_FOOD_CATEGORIES.has(e.category);
-    const foodDays = new Set(month.filter(isFood).map(e => e.date));
-    let streak = 0;
-    const cursor = new Date(today + 'T00:00:00');
-    while (streak <= 365) {
-        const ds = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
-        if (foodDays.has(ds)) break;
-        streak++;
-        cursor.setDate(cursor.getDate() - 1);
-    }
+    const g = window.gamification?.data;
     return {
         todayTotal: sum(todays),
         todayFood: sum(todays, isFood),
         monthTotal: sum(month),
         monthFood: sum(month, isFood),
         daysLeft: previewDaysLeft(),
-        streak,
-        todayCount: todays.length
+        todayCount: todays.length,
+        monthName: previewMonthName(),
+        streak: g?.streak?.current || 0,
+        checkedIn: !!g?.dailyLog?.[today]?.checkedIn,
+        mood: g?.dailyLog?.[today]?.mood || null
     };
 }
+
+const MOOD_LABEL = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
 
 function previewMessage(slot, ctx) {
     const fmt = n => '$' + Math.round(n);
@@ -122,18 +148,49 @@ function previewMessage(slot, ctx) {
     const foodRoom = Math.max(0, PREVIEW_MONTHLY_FOOD - ctx.monthFood);
     const dailyTotalTarget = Math.round(totalRoom / Math.max(1, ctx.daysLeft));
     const dailyFoodTarget = Math.round(foodRoom / Math.max(1, ctx.daysLeft));
+    const overHard = ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_HARD;
+    const overSoft = ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_SOFT;
+
     if (slot === 'morning') {
-        return { title: 'Daily target', body: `Room: ${fmt(dailyTotalTarget)} total · ${fmt(dailyFoodTarget)} food\n${ctx.daysLeft} days left in month` };
+        if (overHard) {
+            return {
+                title: `Heads up — over your ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} cap`,
+                body: `Tighten food today: ${fmt(dailyFoodTarget)} budget left\n${ctx.daysLeft} days to go in ${ctx.monthName}`
+            };
+        }
+        return {
+            title: `You can spend ${fmt(dailyTotalTarget)} today`,
+            body: `${fmt(dailyFoodTarget)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
+        };
     }
+
     if (slot === 'afternoon') {
-        return { title: 'Day so far', body: `Today: ${fmt(ctx.todayTotal)} · food ${fmt(ctx.todayFood)}\nMonth: ${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)}` };
+        if (ctx.todayCount === 0) {
+            return {
+                title: 'Quiet day so far',
+                body: `Nothing logged yet\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
+            };
+        }
+        return {
+            title: `${fmt(ctx.todayTotal)} spent so far today`,
+            body: `Food: ${fmt(ctx.todayFood)} of ${fmt(PREVIEW_MONTHLY_FOOD)} month cap\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} monthly target`
+        };
     }
-    const noSpend = ctx.todayCount === 0 ? ' · no-spend day' : '';
-    let pace;
-    if (ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_HARD) pace = 'Over hard cap';
-    else if (ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_SOFT) pace = 'Over soft pace';
-    else pace = 'Under pace';
-    return { title: 'Day done', body: `${fmt(ctx.todayTotal)} today · food ${fmt(ctx.todayFood)}${noSpend}\nStreak: Day ${ctx.streak} · ${pace}` };
+
+    // evening
+    const paceWord = overHard ? 'over hard cap' : overSoft ? 'over pace' : 'under pace';
+    if (!ctx.checkedIn) {
+        return {
+            title: 'Tag today before bed',
+            body: `Tap to log: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
+        };
+    }
+    const moodLabel = MOOD_LABEL[ctx.mood] || 'Logged';
+    const streakBit = ctx.streak ? `${ctx.streak} day streak` : 'first day';
+    return {
+        title: `${fmt(ctx.todayTotal)} today — ${paceWord}`,
+        body: `Tagged "${moodLabel}" — ${streakBit}\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
+    };
 }
 
 async function fireNotificationPreview(slot = 'evening') {
@@ -161,6 +218,7 @@ async function fireNotificationPreview(slot = 'evening') {
 }
 
 window.enableNotifications = enableNotifications;
+window.refreshFcmTokenSilently = refreshFcmTokenSilently;
 window.updateNotificationsUI = updateNotificationsUI;
 window.fireNotificationPreview = fireNotificationPreview;
 

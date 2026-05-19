@@ -21,6 +21,46 @@ class Gamification {
 
     save() {
         localStorage.setItem('ledgr_gamification', JSON.stringify(this.data));
+        this.scheduleCloudSync();
+    }
+
+    scheduleCloudSync() {
+        clearTimeout(this._syncTimer);
+        this._syncTimer = setTimeout(() => this.syncToCloud(), 2000);
+    }
+
+    async syncToCloud() {
+        try {
+            const uid = window.firebaseAuth?.currentUser?.uid;
+            if (!uid || !window.firebaseDb) return;
+            await window.firebaseDb.collection('users').doc(uid)
+                .collection('state').doc('gamification')
+                .set({ ...this.data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        } catch (err) {
+            console.warn('gamification sync failed:', err.message);
+        }
+    }
+
+    async hydrateFromCloud() {
+        try {
+            const uid = window.firebaseAuth?.currentUser?.uid;
+            if (!uid || !window.firebaseDb) return;
+            const doc = await window.firebaseDb.collection('users').doc(uid)
+                .collection('state').doc('gamification').get();
+            if (!doc.exists) return;
+            const cloud = doc.data();
+            const cloudUpdated = cloud.updatedAt?.toMillis?.() || 0;
+            const localUpdated = parseInt(localStorage.getItem('ledgr_gamification_updatedAt') || '0', 10);
+            if (cloudUpdated > localUpdated) {
+                delete cloud.updatedAt;
+                this.data = { ...this.getDefaults(), ...cloud };
+                localStorage.setItem('ledgr_gamification', JSON.stringify(this.data));
+                localStorage.setItem('ledgr_gamification_updatedAt', String(cloudUpdated));
+                if (typeof renderHabitCard === 'function') renderHabitCard();
+            }
+        } catch (err) {
+            console.warn('gamification hydrate failed:', err.message);
+        }
     }
 
     // === XP & LEVELS ===
