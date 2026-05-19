@@ -3197,15 +3197,15 @@ function closeEditModal() {
 // APPLICATION INITIALIZATION
 // ====================================================================
 
-// Initialize the application
-var expenseTracker = new ExpenseTracker();
-window.expenseTracker = expenseTracker;
+// Initialize the application — DEFERRED to EOF so prototype methods added below
+// (renderHome*, render add-expense, render history, helpers) are bound BEFORE init() runs.
+// The actual `new ExpenseTracker()` lives at the bottom of this file.
 
 // Console helper — set income for a specific month (month is 1-12).
 // Usage: setIncomeForMonth(2026, 1, 4000)  // January 2026 = 4000
 //        setIncomeForMonth(2026, 1, null)  // remove override → falls back to default
 window.setIncomeForMonth = (year, month, amount) =>
-    expenseTracker.setIncomeOverride(year, month - 1, amount);
+    window.expenseTracker.setIncomeOverride(year, month - 1, amount);
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
@@ -4173,3 +4173,9 @@ ExpenseTracker.prototype.renderHistoryTopRegulars = function () {
     const more = list.length > 8 ? `<div class="more">+ ${list.length - 8} more</div>` : '';
     root.innerHTML = `<div class="regulars-card"><div class="head"><div class="title">Top regulars</div><div class="meta">${Y} · by visits</div></div>${rows}${more}</div>`;
 };
+
+// ====================================================================
+// FINAL INITIALIZATION — runs AFTER all prototype methods above are defined.
+// ====================================================================
+var expenseTracker = new ExpenseTracker();
+window.expenseTracker = expenseTracker;
