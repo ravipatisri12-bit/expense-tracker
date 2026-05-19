@@ -382,7 +382,7 @@ class EmailParser {
                 const tripId = (window.tripsStore && window.tripsStore.pickTripIdForDate)
                     ? window.tripsStore.pickTripIdForDate(parsed.date) : null;
                 toAdd.push({
-                    id: Date.now() + Math.floor(Math.random() * 10000),
+                    id: window.expenseTracker ? window.expenseTracker.nextExpenseId() : (Date.now() + Math.floor(Math.random() * 10000)),
                     amount: parseFloat(parsed.amount),
                     description: parsed.merchant,
                     category: parsed.category || 'Other',

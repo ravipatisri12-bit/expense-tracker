@@ -147,7 +147,7 @@ class SmartTransactionInput {
                     const tripId = (!untag && window.tripsStore && window.tripsStore.pickTripIdForDate)
                         ? window.tripsStore.pickTripIdForDate(expenseDate) : null;
                     const expense = {
-                        id: Date.now() + i,
+                        id: this.tracker.nextExpenseId(),
                         amount: parsed.amount,
                         description: parsed.description || 'Expense',
                         category: parsed.category || 'Other',

@@ -214,7 +214,7 @@ class ExpenseTracker {
         // Add sample expenses with IDs and timestamps
         [...aprilSamples, ...marchSamples, ...februarySamples].forEach((sample, index) => {
             this.expenses.push({
-                id: Date.now() + index,
+                id: this.nextExpenseId(),
                 ...sample,
                 timestamp: Date.now() + index,
                 excludeFromBudget: sample.excludeFromBudget || false
@@ -353,7 +353,7 @@ class ExpenseTracker {
         const expenseDate = selectedDate; // Store as YYYY-MM-DD string
         
         const expense = {
-            id: Date.now(),
+            id: this.nextExpenseId(),
             amount: amount,
             description: description,
             category: category,
@@ -1421,15 +1421,35 @@ class ExpenseTracker {
             
             // Set up real-time listener
             this.setupRealtimeListeners();
-            
-            // Check for local data to migrate (but not if data was just cleaned)
+
+            // One-shot migration of local data to Firestore — only safe to run when:
+            //   1) the cloud account has ZERO expenses (so we won't overwrite cloud data
+            //      with stale local copies), AND
+            //   2) the user hasn't just cleaned their data (the dataCleaned flag).
+            // Otherwise the cloud is authoritative; the snapshot listener will populate
+            // this.expenses, and any new local writes go through saveExpenseToFirebase
+            // which is idempotent (deterministic doc IDs).
             const localExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
             const dataCleaned = localStorage.getItem('data_cleaned');
-            if (localExpenses.length > 0 && !dataCleaned) {
-                this.migrateLocalDataToFirebase(localExpenses);
-            } else if (dataCleaned) {
+            if (dataCleaned) {
                 console.log('Skipping migration - data was recently cleaned');
-                localStorage.removeItem('data_cleaned'); // Remove flag after use
+                localStorage.removeItem('data_cleaned');
+            } else if (localExpenses.length > 0) {
+                try {
+                    const cloudCount = await db.collection('users').doc(currentUser.uid)
+                        .collection('expenses').limit(1).get();
+                    if (cloudCount.empty) {
+                        console.log(`Migrating ${localExpenses.length} local expenses to empty cloud account`);
+                        await this.migrateLocalDataToFirebase(localExpenses);
+                    } else {
+                        console.log('Cloud has data; skipping migration to avoid overwriting');
+                        // Local data is now superseded by cloud. Wipe stale local state to
+                        // prevent the next sign-in on this device from re-uploading it.
+                        localStorage.removeItem('expenses');
+                    }
+                } catch (e) {
+                    console.error('Migration safety check failed:', e);
+                }
             }
 
         } catch (error) {
@@ -2254,6 +2274,18 @@ class ExpenseTracker {
             isToday: dateString === today,
             expenses: dayExpenses
         };
+    }
+
+    // Generate a fresh, collision-proof local expense id. `Date.now()` alone
+    // collides if two writes happen in the same millisecond (manual + smart input
+    // batching, double-tap, etc). We append a monotonic per-process counter
+    // so every id this session produces is unique even within the same ms.
+    nextExpenseId() {
+        const ts = Date.now();
+        if (this._lastIdTs === ts) this._lastIdSeq = (this._lastIdSeq || 0) + 1;
+        else { this._lastIdTs = ts; this._lastIdSeq = 0; }
+        // Keep numeric for back-compat with existing comparisons; offset by seq.
+        return ts * 1000 + this._lastIdSeq;
     }
 
     // Helper function to get consistent local date strings (avoiding timezone issues)
@@ -4163,7 +4195,7 @@ window.onManualSubmit = async function () {
     // window attach correctly. Per-page Untag toggle still suppresses tagging.
     const tripId = (!t._addPageState.untag && window.tripsStore)
         ? window.tripsStore.pickTripIdForDate(date) : null;
-    const expense = { id: Date.now(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId };
+    const expense = { id: t.nextExpenseId(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId };
     t.expenses.push(expense);
     t.saveExpenses();
     if (window.currentUser) await t.saveExpenseToFirebase(expense);

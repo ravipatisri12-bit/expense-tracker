@@ -156,7 +156,7 @@ async function submitQuickAdd() {
     }
     
     const expense = {
-        id: Date.now(),
+        id: window.expenseTracker ? window.expenseTracker.nextExpenseId() : Date.now(),
         amount: amount,
         description: description,
         category: window.quickAddInstance.selectedCategory,
