@@ -4280,7 +4280,7 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     const Y = this._historyState.year;
     const now = new Date();
     const all = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
-    const totalSpent = all.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const loggedSpent = all.reduce((s, e) => s + Number(e.amount || 0), 0);
     const monthsActive = new Set(all.map(e => this.parseLocalDate(e.date).getMonth())).size;
     // Avg/mo uses ELAPSED months-of-year (current year up to current month;
     // past year = 12; future year = 0). This matches how income is computed
@@ -4289,16 +4289,24 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     if (Y < now.getFullYear()) monthsElapsed = 12;
     else if (Y === now.getFullYear()) monthsElapsed = now.getMonth() + 1;
     else monthsElapsed = 0;
+    // Fold fixed monthly obligations (rent + utilities + car/insurance from Settings)
+    // into Spent. Without this, Saved looks artificially high because rent never
+    // shows up in the logged-expense ledger.
+    const fixedMonthly = (this.settings?.rent || 0) + (this.settings?.utilities || 0) + (this.settings?.insurance || 0);
+    const fixedYear = fixedMonthly * monthsElapsed;
+    const totalSpent = loggedSpent + fixedYear;
     const avgPerMo = monthsElapsed > 0 ? Math.round(totalSpent / monthsElapsed) : 0;
     const income = (this.getYearIncome ? this.getYearIncome(Y) : 0) || 0;
     const saved = income - totalSpent;
     const rate = income > 0 ? Math.max(0, Math.round((saved / income) * 100)) : 0;
+    const fixedNote = fixedYear > 0 ? `<div class="sub">incl. $${Math.round(fixedYear).toLocaleString()} fixed · $${Math.round(loggedSpent).toLocaleString()} logged</div>` : '';
     root.innerHTML = `
 <div class="year-stats">
     <div class="stat-card spent">
         <div class="lbl">Spent · ${Y}</div>
         <div class="num"><span class="currency">$</span>${Math.round(totalSpent).toLocaleString()}</div>
         <div class="sub">$${avgPerMo.toLocaleString()}/mo avg · ${monthsActive} active mo${monthsActive === 1 ? '' : 's'}</div>
+        ${fixedNote}
     </div>
     <div class="stat-card saved">
         ${income > 0 ? `<div class="rate">${rate}%</div>` : ''}
