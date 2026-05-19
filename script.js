@@ -879,6 +879,9 @@ class ExpenseTracker {
     // ====================================================================
 
     updateDashboard() {
+        // Retro-tag any pre-existing untagged expenses that fall in a trip's window.
+        try { this.backfillTripTags(); } catch (e) { console.warn('backfillTripTags:', e); }
+
         const now = new Date();
         const Y = now.getFullYear();
         const M = now.getMonth();
@@ -2284,6 +2287,29 @@ class ExpenseTracker {
             const d = this.parseLocalDate(e.date);
             return d.getFullYear() === year && d.getMonth() === month;
         });
+    }
+
+    // Walk all expenses with tripId == null and assign them to any trip whose
+    // window contains the expense date. Used to retro-tag entries that existed
+    // before a trip was created (or before the auto-tag plumbing was wired).
+    // Idempotent: never overwrites an explicit tripId.
+    backfillTripTags() {
+        if (!window.tripsStore) return 0;
+        const trips = window.tripsStore.all();
+        if (trips.length === 0) return 0;
+        const updated = [];
+        for (const e of this.expenses) {
+            if (e.tripId) continue;
+            const t = trips.find(t => e.date >= t.startDate && e.date <= t.endDate);
+            if (t) { e.tripId = t.id; updated.push(e); }
+        }
+        if (updated.length > 0) {
+            this.saveExpenses();
+            if (window.currentUser) {
+                for (const e of updated) this.saveExpenseToFirebase(e);
+            }
+        }
+        return updated.length;
     }
 
     animateCount(el, target) {
