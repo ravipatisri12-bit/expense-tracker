@@ -3922,3 +3922,52 @@ window.onHistoryMonthSelect = function (month) {
     t.renderHistoryMonthDetail();
     t.renderHistoryYearShape();
 };
+
+ExpenseTracker.prototype.getYearIncome = function (year) {
+    const monthly = (this.settings && this.settings.income) || 0;
+    if (monthly <= 0) return 0;
+    const now = new Date();
+    if (year === now.getFullYear()) return monthly * (now.getMonth() + 1);
+    if (year < now.getFullYear()) return monthly * 12;
+    return 0;
+};
+
+ExpenseTracker.prototype.renderHistoryYearSelector = function () {
+    const root = document.getElementById('history-year-selector');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const max = new Date().getFullYear();
+    root.innerHTML = `
+<div class="year-selector">
+    <button onclick="onHistoryYearStep(-1)"><span class="material-symbols-rounded">chevron_left</span></button>
+    <span class="year-name">${Y}</span>
+    <button onclick="onHistoryYearStep(1)" ${Y >= max ? 'disabled' : ''}><span class="material-symbols-rounded">chevron_right</span></button>
+</div>`;
+};
+
+ExpenseTracker.prototype.renderHistoryYearStats = function () {
+    const root = document.getElementById('history-year-stats');
+    if (!root) return;
+    const Y = this._historyState.year;
+    const all = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
+    const totalSpent = all.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const monthsActive = new Set(all.map(e => this.parseLocalDate(e.date).getMonth())).size;
+    const avgPerMo = monthsActive > 0 ? Math.round(totalSpent / monthsActive) : 0;
+    const income = (this.getYearIncome ? this.getYearIncome(Y) : 0) || 0;
+    const saved = income - totalSpent;
+    const rate = income > 0 ? Math.max(0, Math.round((saved / income) * 100)) : 0;
+    root.innerHTML = `
+<div class="year-stats">
+    <div class="stat-card spent">
+        <div class="lbl">Spent · ${Y}</div>
+        <div class="num"><span class="currency">$</span>${Math.round(totalSpent).toLocaleString()}</div>
+        <div class="sub">$${avgPerMo.toLocaleString()}/mo avg · ${monthsActive} mo${monthsActive === 1 ? '' : 's'}</div>
+    </div>
+    <div class="stat-card saved">
+        ${income > 0 ? `<div class="rate">${rate}%</div>` : ''}
+        <div class="lbl">Saved · ${Y}</div>
+        <div class="num"><span class="currency">$</span>${Math.round(Math.max(0, saved)).toLocaleString()}</div>
+        <div class="sub">${income > 0 ? `income $${income.toLocaleString()}` : 'set income in Settings'}</div>
+    </div>
+</div>`;
+};
