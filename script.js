@@ -880,106 +880,41 @@ class ExpenseTracker {
 
     updateDashboard() {
         const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        
-        const monthlyExpenses = this.expenses.filter(expense => {
-            const d = this.parseLocalDate(expense.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        });
+        const Y = now.getFullYear();
+        const M = now.getMonth();
+        const monthName = now.toLocaleDateString('en-US', { month: 'long' });
+        const dayOfMonth = now.getDate();
+        const daysInMonth = new Date(Y, M + 1, 0).getDate();
+        const daysLeft = daysInMonth - dayOfMonth;
 
-        // Separate regular and essential expenses
-        const regularExpenses = monthlyExpenses.filter(e => !e.excludeFromBudget);
-        const totalVariableExpenses = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
-        const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
+        const regularThisMonth = this.getRegularMonthExpenses(Y, M);
+        const monthTotalRegular = regularThisMonth.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const monthCombined = this.getMonthCombinedExpenses(Y, M).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const tripExpensesThisMonth = monthCombined - monthTotalRegular;
 
-        // Big spending number + budget ring
-        const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const el = (id) => document.getElementById(id);
-        if (el('month-label')) el('month-label').textContent = monthLabel;
-        if (el('big-spending-number')) this.animateCount(el('big-spending-number'), Math.round(totalVariableExpenses));
+        const SOFT = 1000, HARD = 2000, FOOD = 400;
+        const monthFood = regularThisMonth.filter(e => e.category === 'Food').reduce((s, e) => s + Number(e.amount || 0), 0);
+        const aim = this._computeAimToday({ monthTotal: monthTotalRegular, monthFood, daysLeft, SOFT, HARD, FOOD });
 
-        // Budget ring
-        const totalBudget = Object.values(this.settings.goals).reduce((s, v) => s + v, 0);
-        const ring = el('budget-ring-progress');
-        const ringLabel = el('budget-ring-label');
-        if (ring && totalBudget > 0) {
-            const pct = Math.min(totalVariableExpenses / totalBudget, 1.2);
-            const circumference = 534.07;
-            ring.style.strokeDashoffset = circumference * (1 - Math.min(pct, 1));
-            ring.style.stroke = pct > 1 ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#22c55e';
-            const ringLabel = el('budget-ring-label');
-            if (ringLabel) ringLabel.textContent = `${Math.round(pct * 100)}% of $${Math.round(totalBudget)} budget`;
-        }
+        const todayStr = this.getLocalDateString(now);
+        const todayTotal = regularThisMonth.filter(e => e.date === todayStr).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const avgPerDay = dayOfMonth > 0 ? Math.round(monthTotalRegular / dayOfMonth) : 0;
 
-        // Trend comparison vs last month
-        const lastMonthExpenses = this.expenses.filter(e => {
-            const d = this.parseLocalDate(e.date);
-            return d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && d.getFullYear() === (currentMonth === 0 ? currentYear - 1 : currentYear);
-        });
-        const lastMonthTotal = lastMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
-        const trendEl = el('spending-trend-text');
-        if (trendEl && lastMonthTotal > 0) {
-            const diff = totalVariableExpenses - lastMonthTotal;
-            const pct = Math.abs(Math.round((diff / lastMonthTotal) * 100));
-            trendEl.innerHTML = diff > 0
-                ? `<span style="color:#cf6679">${pct}% more than last month</span>`
-                : `<span style="color:var(--md-sys-color-primary)">${pct}% less than last month</span>`;
-        } else if (trendEl) {
-            trendEl.textContent = '';
-        }
+        try { this.renderHomeGreeting(now); } catch (e) { console.warn(e); }
+        try { this.renderHomeMonthHero({ monthName, year: Y, dayOfMonth, daysInMonth, daysLeft, monthTotalRegular, todayTotal, avgPerDay, aim, tripExpensesThisMonth, SOFT, HARD }); } catch (e) { console.warn(e); }
+        try { this.renderHomeInsight({ monthName, aim, monthTotalRegular, SOFT }); } catch (e) { console.warn(e); }
+        try { this.renderHomeTripTeaser(); } catch (e) { console.warn(e); }
+        try { this.renderHomeHabit(); } catch (e) { console.warn(e); }
+        try { this.renderHomeCategories(regularThisMonth); } catch (e) { console.warn(e); }
+        try { this.renderHomeTrend({ regularThisMonth, daysInMonth, dayOfMonth, monthName, aim }); } catch (e) { console.warn(e); }
+    }
 
-        // Fixed expenses (collapsed)
-        if (el('rent-amount')) el('rent-amount').textContent = formatCurrency(this.settings.rent);
-        if (el('utilities-amount')) el('utilities-amount').textContent = formatCurrency(this.settings.utilities);
-        if (el('insurance-amount')) el('insurance-amount').textContent = formatCurrency(this.settings.insurance);
-        if (el('fixed-total-collapsed')) el('fixed-total-collapsed').textContent = formatCurrency(totalFixedExpenses) + '/mo';
-
-        // Spending trends (default: daily)
-        this.currentTrendsView = this.currentTrendsView || 'daily';
-        if (this.currentTrendsView === 'daily') {
-            this.updateDailySpending('week');
-        } else {
-            this.updateWeeklySpending('recent');
-        }
-
-        // Streaks
-        this.renderStreaks();
-
-        // AI Insights
-        this.renderInsights();
-
-        // Pie chart
-        this.renderPieChart(monthlyExpenses);
-
-        // Monthly report
-        const essentialExpenses = monthlyExpenses.filter(e => e.excludeFromBudget);
-        
-        const spent = regularExpenses.reduce((s, e) => s + e.amount, 0);
-        const essential = essentialExpenses.reduce((s, e) => s + e.amount, 0);
-        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const income = this.getIncomeFor(currentYear, currentMonth);
-        const overall = spent + essential + fixed;
-        const saved = income - overall;
-        
-        const _el = id => document.getElementById(id);
-        if (_el('report-spent')) { 
-            _el('report-spent').textContent = formatCurrency(spent); 
-            _el('report-spent').style.color = (income && spent <= income) ? '#43e97b' : '#cf6679'; 
-        }
-        if (_el('report-essential')) { 
-            _el('report-essential').textContent = formatCurrency(essential); 
-        }
-        if (_el('report-saved')) { 
-            _el('report-saved').textContent = formatCurrency(Math.abs(saved)); 
-            _el('report-saved').style.color = saved >= 0 ? '#43e97b' : '#cf6679'; 
-        }
-        if (_el('report-overall')) _el('report-overall').textContent = formatCurrency(overall);
-
-        try { this.renderTodayPanel(); } catch(e) { console.error('renderTodayPanel:', e); }
-        try { this.renderWeeklyQuest(); } catch(e) { console.error('renderWeeklyQuest:', e); }
-        try { if (typeof renderHabitCard === 'function') renderHabitCard(); } catch(e) { console.error('renderHabitCard:', e); }
-        this.maybeShowEveningNotification();
+    _computeAimToday({ monthTotal, monthFood, daysLeft, SOFT, HARD, FOOD }) {
+        const dl = Math.max(1, daysLeft);
+        if (monthTotal > HARD) return { state: 'HARD_OVER', dailyTotal: 0, dailyFood: 0 };
+        if (monthTotal > SOFT) return { state: 'SOFT_OVER', dailyTotal: Math.round((HARD - monthTotal) / dl), dailyFood: 0 };
+        if (monthFood > FOOD) return { state: 'FOOD_OVER', dailyTotal: Math.round((SOFT - monthTotal) / dl), dailyFood: 0 };
+        return { state: 'HEALTHY', dailyTotal: Math.round((SOFT - monthTotal) / dl), dailyFood: Math.round((FOOD - monthFood) / dl) };
     }
 
     getTodayStats() {
