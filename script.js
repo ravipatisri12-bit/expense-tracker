@@ -3479,3 +3479,15 @@ ExpenseTracker.prototype._gmailLastSyncedLabel = function () {
 window.onAutoAddTap = window.onAutoAddTap || function () {
     if (window.emailParser && typeof window.emailParser.sync === 'function') window.emailParser.sync();
 };
+
+ExpenseTracker.prototype.renderHomeInsight = function ({ monthName, aim, monthTotalRegular, SOFT }) {
+    const root = document.getElementById('home-insight');
+    if (!root) return;
+    let msg;
+    if (aim.state === 'HARD_OVER') msg = `You're over the hard cap. The rest of ${monthName} is reset territory — log every dollar.`;
+    else if (aim.state === 'SOFT_OVER') msg = `Soft target blown. Stay under <strong>$${aim.dailyTotal}/day</strong> to land below the hard cap.`;
+    else if (aim.state === 'FOOD_OVER') msg = `Food cap blown. Stay under <strong>$${aim.dailyTotal}/day total</strong> for the rest of ${monthName}.`;
+    else msg = `Spending under <strong>$${aim.dailyTotal}</strong> today keeps ${monthName} under your $${SOFT.toLocaleString()} soft target.`;
+    root.classList.remove('hidden');
+    root.innerHTML = `<div class="insight"><span class="material-symbols-rounded">tips_and_updates</span><div class="text">${msg}</div></div>`;
+};
