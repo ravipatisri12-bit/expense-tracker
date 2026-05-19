@@ -19,12 +19,28 @@
 
     function pickTripForDashboard() {
         const today = todayStr();
-        const focusId = window.tripsStore && window.tripsStore._focusTripId;
-        if (focusId) { window.tripsStore._focusTripId = null; const t = window.tripsStore.getById(focusId); if (t) return t; }
-        const active = window.tripsStore && window.tripsStore.getActiveTrip(today);
-        if (active) return active;
-        const upcoming = window.tripsStore && window.tripsStore.getUpcomingTrips(today)[0];
-        return upcoming || null;
+        if (!window.tripsStore) return null;
+        // Priority 1: explicit nav-time selection (set by trip teaser, trip card, FAB).
+        // Consumes the value into _currentTripId so subsequent in-page re-renders keep it.
+        const focusId = window.tripsStore._focusTripId;
+        if (focusId) {
+            window.tripsStore._focusTripId = null;
+            window.tripsStore._currentTripId = focusId;
+            const t = window.tripsStore.getById(focusId);
+            if (t) return t;
+        }
+        // Priority 2: in-page state — same trip still being viewed across re-renders.
+        const cur = window.tripsStore._currentTripId;
+        if (cur) {
+            const t = window.tripsStore.getById(cur);
+            if (t) return t;
+        }
+        // Priority 3: pick the active trip (or upcoming) as a sensible default.
+        const active = window.tripsStore.getActiveTrip(today);
+        if (active) { window.tripsStore._currentTripId = active.id; return active; }
+        const upcoming = window.tripsStore.getUpcomingTrips(today)[0];
+        if (upcoming) { window.tripsStore._currentTripId = upcoming.id; return upcoming; }
+        return null;
     }
 
     window.renderTripDashboard = function () {

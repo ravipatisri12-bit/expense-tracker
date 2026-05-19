@@ -299,6 +299,12 @@ class ExpenseTracker {
 
     showPage(pageId, clickedElement = null) {
         // pageId can be 'dashboard' | 'trips' | 'trip-dashboard' | 'transactions' | 'history' | 'add-expense' | 'settings'
+        // When leaving the trip dashboard, clear the in-page trip selection so future
+        // returns via teaser/active-fallback re-pick the correct trip.
+        if (pageId !== 'trip-dashboard' && window.tripsStore) {
+            window.tripsStore._currentTripId = null;
+            window.tripsStore._expandedBreakdownCat = null;
+        }
         document.querySelectorAll('.page-content').forEach(page => { page.classList.add('hidden'); });
         const map = {
             'dashboard': 'dashboard-page',
