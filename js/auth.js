@@ -217,7 +217,6 @@ function initAuth() {
             refreshFcmTokenSilently();
         }
         if (window.tripsStore) window.tripsStore.attachRealtime();
-        if (window.wishlistStore) window.wishlistStore.attachRealtime();
     });
 }
 

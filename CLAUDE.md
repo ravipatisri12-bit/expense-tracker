@@ -12,13 +12,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-This is a **vanilla-JS single-page PWA** — no framework, no module bundler at runtime. `index.html` loads scripts via classic `<script>` tags in a fixed order, so all JS files share the global `window` namespace. Order matters: `defensive.js` → `config.js` → `utils.js` → `auth.js` → `llm-integration.js` → `smart-input.js` → `quick-add.js` → `gamification.js` → `email-parser.js` → `script.js` (inline at end of body).
+This is a **vanilla-JS single-page PWA** — no framework, no module bundler at runtime. `index.html` loads scripts via classic `<script>` tags in a fixed order, so all JS files share the global `window` namespace. Order matters (from `index.html`): `defensive.js` → `config.js` → `utils.js` → `trips.js` → `forecast.js` → `trip-dashboard.js` → `merchant-frequency.js` → `auth.js` → `llm-integration.js` → `smart-input.js` → `quick-add.js` → `gamification.js` → `email-parser.js` → `notifications.js`, then `script.js` last (via `<script src="script.js">` at end of body, after all `js/*.js`). When adding a script tag, keep dependencies earlier in the list, and `test.sh` verifies the file exists.
 
-### The ExpenseTracker class (`script.js`, ~3500 lines)
+`index.html` is the whole UI: a fixed header, a **4-tab** bottom nav (Home/`dashboard`, Trips, Txns/`transactions`, History), and one `<div class="page-content">` per page that JS shows/hides via `showPage()`. Most page bodies are empty containers (`<div id="home-month-hero">`, `<div id="history-month-rail">`, …) that the renderers fill.
+
+**Not loaded / dead code** (present in the repo but referenced by nothing — don't wire new features through them): `js/overview-analysis.js` (`BehavioralAnalysisAI`) and root `main.js` (a Vite CSS entry that isn't the configured entry point).
+
+### The ExpenseTracker class (`script.js`, ~4600 lines)
 
 One monolithic class holds nearly all app state and rendering. Features are added as **prototype methods**, not class methods (`ExpenseTracker.prototype.renderStreaks = function() { ... }`). Match this style when adding features — see `.kiro/steering/project-context.md`.
 
 Initialization is DOM-ready + try-catch (see `.kiro/defensive-implementation.md`). The instance is exposed as `window.expenseTracker`. Global functions at the bottom of `script.js` (e.g. `showPage`, `selectCategoryPill`) exist to be called from inline `onclick=` attributes in `index.html` — they delegate via `safeTrackerCall(method, ...args)`. **If you add an `onclick="foo("` to HTML, you MUST add a corresponding `function foo` in JS or `test.sh` will fail.**
+
+### Trips subsystem (`js/trips.js`, `js/trip-dashboard.js`)
+
+These are the independent feature modules split out of `script.js`. Each follows the same shape: an IIFE that defines a store class backed by both localStorage (offline) and Firestore (`users/{uid}/{collection}/{id}`), plus render/action functions attached to `window` for `onclick=` handlers. Data shapes are specced in `.kiro/specs/expense-tracker/design.md` (referenced as "spec §N" in file headers).
+
+- **`trips.js`** → `window.tripsStore` (a `TripsStore`). Trip CRUD + state machine; trips at `users/{uid}/trips/{tripId}` and `localStorage['trips']`. `ExpenseTracker.getTripExpenses(id)` bridges expenses to a trip. `auth.js` calls `tripsStore.attachRealtime()` on sign-in to hydrate from Firestore.
+- **`trip-dashboard.js`** — renders the Trip dashboard + Trips index from `window.tripsStore`.
+- **`forecast.js`** → `window.Forecast` (pure month-end projection helper; used by the Home month hero in `renderHomeMonthHero`). **`merchant-frequency.js`** → `window.MerchantFrequency` (aggregates/normalizes merchant names, stripping `TST*`/`SQ *`/`PAYPAL *` prefixes; used by History's "Top regulars" in `renderHistoryTopRegulars`).
+
+These modules read `window.expenseTracker` but are loaded *before* `script.js`, so they must tolerate it being undefined at load time and only touch it inside render/action callbacks (which fire after init).
+
+> The **Plan tab** (a "Spending Planner" / wishlist feature — `js/plan-page.js`, `js/wishlist.js`, `window.wishlistStore`, the Settings "Savings target" slider, and `settings.savingsTargetRate`) was removed. Don't reintroduce references to it.
 
 ### Defensive coding (`js/defensive.js`)
 
@@ -43,7 +59,7 @@ Insights are cached per `day + expense count` to limit API calls.
 
 ### PWA (`sw.js`)
 
-Network-first, cache-as-fallback service worker with a versioned cache name (`expense-tracker-v6`). Bump the version when shipping cached-asset changes — old clients won't pick up new HTML/CSS/JS otherwise.
+Network-first, cache-as-fallback service worker with a versioned cache name (currently `expense-tracker-v8` in `sw.js`). Bump the version when shipping cached-asset changes — old clients won't pick up new HTML/CSS/JS otherwise.
 
 ### Push notifications (FCM)
 
