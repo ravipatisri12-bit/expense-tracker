@@ -3723,65 +3723,216 @@ ExpenseTracker.prototype.renderHomeHabit = function () {
     const root = document.getElementById('home-habit');
     if (!root) return;
     const g = window.gamification;
-    const streak = g?.data?.streak?.current || 0;
-    const best = g?.data?.streak?.best || 0;
-    const today = this.getLocalDateString(new Date());
+    if (!g) { root.innerHTML = ''; return; }
 
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = this.getLocalDateString(d);
-        const log = g?.data?.dailyLog?.[key];
-        days.push({
-            num: d.getDate(),
-            label: d.toLocaleDateString('en-US', { weekday: 'narrow' }).toUpperCase(),
-            mood: log?.mood || null,
-            isToday: key === today
-        });
-    }
-    const tile = d => {
+    const streak = g.data?.streak?.current || 0;
+    const best = g.data?.streak?.best || 0;
+    const log = g.data?.dailyLog || {};
+    const today = this.getLocalDateString(new Date());
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return this.getLocalDateString(d); })();
+    const view = this._habitView === 'month' ? 'month' : 'week';
+    const editDate = this._habitEditDate || null;
+
+    const moodClass = m => m === 'no-spend' ? 'no-spend' : m === 'essential' ? 'essential' : m === 'wants' ? 'wants' : '';
+
+    // --- one day tile (week + month share this) ---
+    const dayTile = (key, num, label) => {
+        const entry = log[key];
+        const mood = entry?.mood || null;
+        const frozen = entry?.frozen && !mood;
+        const isToday = key === today;
+        const isFuture = key > today;
+        const isFillable = !mood && !frozen && !isFuture && key === yesterday; // backfill yesterday only
         const cls = ['habit-tile'];
-        if (d.mood === 'no-spend') cls.push('no-spend');
-        if (d.mood === 'essential') cls.push('essential');
-        if (d.mood === 'wants') cls.push('wants');
-        if (d.isToday) cls.push('today');
-        return `<div class="${cls.join(' ')}">${d.num}<span class="habit-day-label">${d.label}</span></div>`;
+        if (mood) cls.push(moodClass(mood));
+        if (frozen) cls.push('frozen');
+        if (isToday) cls.push('today');
+        if (isFuture) cls.push('future');
+        if (isFillable) cls.push('fillable');
+        if (editDate === key) cls.push('editing');
+        const plus = isFillable ? `<span class="plus material-symbols-rounded">add</span>` : '';
+        const lbl = label != null ? `<span class="habit-day-label">${label}</span>` : '';
+        const tap = (isFillable || (mood && key === today) || (mood && key === yesterday))
+            ? ` onclick="onHabitDayTap('${key}')" style="cursor:pointer"` : '';
+        return `<div class="${cls.join(' ')}"${tap}>${plus}${num}${lbl}</div>`;
     };
-    const todayMood = g?.data?.dailyLog?.[today]?.mood;
-    const cls = m => `ck-${m === 'no-spend' ? 'no' : m === 'essential' ? 'es' : 'wt'}` + (todayMood === m ? ' suggested' : '');
+
+    // --- WEEK trail (last 7 days) ---
+    const weekTiles = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const key = this.getLocalDateString(d);
+        weekTiles.push(dayTile(key, d.getDate(), d.toLocaleDateString('en-US', { weekday: 'narrow' }).toUpperCase()));
+    }
+
+    // --- MONTH grid (current month only) + tally ---
+    let monthSection = '';
+    if (view === 'month') {
+        const now = new Date();
+        const yr = now.getFullYear(), mo = now.getMonth();
+        const firstDow = new Date(yr, mo, 1).getDay();
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const hdr = ['S','M','T','W','T','F','S'].map(d => `<div>${d}</div>`).join('');
+        const cells = [];
+        for (let i = 0; i < firstDow; i++) cells.push(`<div class="mcell empty"></div>`);
+        const tally = { 'no-spend': 0, essential: 0, wants: 0 };
+        for (let day = 1; day <= daysInMonth; day++) {
+            const key = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const entry = log[key];
+            const mood = entry?.mood || null;
+            if (mood && tally[mood] != null) tally[mood]++;
+            const frozen = entry?.frozen && !mood;
+            const isToday = key === today, isFuture = key > today;
+            const c = ['mcell'];
+            if (mood) c.push(moodClass(mood));
+            if (frozen) c.push('frozen');
+            if (isToday) c.push('today');
+            if (isFuture) c.push('future');
+            const isFillable = !mood && !frozen && !isFuture && key === yesterday;
+            if (isFillable) c.push('fillable');
+            if (editDate === key) c.push('editing');
+            const tap = (isFillable || (mood && (key === today || key === yesterday)))
+                ? ` onclick="onHabitDayTap('${key}')" style="cursor:pointer"` : '';
+            cells.push(`<div class="${c.join(' ')}"${tap}>${day}</div>`);
+        }
+        monthSection = `
+    <div class="habit-month">
+        <div class="mhdr">${hdr}</div>
+        <div class="mgrid">${cells.join('')}</div>
+    </div>
+    <div class="habit-tally">
+        <span class="t no"><span class="swatch"></span><b>${tally['no-spend']}</b> <span class="lbl">no spend</span></span>
+        <span class="t es"><span class="swatch"></span><b>${tally.essential}</b> <span class="lbl">essentials</span></span>
+        <span class="t wt"><span class="swatch"></span><b>${tally.wants}</b> <span class="lbl">wants</span></span>
+    </div>`;
+    }
+
+    // --- next-goal bar ---
+    const next = g.nextMilestone ? g.nextMilestone() : null;
+    let goalSection = '';
+    if (next) {
+        const remaining = next.days - streak;
+        const prev = [0, 3, 7, 14, 30, 60].filter(d => d < next.days).pop() || 0;
+        const pct = Math.max(0, Math.min(100, Math.round(((streak - prev) / (next.days - prev)) * 100)));
+        goalSection = `
+    <div class="habit-goal">
+        <div class="gtxt"><span><b>${remaining} day${remaining !== 1 ? 's' : ''}</b> to ${this._escapeHtml(next.name)}</span><span class="gnum">${streak} / ${next.days}</span></div>
+        <div class="bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+    } else if (streak >= 100) {
+        goalSection = `<div class="habit-goal legend"><div class="gtxt"><span><b>Century+</b> — legendary streak</span></div></div>`;
+    }
+
+    // --- milestone toast (celebrate crossing, once) ---
+    let toastSection = '';
+    const pending = g.pendingMilestone ? g.pendingMilestone() : null;
+    if (pending) {
+        const after = (g.constructor.MILESTONES || []).find(m => m.days > pending.days);
+        toastSection = `
+    <div class="ms-toast">
+        <span class="material-symbols-rounded">military_tech</span>
+        <span><b>${this._escapeHtml(pending.name)}</b> reached${after ? ` — next stop, ${after.days} days.` : '.'}</span>
+    </div>`;
+        // mark shown after render so it appears exactly once
+        setTimeout(() => { try { g.markMilestoneShown(pending.days); } catch (e) {} }, 0);
+    }
+
+    // --- streak header (flame + count, or frozen state) ---
+    const frozenActive = !!g.data?.streak?.freezeUsedOn;
+    const flameCls = frozenActive ? 'flame frozen' : 'flame';
+    const flameIcon = frozenActive ? 'ac_unit' : 'local_fire_department';
+    const rightSide = frozenActive
+        ? `<span class="freeze-chip"><span class="material-symbols-rounded">ac_unit</span>Freeze used</span>`
+        : `<div class="habit-best">BEST · ${best} DAYS</div>`;
+
+    // --- bottom row: check-in OR backfill picker ---
+    let bottom;
+    if (editDate && editDate !== today) {
+        const d = this.parseLocalDate(editDate);
+        const lbl = d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + d.getDate();
+        bottom = `
+    <div class="habit-picker">
+        <span class="plabel">Log <b>${lbl}</b> as</span>
+        <div class="dots">
+            <button class="p-no" onclick="onHabitBackfill('${editDate}','no-spend')" aria-label="No spend"><span class="sw"></span></button>
+            <button class="p-es" onclick="onHabitBackfill('${editDate}','essential')" aria-label="Essentials"><span class="sw"></span></button>
+            <button class="p-wt" onclick="onHabitBackfill('${editDate}','wants')" aria-label="Wants"><span class="sw"></span></button>
+        </div>
+        <button class="pcancel" onclick="onHabitDayTap(null)" aria-label="Cancel"><span class="material-symbols-rounded">close</span></button>
+    </div>`;
+    } else {
+        const todayMood = log[today]?.mood;
+        const ck = m => `ck-${m === 'no-spend' ? 'no' : m === 'essential' ? 'es' : 'wt'}` + (todayMood === m ? ' suggested' : '');
+        bottom = `
+    <div class="checkin">
+        <button class="${ck('no-spend')}" onclick="onHabitCheckin('no-spend')">No spend</button>
+        <button class="${ck('essential')}" onclick="onHabitCheckin('essential')">Essentials</button>
+        <button class="${ck('wants')}" onclick="onHabitCheckin('wants')">Wants</button>
+    </div>`;
+    }
+
+    const toggle = `
+        <div class="habit-toggle">
+            <button class="${view === 'week' ? 'on' : ''}" onclick="onHabitView('week')">Week</button>
+            <button class="${view === 'month' ? 'on' : ''}" onclick="onHabitView('month')">Month</button>
+        </div>`;
 
     root.innerHTML = `
-<div class="section-head"><h2 class="section-title">Daily habit</h2><span class="section-meta">tap a day</span></div>
+<div class="section-head"><h2 class="section-title">Daily habit</h2>${toggle}</div>
 <div class="habit-card">
     <div class="habit-row">
         <div class="habit-streak">
-            <div class="flame"><span class="material-symbols-rounded">local_fire_department</span></div>
+            <div class="${flameCls}"><span class="material-symbols-rounded">${flameIcon}</span></div>
             <div class="num">${streak} <span>day streak</span></div>
         </div>
-        <div class="habit-best">BEST · ${best} DAYS</div>
+        ${rightSide}
     </div>
-    <div class="habit-week">${days.map(tile).join('')}</div>
-    <div class="checkin">
-        <button class="${cls('no-spend')}" onclick="onHabitCheckin('no-spend')">No spend</button>
-        <button class="${cls('essential')}" onclick="onHabitCheckin('essential')">Essentials</button>
-        <button class="${cls('wants')}" onclick="onHabitCheckin('wants')">Wants</button>
-    </div>
+    ${toastSection}
+    ${goalSection}
+    ${view === 'week' ? `<div class="habit-week">${weekTiles.join('')}</div>` : monthSection}
+    ${bottom}
 </div>`;
 };
 
+// Same-day check-in.
 window.onHabitCheckin = function (mood) {
-    if (!window.gamification) return;
-    const today = window.expenseTracker.getLocalDateString(new Date());
-    window.gamification.data.dailyLog = window.gamification.data.dailyLog || {};
-    const wasCheckedIn = !!window.gamification.data.dailyLog[today]?.checkedIn;
-    window.gamification.data.dailyLog[today] = { ...(window.gamification.data.dailyLog[today] || {}), mood, checkedIn: true };
-    // Advance the streak the FIRST time a user checks in today.
-    if (!wasCheckedIn && typeof window.gamification.updateStreak === 'function') {
-        window.gamification.updateStreak();
+    const g = window.gamification, t = window.expenseTracker;
+    if (!g || !t) return;
+    const today = t.getLocalDateString(new Date());
+    const isNew = g.setDayMood(today, mood);
+    t._habitEditDate = null;
+    t.renderHomeHabit();
+    if (isNew && typeof showNotification === 'function') {
+        const msgs = { 'no-spend': 'No spend day — streak extended', essential: 'Essentials only — solid discipline', wants: 'Logged · every day counts' };
+        showNotification(msgs[mood] || 'Logged', 'success');
     }
-    window.gamification.save();
-    window.expenseTracker.renderHomeHabit();
+};
+
+// Toggle week/month view.
+window.onHabitView = function (view) {
+    const t = window.expenseTracker;
+    if (!t) return;
+    t._habitView = view === 'month' ? 'month' : 'week';
+    t._habitEditDate = null;
+    t.renderHomeHabit();
+};
+
+// Tap a date tile: open the backfill picker for yesterday, or re-open today's picker to change it.
+window.onHabitDayTap = function (key) {
+    const t = window.expenseTracker;
+    if (!t) return;
+    t._habitEditDate = key || null;
+    t.renderHomeHabit();
+};
+
+// Backfill a past day's mood (yesterday only — enforced by the tile being the only fillable one).
+window.onHabitBackfill = function (key, mood) {
+    const g = window.gamification, t = window.expenseTracker;
+    if (!g || !t) return;
+    g.setDayMood(key, mood);
+    t._habitEditDate = null;
+    t.renderHomeHabit();
+    if (typeof showNotification === 'function') showNotification('Day logged — streak updated', 'success');
 };
 
 ExpenseTracker.prototype._categoryColor = function (name) {

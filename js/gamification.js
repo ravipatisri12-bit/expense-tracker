@@ -11,10 +11,11 @@ class Gamification {
         return {
             xp: 0,
             level: 1,
-            streak: { current: 0, best: 0, lastDate: null },
+            streak: { current: 0, best: 0, lastDate: null, freezeUsedOn: null },
             achievements: [],   // unlocked achievement IDs
-            dailyLog: {},       // { "2026-02-18": { logged: true, underBudget: true, mood?, checkedIn? } }
-            weeklyQuest: null   // { weekId, type, target, completed, xpRewarded }
+            dailyLog: {},       // { "2026-02-18": { logged: true, underBudget: true, mood?, checkedIn?, frozen? } }
+            weeklyQuest: null,  // { weekId, type, target, completed, xpRewarded }
+            milestoneShownFor: 0 // highest streak-day milestone already celebrated (for the inline toast)
         };
     }
 
@@ -55,7 +56,9 @@ class Gamification {
                 this.data = { ...this.getDefaults(), ...cloud };
                 localStorage.setItem('ledgr_gamification', JSON.stringify(this.data));
                 localStorage.setItem('ledgr_gamification_updatedAt', String(cloudUpdated));
-                if (typeof renderHabitCard === 'function') renderHabitCard();
+                // Recompute streak from the freshly-hydrated log, then refresh the live habit card.
+                if (typeof this.updateStreak === 'function') this.updateStreak();
+                try { window.expenseTracker?.renderHomeHabit?.(); } catch (e) {}
             }
         } catch (err) {
             console.warn('gamification hydrate failed:', err.message);
@@ -85,62 +88,121 @@ class Gamification {
 
     // === STREAKS ===
 
-    updateStreak() {
-        const localStr = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-        const today = localStr(new Date());
-        if (this.data.streak.lastDate === today) return this.data.streak;
+    // Milestone ladder (days). Also drives the always-visible "next goal" and the inline toast.
+    static get MILESTONES() {
+        return [
+            { days: 3,   name: '3-Day Streak' },
+            { days: 7,   name: 'Week Warrior' },
+            { days: 14,  name: 'Two Weeks' },
+            { days: 30,  name: 'Monthly Master' },
+            { days: 60,  name: 'Two Months' },
+            { days: 100, name: 'Century' },
+        ];
+    }
 
-        const y = new Date(); y.setDate(y.getDate() - 1);
-        const yesterday = localStr(y);
-        if (this.data.streak.lastDate === yesterday) {
-            this.data.streak.current++;
-        } else if (this.data.streak.lastDate !== today) {
-            this.data.streak.current = 1;
+    _localStr(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    // Recompute the streak from the daily log. Walks backward from today over
+    // checked-in days, tolerating ONE single-day gap (a grace "freeze"). A second
+    // gap (or a 2+ day gap) ends the streak. Fully idempotent — safe to call any time,
+    // and correct after same-day check-ins AND yesterday backfills.
+    updateStreak() {
+        const log = this.data.dailyLog || {};
+        const isDone = (key) => !!(log[key] && log[key].checkedIn);
+
+        const today = new Date();
+        const todayKey = this._localStr(today);
+        // Anchor: today if checked in, else yesterday if checked in, else no active streak.
+        let cursor = new Date(today);
+        if (!isDone(todayKey)) {
+            cursor.setDate(cursor.getDate() - 1);
+            if (!isDone(this._localStr(cursor))) {
+                this.data.streak.current = 0;
+                this.data.streak.freezeUsedOn = null;
+                this._clearFrozenFlags();
+                this.save();
+                return this.data.streak;
+            }
         }
-        this.data.streak.lastDate = today;
-        this.data.streak.best = Math.max(this.data.streak.best, this.data.streak.current);
+
+        let count = 0;
+        let freezeUsedOn = null;
+        let freezeAvailable = true;
+        this._clearFrozenFlags();
+        while (true) {
+            const key = this._localStr(cursor);
+            if (isDone(key)) {
+                count++;
+                cursor.setDate(cursor.getDate() - 1);
+                continue;
+            }
+            // Gap day. Spend the one freeze to bridge a single missed day, then continue.
+            if (freezeAvailable) {
+                const prev = new Date(cursor);
+                prev.setDate(prev.getDate() - 1);
+                if (isDone(this._localStr(prev))) {
+                    freezeAvailable = false;
+                    freezeUsedOn = key;
+                    // Mark the bridged day so the calendar can show it as freeze-covered.
+                    log[key] = { ...(log[key] || {}), frozen: true };
+                    cursor = prev; // resume from the day before the gap
+                    continue;
+                }
+            }
+            break; // streak ends here
+        }
+
+        this.data.streak.current = count;
+        this.data.streak.freezeUsedOn = freezeUsedOn;
+        this.data.streak.lastDate = isDone(todayKey) ? todayKey : this.data.streak.lastDate;
+        this.data.streak.best = Math.max(this.data.streak.best || 0, count);
         this.save();
         this.checkStreakAchievements();
         return this.data.streak;
     }
 
-    // === DAILY LOG ===
-
-    logDay(underBudget) {
-        const today = new Date().toISOString().split('T')[0];
-        if (!this.data.dailyLog[today]) {
-            this.data.dailyLog[today] = { logged: true, underBudget };
-            this.addXP(underBudget ? 20 : 5, 'daily-log');
-            this.updateStreak();
+    _clearFrozenFlags() {
+        const log = this.data.dailyLog || {};
+        for (const k in log) {
+            if (log[k] && log[k].frozen) {
+                delete log[k].frozen;
+                // Drop entries that existed ONLY to hold a stale freeze marker.
+                if (!log[k].checkedIn && !log[k].mood) delete log[k];
+            }
         }
-        this.save();
     }
 
-    // === DAILY CHECK-IN ===
-
-    checkIn(mood) {
-        const today = new Date().toISOString().split('T')[0];
-        if (!this.data.dailyLog[today]) {
-            this.data.dailyLog[today] = { logged: true, underBudget: mood !== 'wants' };
-        }
-        const alreadyCheckedIn = this.data.dailyLog[today].checkedIn;
-        this.data.dailyLog[today].mood = mood;
-        this.data.dailyLog[today].checkedIn = true;
-        this.data.dailyLog[today].underBudget = mood !== 'wants';
-        if (!alreadyCheckedIn) {
-            const xp = mood === 'no-spend' ? 15 : mood === 'essential' ? 10 : 5;
-            this.addXP(xp, 'daily-checkin');
-            this.updateStreak();
-        }
+    // Log a specific day's mood (used for same-day check-in AND yesterday backfill).
+    // Returns true if this was a new check-in (so the caller can toast / recompute).
+    setDayMood(dateKey, mood) {
+        this.data.dailyLog = this.data.dailyLog || {};
+        const existing = this.data.dailyLog[dateKey] || {};
+        const wasCheckedIn = !!existing.checkedIn;
+        this.data.dailyLog[dateKey] = { ...existing, mood, checkedIn: true, underBudget: mood !== 'wants' };
+        this.updateStreak();
         this.save();
+        return !wasCheckedIn;
     }
 
-    openEditCheckIn() {
-        const today = new Date().toISOString().split('T')[0];
-        if (this.data.dailyLog[today]) {
-            this.data.dailyLog[today].checkedIn = false;
-            this.save();
-        }
+    // Milestone helpers for the UI.
+    nextMilestone() {
+        const s = this.data.streak.current || 0;
+        return Gamification.MILESTONES.find(m => m.days > s) || null;
+    }
+
+    // Returns a milestone object if the current streak just crossed one not yet celebrated.
+    pendingMilestone() {
+        const s = this.data.streak.current || 0;
+        const shown = this.data.milestoneShownFor || 0;
+        const reached = Gamification.MILESTONES.filter(m => m.days <= s && m.days > shown);
+        return reached.length ? reached[reached.length - 1] : null;
+    }
+
+    markMilestoneShown(days) {
+        this.data.milestoneShownFor = Math.max(this.data.milestoneShownFor || 0, days);
+        this.save();
     }
 
     // === ACHIEVEMENTS ===
@@ -204,205 +266,13 @@ function updateGreeting() {
     el.textContent = greet;
 }
 
+// The live habit card lives in script.js (ExpenseTracker.prototype.renderHomeHabit).
+// This just delegates so legacy callers (expense-logged XP hook, weekly quest) still refresh it.
 function updateGamificationUI() {
-    renderHabitCard();
+    try { window.expenseTracker?.renderHomeHabit?.(); } catch (e) { console.warn('renderHomeHabit:', e); }
 }
 
-// === HABIT CARD — streak + 7-day trail + daily check-in (merged) ===
-
-let habitCalExpanded = false;
-let habitCalViewYear = null;
-let habitCalViewMonth = null;
-
-function toggleHabitCal() {
-    habitCalExpanded = !habitCalExpanded;
-    if (habitCalExpanded) {
-        const now = new Date();
-        habitCalViewYear = now.getFullYear();
-        habitCalViewMonth = now.getMonth();
-    }
-    renderHabitCard();
-}
-
-function habitCalNav(dir) {
-    habitCalViewMonth += dir;
-    if (habitCalViewMonth < 0)  { habitCalViewMonth = 11; habitCalViewYear--; }
-    if (habitCalViewMonth > 11) { habitCalViewMonth = 0;  habitCalViewYear++; }
-    renderHabitCard();
-}
-
-function renderHabitCard() {
-    const card = document.getElementById('habit-card');
-    if (!card) return;
-
-    const g = window.gamification;
-    const today = new Date().toISOString().split('T')[0];
-    const todayLog = g.data.dailyLog[today];
-    const alreadyCheckedIn = todayLog?.checkedIn;
-    const streak = g.data.streak.current;
-    const bestStreak = g.data.streak.best;
-
-    const moodColors = { 'no-spend': '#43e97b', essential: '#667eea', wants: '#f59e0b' };
-    const moodLabels = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
-    const weekDays = ['S','M','T','W','T','F','S'];
-
-    // Calendar tile row — one colored tile per day
-    const tileBg = {
-        'no-spend': 'rgba(67,233,123,0.18)',  'no-spend-text': '#43e97b',
-        essential:  'rgba(102,126,234,0.18)', 'essential-text': '#a8c7fa',
-        wants:      'rgba(245,158,11,0.18)',  'wants-text':     '#f59e0b',
-    };
-    // Calendar section — compact 7-day row or full month grid on tap
-    let calSection;
-    if (habitCalExpanded) {
-        const yr = habitCalViewYear;
-        const mo = habitCalViewMonth;
-        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const firstDay = new Date(yr, mo, 1).getDay();
-        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
-        const now = new Date();
-        const isFutureMonth = yr > now.getFullYear() || (yr === now.getFullYear() && mo > now.getMonth());
-        const dayHdrs = weekDays.map(d =>
-            `<div class="flex items-center justify-center" style="font-size:9px;color:var(--md-sys-color-outline);opacity:0.5;height:14px">${d}</div>`
-        ).join('');
-        const cells = [];
-        for (let i = 0; i < firstDay; i++) cells.push('<div></div>');
-        for (let day = 1; day <= daysInMonth; day++) {
-            const ds = `${yr}-${String(mo + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            const log = g.data.dailyLog[ds];
-            const mood = log?.mood;
-            const isToday = ds === today;
-            const isFuture = ds > today;
-            const bg  = isFuture ? 'transparent'
-                      : mood ? tileBg[mood]
-                      : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
-            const col = isFuture ? 'rgba(255,255,255,0.1)'
-                      : mood ? tileBg[mood + '-text']
-                      : log?.logged ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)';
-            const ring = isToday ? `;box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.3)'}` : '';
-            cells.push(`<div class="rounded flex items-center justify-center font-medium" style="aspect-ratio:1;font-size:9px;background:${bg};color:${col}${ring}">${day}</div>`);
-        }
-        const nextDisabled = isFutureMonth ? 'opacity:0.2;pointer-events:none' : '';
-        calSection = `
-            <div class="mt-2">
-                <div class="flex items-center justify-between mb-1">
-                    <button onclick="habitCalNav(-1)" class="p-0.5 rounded" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded" style="font-size:14px">chevron_left</span></button>
-                    <button onclick="toggleHabitCal()" class="text-xs font-semibold px-2 flex items-center gap-0.5" style="color:var(--md-sys-color-on-surface)">${monthNames[mo]} ${yr}<span class="material-symbols-rounded" style="font-size:11px;opacity:0.5">expand_less</span></button>
-                    <button onclick="habitCalNav(1)" class="p-0.5 rounded" style="color:var(--md-sys-color-outline);${nextDisabled}"><span class="material-symbols-rounded" style="font-size:14px">chevron_right</span></button>
-                </div>
-                <div class="grid grid-cols-7 gap-0.5 mb-0.5">${dayHdrs}</div>
-                <div class="grid grid-cols-7 gap-0.5">${cells.join('')}</div>
-            </div>`;
-    } else {
-        const tiles = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(Date.now() - i * 86400000);
-            const ds = d.toISOString().split('T')[0];
-            const log = g.data.dailyLog[ds];
-            const isToday = ds === today;
-            const mood = log?.mood;
-            const bg   = mood ? tileBg[mood]           : log?.logged ? 'rgba(102,126,234,0.12)' : 'rgba(255,255,255,0.04)';
-            const col  = mood ? tileBg[mood + '-text'] : log?.logged ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)';
-            const ring = isToday ? `box-shadow:0 0 0 1.5px ${mood ? col : 'rgba(255,255,255,0.25)'}` : '';
-            tiles.push(`<div class="flex-1 py-1.5 rounded-lg flex items-center justify-center text-xs font-bold" style="background:${bg};color:${col};${ring}">${weekDays[d.getDay()]}</div>`);
-        }
-        calSection = `<div class="flex gap-1 mt-2 cursor-pointer" onclick="toggleHabitCal()">${tiles.join('')}</div>`;
-    }
-
-    // Streak header row
-    const streakRow = `
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
-                ${streak > 0
-                    ? `<span class="material-symbols-rounded" style="color:#f59e0b;font-size:15px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">local_fire_department</span>
-                       <span class="text-xs font-bold" style="color:var(--md-sys-color-on-surface)">${streak} day${streak !== 1 ? 's' : ''}</span>`
-                    : `<span class="text-xs" style="color:var(--md-sys-color-outline)">Start your streak</span>`}
-                ${bestStreak > streak && bestStreak > 1 ? `<span class="text-xs" style="color:var(--md-sys-color-outline);opacity:0.4">· best ${bestStreak}</span>` : ''}
-            </div>
-            <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Daily Habit</span>
-        </div>`;
-
-    if (alreadyCheckedIn) {
-        const mood = todayLog.mood || 'wants';
-        const label = moodLabels[mood] || mood;
-        const color = moodColors[mood] || '#667eea';
-        card.innerHTML = `
-            <div class="px-3 pt-3 pb-3">
-                ${streakRow}
-                ${calSection}
-                <div class="flex items-center justify-between mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
-                    <span class="text-xs" style="color:var(--md-sys-color-outline)">
-                        <span class="font-semibold" style="color:${color}">${label}</span> day logged
-                    </span>
-                    <button onclick="openEditDailyCheckIn()" class="text-xs px-2 py-0.5 rounded-lg" style="color:var(--md-sys-color-outline);background:rgba(255,255,255,0.06)">Change</button>
-                </div>
-            </div>`;
-        return;
-    }
-
-    // Smart suggestion based on today's actual transactions
-    let suggested = null;
-    try {
-        const et = window.expenseTracker;
-        if (et) {
-            const stats = et.getTodayStats();
-            if (stats.count === 0) suggested = 'no-spend';
-            else if (stats.wants === 0 && stats.needs > 0) suggested = 'essential';
-            else if (stats.wants > 0) suggested = 'wants';
-        }
-    } catch(e) {}
-
-    const btn = (id, label) => {
-        const s = {
-            'no-spend': { bg: 'rgba(67,233,123,0.1)',  color: '#43e97b', border: 'rgba(67,233,123,0.2)',  bgHi: 'rgba(67,233,123,0.18)',  bHi: 'rgba(67,233,123,0.45)' },
-            essential:  { bg: 'rgba(102,126,234,0.1)', color: '#a8c7fa', border: 'rgba(102,126,234,0.2)', bgHi: 'rgba(102,126,234,0.18)', bHi: 'rgba(102,126,234,0.45)' },
-            wants:      { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)',  bgHi: 'rgba(245,158,11,0.18)',  bHi: 'rgba(245,158,11,0.45)' },
-        }[id];
-        const hi = id === suggested;
-        return `<button onclick="checkInDaily('${id}')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95" style="background:${hi ? s.bgHi : s.bg};color:${s.color};border:1px solid ${hi ? s.bHi : s.border}">${label}</button>`;
-    };
-
-    card.innerHTML = `
-        <div class="px-3 pt-3 pb-3">
-            ${streakRow}
-            ${calSection}
-            <div class="flex gap-1.5 mt-2 pt-2" style="border-top:1px solid rgba(255,255,255,0.06)">
-                ${btn('no-spend', 'No Spend')}
-                ${btn('essential', 'Essentials')}
-                ${btn('wants', 'Wants')}
-            </div>
-        </div>`;
-}
-
-function checkInDaily(mood) {
-    const wasNew = !window.gamification.data.dailyLog[new Date().toISOString().split('T')[0]]?.checkedIn;
-    window.gamification.checkIn(mood);
-    renderHabitCard();
-    if (wasNew) {
-        const msgs = {
-            'no-spend': 'No spend day — streak extended',
-            essential: 'Essentials only — solid discipline',
-            wants: 'Logged · every day counts'
-        };
-        showNotification(msgs[mood] || 'Logged', 'success');
-    }
-}
-
-function openEditDailyCheckIn() {
-    window.gamification.openEditCheckIn();
-    renderHabitCard();
-}
-
-// Update UI when page loads and on page switches
+// Update greeting on load.
 document.addEventListener('DOMContentLoaded', () => {
-    updateGreeting();
-    try { renderHabitCard(); } catch(e) { console.error('renderHabitCard:', e); }
-    // Re-update when pages switch
-    const origShowPage = window.showPage;
-    if (origShowPage) {
-        window.showPage = function(pageId) {
-            origShowPage(pageId);
-            setTimeout(() => { updateGamificationUI(); }, 50);
-        };
-    }
+    try { updateGreeting(); } catch (e) {}
 });
