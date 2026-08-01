@@ -14,10 +14,36 @@ class EmailParser {
         return !!token && Date.now() < expiry;
     }
 
-    async getValidToken() {
-        if (this.isTokenValid()) return localStorage.getItem('gmail_access_token');
-        // Gmail OAuth token expired (~60 min TTL) — need user to re-approve Gmail access
-        // This is NOT a full sign-in, just refreshing the Gmail read permission
+    // Minutes of remaining token life below which we treat the token as unusable.
+    // A sync can take a few seconds; starting one with 10s left just fails mid-flight.
+    static TOKEN_SKEW_MS = 60 * 1000;
+
+    isTokenUsable() {
+        const token = localStorage.getItem('gmail_access_token');
+        const expiry = parseInt(localStorage.getItem('gmail_token_expiry') || '0', 10);
+        return !!token && Date.now() < (expiry - EmailParser.TOKEN_SKEW_MS);
+    }
+
+    // opts.silent — background caller. Must NEVER open a popup: browsers block
+    // popups outside a user gesture, and an unprompted Google window is hostile.
+    // Returns null instead, and the caller quietly gives up until the next tap.
+    async getValidToken(opts) {
+        const silent = !!(opts && opts.silent);
+        if (this.isTokenUsable()) return localStorage.getItem('gmail_access_token');
+        if (silent) {
+            // Token lapsed. Try the no-UI refresh first — it succeeds whenever the
+            // user's Google session is still alive, which covers most reopens.
+            const quiet = window.refreshGmailTokenSilent
+                ? await window.refreshGmailTokenSilent()
+                : null;
+            if (quiet) return quiet;
+            // Google needs real interaction. Surface the Reconnect button so the
+            // state is visible, but never pop a window the user didn't ask for.
+            this.showReconnectButton(true);
+            return null;
+        }
+        // Gmail OAuth token expired (~60 min TTL) — need user to re-approve Gmail access.
+        // This is NOT a full sign-in, just refreshing the Gmail read permission.
         const syncBtn = document.getElementById('gmail-sync-btn');
         if (syncBtn) syncBtn.textContent = 'Reconnecting...';
         if (typeof showNotification === 'function') {
@@ -304,41 +330,42 @@ class EmailParser {
         }
     }
 
-    async sync() {
+    async sync(opts) {
+        const silent = !!(opts && opts.silent);
+        // In silent mode every user-facing message is suppressed; only real imports talk.
+        const notify = (msg, kind, ms) => {
+            if (silent) return;
+            if (typeof showNotification === 'function') showNotification(msg, kind, ms);
+        };
+
         // Clear stale lock — any lock older than 2 minutes is from a previous crashed session
         const lockTs = parseInt(localStorage.getItem('gmail_syncing_ts') || '0', 10);
         const lockStale = Date.now() - lockTs > 120000;
         if (localStorage.getItem('gmail_syncing') === 'true' && !lockStale) {
-            if (typeof showNotification === 'function') {
-                showNotification('Sync already in progress...', 'success');
-            }
+            notify('Sync already in progress...', 'success');
             return;
         }
 
         if (!window.currentUser) {
-            if (typeof showNotification === 'function') {
-                showNotification('Sign in with Google first to use Gmail sync', 'error');
-            }
+            notify('Sign in with Google first to use Gmail sync', 'error');
             return;
         }
 
         localStorage.setItem('gmail_syncing', 'true');
         localStorage.setItem('gmail_syncing_ts', String(Date.now()));
-        this.setSyncButtonState(true);
+        if (!silent) this.setSyncButtonState(true);
         // Yield to browser to paint the button state before any popup can steal focus
         await new Promise(r => setTimeout(r, 50));
 
         try {
-            const token = await this.getValidToken();
+            const token = await this.getValidToken({ silent });
             if (!token) return;
 
             await this.loadProcessedIds();
 
             const messages = await this.searchMessages(token);
             if (!messages.length) {
-                if (typeof showNotification === 'function') {
-                    showNotification('No new Chase alerts found', 'success');
-                }
+                notify('No new Chase alerts found', 'success');
                 return;
             }
 
@@ -346,9 +373,7 @@ class EmailParser {
             const newMessages = messages.filter(m => !processedIds.has(m.id));
 
             if (!newMessages.length) {
-                if (typeof showNotification === 'function') {
-                    showNotification('All emails already imported', 'success');
-                }
+                notify('All emails already imported', 'success');
                 return;
             }
 
@@ -378,11 +403,26 @@ class EmailParser {
                 const subject = subjectHeader?.value || '';
                 const bodyText = this.extractTextFromPayload(fullMsg.payload);
                 const parsed = this.parseChaseRegex(bodyText, subject);
-                if (!this.isValidTransaction(parsed)) continue;
+                if (!this.isValidTransaction(parsed)) {
+                    // Fetched fine but couldn't be parsed into a transaction. Usually a
+                    // non-transaction alert — but it's ALSO how a Chase template change
+                    // would look, and the id is marked processed either way. Log it so a
+                    // silent parser regression leaves a trail instead of vanishing.
+                    console.warn('[gmail] unparsed message', id, '| subject:', subject.slice(0, 80), '| parsed:', parsed);
+                    this._unparsed = (this._unparsed || 0) + 1;
+                    continue;
+                }
                 const tripId = (window.tripsStore && window.tripsStore.pickTripIdForDate)
                     ? window.tripsStore.pickTripIdForDate(parsed.date) : null;
                 toAdd.push({
-                    id: window.expenseTracker ? window.expenseTracker.nextExpenseId() : (Date.now() + Math.floor(Math.random() * 10000)),
+                    // Deterministic ID derived from the Gmail message. The Apps Script
+                    // importer (gmail-import/apps-script.js) derives the SAME id for the
+                    // same email, so whichever path lands first wins and the other
+                    // overwrites the identical doc instead of creating a duplicate.
+                    // A random/sequential id here would double-import every transaction
+                    // that both paths happen to see.
+                    id: 'gm_' + id,
+                    gmailMessageId: id,
                     amount: parseFloat(parsed.amount),
                     description: parsed.merchant,
                     category: parsed.category || 'Other',
@@ -403,24 +443,22 @@ class EmailParser {
             this.updateLastSyncedUI();
             this.showReconnectButton(false);
 
-            if (typeof showNotification === 'function') {
-                const msg = imported > 0
-                    ? `${imported} transaction${imported > 1 ? 's' : ''} imported from Gmail`
-                    : 'No new transactions found in Chase alerts';
-                showNotification(msg, 'success');
+            // A background sync stays quiet UNLESS it actually found something —
+            // landing new transactions is worth interrupting for; "nothing new" is not.
+            if (imported > 0) {
+                const msg = `${imported} transaction${imported > 1 ? 's' : ''} imported from Gmail`;
+                if (typeof showNotification === 'function') showNotification(msg, 'success');
+            } else {
+                notify('No new transactions found in Chase alerts', 'success');
             }
         } catch (err) {
             if (err.message === 'TOKEN_EXPIRED') {
                 localStorage.removeItem('gmail_access_token');
                 this.showReconnectButton(true);
-                if (typeof showNotification === 'function') {
-                    showNotification('Gmail session expired — tap "Reconnect Gmail"', 'error', 7000);
-                }
+                notify('Gmail session expired — tap "Reconnect Gmail"', 'error', 7000);
             } else {
                 console.error('Gmail sync error:', err);
-                if (typeof showNotification === 'function') {
-                    showNotification('Gmail sync failed. Check your connection.', 'error');
-                }
+                notify('Gmail sync failed. Check your connection.', 'error');
             }
         } finally {
             localStorage.removeItem('gmail_syncing');
@@ -435,3 +473,53 @@ localStorage.removeItem('gmail_syncing');
 localStorage.removeItem('gmail_syncing_ts');
 
 window.emailParser = new EmailParser();
+
+// ===========================================================================
+// AUTO-SYNC
+//
+// The importer used to run ONLY from the "Auto add" tap, so transactions
+// existed only when the user remembered to ask — and with a 30-day search
+// window, a long gap loses alerts permanently.
+//
+// These triggers run sync({silent:true}), which never opens a popup: if the
+// Gmail token has expired it gives up and shows the Reconnect button instead.
+// So syncs inside the token's ~59-minute life are fully automatic, and the
+// popup is only ever the price of an explicit tap.
+// ===========================================================================
+(function () {
+    const MIN_GAP_MS = 5 * 60 * 1000;      // don't re-sync more than once per 5 min
+    const POLL_MS = 10 * 60 * 1000;        // while the app is open and visible
+
+    function shouldSync() {
+        if (!window.currentUser) return false;                  // needs auth
+        if (!window.emailParser?.isTokenUsable?.()) return false; // would need a popup
+        if (document.visibilityState === 'hidden') return false;  // don't burn quota
+        const last = Date.parse(localStorage.getItem('gmail_last_synced') || '') || 0;
+        return Date.now() - last > MIN_GAP_MS;
+    }
+
+    function maybeSync(reason) {
+        if (!shouldSync()) return;
+        console.log('[gmail] auto-sync:', reason);
+        window.emailParser.sync({ silent: true }).catch(err => {
+            console.warn('[gmail] auto-sync failed:', err && err.message);
+        });
+    }
+
+    // 1. On app open / sign-in. Auth is async, so poll briefly for currentUser
+    //    rather than racing it — this also covers a restored session.
+    let waited = 0;
+    const authWait = setInterval(() => {
+        waited += 500;
+        if (window.currentUser) { clearInterval(authWait); maybeSync('app-open'); }
+        else if (waited >= 15000) clearInterval(authWait);
+    }, 500);
+
+    // 2. On return to the app — the common PWA case: reopening after a few hours.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') maybeSync('refocus');
+    });
+
+    // 3. While left open, so a long session still picks up new alerts.
+    setInterval(() => maybeSync('poll'), POLL_MS);
+})();

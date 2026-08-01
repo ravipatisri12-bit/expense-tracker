@@ -220,17 +220,53 @@ function initAuth() {
     });
 }
 
+function _storeGmailToken(token) {
+    if (!token) return null;
+    localStorage.setItem('gmail_access_token', token);
+    // Google access tokens live 1 hour; expire ours slightly early to avoid
+    // starting a sync that dies mid-flight.
+    localStorage.setItem('gmail_token_expiry', String(Date.now() + 3540000));
+    return token;
+}
+
+/**
+ * Try to get a fresh Gmail token WITHOUT showing any UI.
+ *
+ * Browser clients get no refresh token, so the usual path is a popup. But when the
+ * user still has a live Google session, Google will re-issue an access token with
+ * prompt:'none' and no interaction. That fails (login_required) once the Google
+ * session itself is gone — which is why the popup path below still exists.
+ *
+ * @returns {Promise<string|null>} token, or null if a real prompt is required
+ */
+async function refreshGmailTokenSilent() {
+    try {
+        if (!window.firebaseAuth || !window.firebaseAuth.currentUser) return null;
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+        // login_hint lets Google skip the account chooser; prompt:none forbids UI.
+        provider.setCustomParameters({
+            prompt: 'none',
+            login_hint: window.firebaseAuth.currentUser.email || '',
+        });
+        const result = await window.firebaseAuth.currentUser.reauthenticateWithPopup(provider);
+        return _storeGmailToken(result.credential && result.credential.accessToken);
+    } catch (err) {
+        // Expected when Google needs interaction — not an error worth surfacing.
+        console.log('Silent Gmail token refresh unavailable:', err && err.code);
+        return null;
+    }
+}
+
 async function refreshGmailToken() {
+    // Prefer the no-UI path; only fall back to a popup when Google demands one.
+    const silent = await refreshGmailTokenSilent();
+    if (silent) return silent;
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
         const result = await window.firebaseAuth.signInWithPopup(provider);
-        const token = result.credential && result.credential.accessToken;
-        if (token) {
-            localStorage.setItem('gmail_access_token', token);
-            localStorage.setItem('gmail_token_expiry', String(Date.now() + 3540000));
-        }
-        return token || null;
+        return _storeGmailToken(result.credential && result.credential.accessToken);
     } catch (err) {
         console.error('Gmail token refresh failed:', err);
         return null;
@@ -239,6 +275,7 @@ async function refreshGmailToken() {
 
 // Export functions for use in other modules
 window.refreshGmailToken = refreshGmailToken;
+window.refreshGmailTokenSilent = refreshGmailTokenSilent;
 window.signInWithGoogle = signInWithGoogle;
 window.signOut = signOut;
 window.onAuthStateChanged = onAuthStateChanged;

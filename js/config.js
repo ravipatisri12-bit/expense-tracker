@@ -24,7 +24,15 @@ try {
         
         // Initialize Firestore
         db = firebase.firestore();
-        
+
+        // Offline cache. Without this, a cold open on flaky mobile data has no local
+        // Firestore copy and the UI waits on a network round-trip before showing
+        // cloud data (including anything the Gmail Apps Script imported).
+        // Fails harmlessly when multiple tabs are open or the browser blocks storage.
+        db.enablePersistence({ synchronizeTabs: true }).catch(function (err) {
+            console.warn('Firestore offline persistence unavailable:', err.code || err.message);
+        });
+
         // Initialize Firebase Authentication
         auth = firebase.auth();
         // Explicitly set LOCAL persistence so sessions survive page refreshes and browser restarts
