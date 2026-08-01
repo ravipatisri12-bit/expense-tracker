@@ -25,7 +25,7 @@
     <script src="js/trip-dashboard.js"></script>
     <script src="js/merchant-frequency.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/llm-integration.js"></script>
+    <script src="js/transaction-parser.js"></script>
     <script src="js/smart-input.js"></script>
     <script src="js/quick-add.js"></script>
     <script src="js/gamification.js"></script>
@@ -235,21 +235,6 @@
             </div>
 
             <button onclick="saveSettings()" class="w-full py-3 rounded-full font-medium text-sm" style="background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)">Save Settings</button>
-            <button onclick="document.getElementById('llm-config-modal').classList.remove('hidden')" id="llm-config-btn" class="w-full py-3 rounded-full font-medium text-sm" style="background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline-variant)">Configure Gemini AI Key</button>
-        </div>
-    </div>
-
-    <!-- LLM Config Modal -->
-    <div id="llm-config-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="max-w-md w-full p-6" style="background:var(--md-sys-color-surface-container-high);border-radius:28px">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base font-medium" style="color:var(--md-sys-color-on-surface)">Gemini AI Config</h3>
-                <button id="close-llm-config" style="color:var(--md-sys-color-outline)"><span class="material-symbols-rounded text-xl">close</span></button>
-            </div>
-            <div class="space-y-4">
-                <div><label class="block text-xs mb-1.5" style="color:var(--md-sys-color-outline)">API Key</label><input type="password" id="llm-api-key" placeholder="AIza..."><p class="text-xs mt-1.5" style="color:var(--md-sys-color-outline)">Get free key at <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color:var(--md-sys-color-primary)">Google AI Studio</a></p></div>
-                <div class="flex gap-3"><button id="save-llm-config" class="flex-1 bg-primary-600 text-white py-2.5 rounded-full text-sm font-medium">Save</button><button id="close-llm-config-btn" onclick="document.getElementById('llm-config-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-full text-sm" style="background:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface)">Cancel</button></div>
-            </div>
         </div>
     </div>
 
@@ -273,7 +258,40 @@
         </div>
     </div>
 
-    <script>window.onerror=function(m,s,l,c,e){if((s&&s.startsWith('chrome-extension://'))||(e&&e.stack&&e.stack.includes('chrome-extension://')))return;document.title='ERR:'+l+':'+m;document.body.insertAdjacentHTML('afterbegin','<pre style="color:red;padding:20px;font-size:14px;position:fixed;top:60px;left:0;right:0;z-index:9999;background:white">ERROR at line '+l+':\n'+m+'\n'+(e&&e.stack||'')+'</pre>')}</script>
+    <script>
+    // Global error reporting. Deliberately does NOT paint over the UI: the app is
+    // offline-first and a failed CDN/extension script must not look like a crash.
+    (function () {
+        var log = [];
+        window.__errorLog = log;   // inspect with __errorLog in a console
+
+        function record(kind, msg, src, line, err) {
+            log.push({ kind: kind, msg: String(msg || ''), src: src || '', line: line || 0, stack: (err && err.stack) || '', at: new Date().toISOString() });
+            if (log.length > 50) log.shift();
+        }
+
+        window.onerror = function (m, s, l, c, e) {
+            // Third-party noise we can neither fix nor act on:
+            //  - browser extensions injecting scripts
+            //  - cross-origin scripts (CDN tailwind/firebase/fonts), which the browser
+            //    censors to exactly {message:"Script error.", source:"", lineno:0}
+            var isExtension = (s && s.indexOf('chrome-extension://') === 0) || (e && e.stack && e.stack.indexOf('chrome-extension://') !== -1);
+            var isOpaqueCrossOrigin = (!s || s === '') && (l === 0 || l == null) && /^Script error\.?$/i.test(String(m || ''));
+            record(isExtension ? 'extension' : isOpaqueCrossOrigin ? 'cross-origin' : 'app', m, s, l, e);
+            if (isExtension || isOpaqueCrossOrigin) return true;   // swallow: not actionable
+            console.error('[app error]', m, s + ':' + l, e && e.stack);
+            return false;   // real app errors still surface in the console
+        };
+
+        // Unhandled promise rejections (failed fetch, Firestore timeout) were previously
+        // invisible — a sync could fail silently with no console trace.
+        window.addEventListener('unhandledrejection', function (ev) {
+            var r = ev.reason;
+            record('promise', (r && r.message) || r, '', 0, r);
+            console.error('[unhandled rejection]', r);
+        });
+    })();
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
