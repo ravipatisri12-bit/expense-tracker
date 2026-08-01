@@ -3,7 +3,12 @@
 
 class Gamification {
     constructor() {
-        this.data = JSON.parse(localStorage.getItem('ledgr_gamification')) || this.getDefaults();
+        // Merge over defaults: blobs written by older versions can be missing whole
+        // fields (achievements, milestoneShownFor, ...). Without this, the first
+        // this.data.achievements.includes() throws on those users.
+        const stored = JSON.parse(localStorage.getItem('ledgr_gamification')) || {};
+        this.data = { ...this.getDefaults(), ...stored };
+        this.data.streak = { ...this.getDefaults().streak, ...(stored.streak || {}) };
         this.save();
     }
 
@@ -209,6 +214,7 @@ class Gamification {
 
     checkStreakAchievements() {
         const s = this.data.streak.current;
+        if (!Array.isArray(this.data.achievements)) this.data.achievements = [];
         const unlocks = [
             [3, 'streak-3', '3-Day Streak'],
             [7, 'streak-7', 'Week Warrior'],

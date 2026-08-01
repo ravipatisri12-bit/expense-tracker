@@ -913,6 +913,11 @@ class ExpenseTracker {
         try { this.renderHomeMonthHero({ monthName, year: Y, dayOfMonth, daysInMonth, daysLeft, monthTotalRegular, todayTotal, avgPerDay, aim, tripExpensesThisMonth, SOFT, HARD }); } catch (e) { console.warn(e); }
         try { this.renderHomeInsight({ monthName, aim, monthTotalRegular, SOFT }); } catch (e) { console.warn(e); }
         try { this.renderHomeTripTeaser(); } catch (e) { console.warn(e); }
+        // Recompute before rendering: updateStreak() otherwise only runs on check-in,
+        // backfill or cloud hydrate, so a plain page load would show the last persisted
+        // value — a dead streak still reading "5 day streak", or a freeze-bridged one
+        // still reading 0 until the user happens to check in.
+        try { window.gamification?.updateStreak?.(); } catch (e) { console.warn('updateStreak:', e); }
         try { this.renderHomeHabit(); } catch (e) { console.warn(e); }
         try { this.renderHomeCategories(regularThisMonth); } catch (e) { console.warn(e); }
         try { this.renderHomeTrend({ regularThisMonth, daysInMonth, dayOfMonth, monthName, aim }); } catch (e) { console.warn(e); }
@@ -1407,10 +1412,12 @@ class ExpenseTracker {
             
             if (settingsDoc.exists) {
                 this.settings = { ...this.getDefaultSettings(), ...settingsDoc.data() };
-                // Restore API key from synced settings
+                // Drop any Gemini key that older versions synced to the cloud. Parsing and
+                // insights are fully local now, so this value is unused — and a stored API
+                // key is a liability, not a feature.
                 if (this.settings.geminiApiKey) {
-                    localStorage.setItem('gemini_api_key', this.settings.geminiApiKey);
-                    if (window.llmParser) window.llmParser.configure(this.settings.geminiApiKey);
+                    delete this.settings.geminiApiKey;
+                    localStorage.removeItem('gemini_api_key');
                 }
             }
 
@@ -2928,85 +2935,16 @@ ExpenseTracker.prototype.renderInsights = function() {
         } catch (e) {}
     }
 
+    // Insights are generated locally by templateInsights(). The former Gemini path
+    // was removed: it needed an API key that no longer exists (the committed one was
+    // stripped in c83cd5c and revoked), so every dashboard render fired a doomed
+    // request and fell through to exactly this template output anyway.
     const badge = document.getElementById('insights-badge');
-    this.fetchGeminiInsights(summary).then(insights => {
-        const html = this.formatInsights(insights);
-        container.innerHTML = html;
-        localStorage.setItem('insights_cache', JSON.stringify({ date: today, html }));
-        if (badge) { badge.textContent = 'AI'; badge.style.background = 'linear-gradient(135deg,rgba(102,126,234,0.15),rgba(118,75,162,0.15))'; badge.style.color = 'var(--md-sys-color-primary)'; }
-    }).catch((err) => {
-        console.warn('Gemini insights failed:', err.message);
-        const html = this.formatInsights(this.templateInsights(summary));
-        container.innerHTML = html;
-        if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
-        this._insightsFetching = false;
-    });
-};
-
-ExpenseTracker.prototype.fetchGeminiInsights = async function(summary) {
-    const prompt = `You're a supportive but honest personal spending coach. Based on this rolling 2-week spending data, give exactly 3 short behavioral insights (1-2 sentences each). Be specific with dollar amounts. Focus on patterns the user can act on. No generic advice. No bullet points or numbering — just 3 separate observations.
-
-Data (last 2 weeks):
-- Total spent: $${summary.totalSpent} across ${summary.transactionCount} transactions
-- Daily average: $${summary.dailyAvg}, Weekly average: $${summary.weeklyAvg}
-- Recent 2 weeks: $${summary.recentTwoWeeks}, Prior 2 weeks: $${summary.priorTwoWeeks}
-- This week: $${summary.thisWeek}, Last week: $${summary.lastWeek}${summary.budget ? `\n- Monthly budget: $${summary.budget}` : ''}
-- Top categories: ${summary.topCategories.map(c => c.name + ' $' + c.amount).join(', ')}
-${summary.topSpendingDay ? `- Highest spending day: ${summary.topSpendingDay.day} (avg $${summary.topSpendingDay.avg})` : ''}
-- Days without eating out: ${summary.noEatOutStreak}
-
-Return ONLY a JSON array of 3 strings. Example: ["insight 1", "insight 2", "insight 3"]`;
-
-    // Get API key: memory cache → localStorage → Firestore
-    let apiKey = this._geminiKey || localStorage.getItem('gemini_api_key') || '';
-    if (!apiKey && window.firebaseDb) {
-        try {
-            const doc = await window.firebaseDb.collection('users').doc('config').get();
-            console.log('Firestore config doc:', doc.exists, doc.exists ? doc.data() : 'N/A');
-            if (doc.exists && doc.data().geminiKey) {
-                apiKey = doc.data().geminiKey;
-                this._geminiKey = apiKey;
-            }
-        } catch (e) { console.warn('Failed to fetch API key from Firestore:', e.message); }
-    }
-    console.log('API key resolved:', apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE');
-    if (!apiKey) throw new Error('No API key available');
-
-    // Daily call limit (max 15)
-    const today = new Date().toDateString();
-    const usage = JSON.parse(localStorage.getItem('gemini_usage') || '{}');
-    if (usage.date !== today) { usage.date = today; usage.count = 0; }
-    if (usage.count >= 15) throw new Error('Daily API limit reached (15)');
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-        usage.count++;
-        localStorage.setItem('gemini_usage', JSON.stringify(usage));
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
-            })
-        });
-
-        if (resp.status === 429) {
-            usage.count = 15; // Block further calls today
-            localStorage.setItem('gemini_usage', JSON.stringify(usage));
-            throw new Error('Rate limited (429) — paused for today');
-        }
-
-        if (!resp.ok) {
-            const errBody = await resp.text();
-            console.error('Gemini API response:', resp.status, errBody);
-            throw new Error(`API error ${resp.status}`);
-        }
-        const data = await resp.json();
-        const text = data.candidates[0].content.parts[0].text.trim();
-        const match = text.match(/\[[\s\S]*\]/);
-        return match ? JSON.parse(match[0]) : this.templateInsights(summary);
-    }
-    throw new Error('API error 429 after 3 retries');
+    const html = this.formatInsights(this.templateInsights(summary));
+    container.innerHTML = html;
+    localStorage.setItem('insights_cache', JSON.stringify({ date: today, html }));
+    if (badge) { badge.textContent = 'Local'; badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--md-sys-color-outline)'; }
+    this._insightsFetching = false;
 };
 
 ExpenseTracker.prototype.templateInsights = function(s) {
@@ -4224,7 +4162,7 @@ ExpenseTracker.prototype._renderSmartCard = function () {
 <div class="smart-card">
     <div class="smart-head">
         <div class="smart-title"><div class="icon"><span class="material-symbols-rounded">bolt</span></div> Type it naturally</div>
-        <div class="smart-meta">SMART · GEMINI</div>
+        <div class="smart-meta">SMART · OFFLINE</div>
     </div>
     <textarea id="smart-input" class="smart-textarea" rows="4" placeholder="One per line — example:&#10;&#10;14 joes pizza&#10;subway 8&#10;moma 30 yesterday"></textarea>
     <div id="smart-parse-preview" class="parse-preview hidden"></div>
