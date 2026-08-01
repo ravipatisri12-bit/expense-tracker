@@ -14,7 +14,6 @@ class SmartTransactionInput {
     init() {
         this.setupSmartInput();
         this.setupManualFormToggle();
-        this.setupLLMConfig();
     }
 
     /**
@@ -290,48 +289,6 @@ class SmartTransactionInput {
         }, 5000);
     }
 
-    /**
-     * Setup LLM configuration
-     */
-    setupLLMConfig() {
-        const configButton = document.getElementById('llm-config-btn');
-        const configModal = document.getElementById('llm-config-modal');
-        const saveConfigButton = document.getElementById('save-llm-config');
-        const closeConfigButton = document.getElementById('close-llm-config');
-
-        if (!configButton || !configModal) return;
-
-        // Load current config
-        const apiKeyInput = document.getElementById('llm-api-key');
-        
-        if (apiKeyInput) {
-            apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
-        }
-
-        // Open modal
-        configButton.addEventListener('click', () => {
-            configModal.classList.remove('hidden');
-        });
-
-        // Close modal
-        closeConfigButton.addEventListener('click', () => {
-            configModal.classList.add('hidden');
-        });
-
-        // Save config
-        saveConfigButton.addEventListener('click', () => {
-            const apiKey = apiKeyInput.value.trim();
-
-            if (apiKey) {
-                window.llmParser.configure(apiKey);
-                showNotification('Gemini API configured successfully!', 'success');
-                configModal.classList.add('hidden');
-            } else {
-                showNotification('Please enter an API key', 'error');
-            }
-        });
-    }
-
     attachLivePreview() {
         const ta = document.getElementById('smart-input');
         const preview = document.getElementById('smart-parse-preview');
@@ -348,7 +305,7 @@ class SmartTransactionInput {
                 return;
             }
             preview.classList.remove('hidden');
-            // Use existing regex parser; never call Gemini for live preview.
+            // Local regex parser — no network call on any path.
             const parsed = window.llmParser.fallbackParseMultiple(text);
             const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
             const ok = parsed.filter(p => p.amount && p.amount > 0);

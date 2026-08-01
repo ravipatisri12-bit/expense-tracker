@@ -1,4 +1,4 @@
-const CACHE_NAME = 'expense-tracker-v10';
+const CACHE_NAME = 'expense-tracker-v12';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

@@ -12,11 +12,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-This is a **vanilla-JS single-page PWA** — no framework, no module bundler at runtime. `index.html` loads scripts via classic `<script>` tags in a fixed order, so all JS files share the global `window` namespace. Order matters (from `index.html`): `defensive.js` → `config.js` → `utils.js` → `trips.js` → `forecast.js` → `trip-dashboard.js` → `merchant-frequency.js` → `auth.js` → `llm-integration.js` → `smart-input.js` → `quick-add.js` → `gamification.js` → `email-parser.js` → `notifications.js`, then `script.js` last (via `<script src="script.js">` at end of body, after all `js/*.js`). When adding a script tag, keep dependencies earlier in the list, and `test.sh` verifies the file exists.
+This is a **vanilla-JS single-page PWA** — no framework, no module bundler at runtime. `index.html` loads scripts via classic `<script>` tags in a fixed order, so all JS files share the global `window` namespace. Order matters (from `index.html`): `defensive.js` → `config.js` → `utils.js` → `trips.js` → `forecast.js` → `trip-dashboard.js` → `merchant-frequency.js` → `auth.js` → `transaction-parser.js` → `smart-input.js` → `quick-add.js` → `gamification.js` → `email-parser.js` → `notifications.js`, then `script.js` last (via `<script src="script.js">` at end of body, after all `js/*.js`). When adding a script tag, keep dependencies earlier in the list, and `test.sh` verifies the file exists.
 
 `index.html` is the whole UI: a fixed header, a **4-tab** bottom nav (Home/`dashboard`, Trips, Txns/`transactions`, History), and one `<div class="page-content">` per page that JS shows/hides via `showPage()`. Most page bodies are empty containers (`<div id="home-month-hero">`, `<div id="history-month-rail">`, …) that the renderers fill.
 
-**Not loaded / dead code** (present in the repo but referenced by nothing — don't wire new features through them): `js/overview-analysis.js` (`BehavioralAnalysisAI`) and root `main.js` (a Vite CSS entry that isn't the configured entry point).
+**Not loaded / dead code** (present in the repo but referenced by nothing — don't wire new features through them): root `main.js` (a Vite CSS entry that isn't the configured entry point).
 
 ### The ExpenseTracker class (`script.js`, ~4600 lines)
 
@@ -49,13 +49,27 @@ The codebase uses safe wrappers (`safeGetElement`, `safeAddEventListener`, `safe
 - Dates are stored as `YYYY-MM-DD` strings and parsed via `parseLocalDate()` to avoid UTC timezone shifts. Use this helper — never `new Date('YYYY-MM-DD')` directly (that parses as UTC midnight and shifts a day in negative timezones).
 - **Timezone footgun, repeatedly hit**: every place that derives a "today" date string from `Date` MUST use the user's local time, never UTC. When adding an expense, the default date is the device's local `YYYY-MM-DD` (`new Date()` then read year/month/date components — not `.toISOString().slice(0,10)` which is UTC). For Gmail-imported transactions, Chase emails report ET; convert to UTC instant first, then read the device's local calendar parts (see `_parseDate` in `js/email-parser.js` for the canonical pattern). Past bugs have caused expenses logged at 11pm Pacific to appear on the next day.
 
-### LLM integration (`js/llm-integration.js`)
+### Transaction parsing (`js/transaction-parser.js`) — local, no LLM
 
-Gemini 2.0 Flash-Lite for two things: (1) parsing natural-language expense input like `100 at castilla on food 02/18`, and (2) generating spending insights on the dashboard. Both fall back to local logic when the API key is missing or fails:
-- Input parsing falls back to a regex parser in `smart-input.js`.
-- Insights fall back to `ExpenseTracker.prototype.templateInsights` in `script.js`.
+Natural-language input like `100 at castilla on food 02/18` is parsed by a local regex
+parser: `window.llmParser.parseTransaction()` → `fallbackParseMultiple()`. One transaction
+per input line; extracts amount, description, category and date (including `yesterday` and
+`MM/DD`). No network call on any path.
 
-Insights are cached per `day + expense count` to limit API calls.
+Dashboard insights come from `ExpenseTracker.prototype.templateInsights` in `script.js`,
+cached in `localStorage['insights_cache']` per day.
+
+> **Removed: the Gemini integration.** `js/llm-integration.js` (Gemini 2.0 Flash-Lite) and
+> `js/overview-analysis.js` (`BehavioralAnalysisAI`) are deleted. The integration never
+> worked — its constructor hardcoded `isConfigured = true` while the API key resolved to
+> `''` (the committed key was stripped in `c83cd5c` and has since been revoked), so every
+> parse fired a keyless request, took a 400, and fell through to the regex parser. Same for
+> insights. Removing it deleted one failing round-trip per parse and a leaked API key that
+> was still live in `overview-analysis.js` on a public repo.
+>
+> `window.llmParser` is kept as the global name so existing call sites keep working; the
+> class behind it is `TransactionParser`. Don't reintroduce an LLM parse path without a
+> server-side key — a browser-held API key on a public repo is what caused the leak.
 
 ### PWA (`sw.js`)
 
