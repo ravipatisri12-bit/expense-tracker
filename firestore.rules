@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Firestore security rules for Ledgr.
+//
+// Committed as the source of truth for what is deployed in the Firebase console
+// (project personal-expense-tracker-7aa9c). Keep this file in sync with the console:
+// rules edited only in the console can silently drift, and there is no build step
+// that deploys them from here.
+//
+// The Firebase web config in js/config.js is public on purpose — a web API key is an
+// identifier, not a secret. THESE RULES are the thing that actually stops anyone else
+// from reading your data, so any change here needs care.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A signed-in user may read and write only their own subtree.
+    //
+    //   request.auth != null            -> reject anonymous callers outright
+    //   request.auth.uid == userId      -> confine each user to their own document path
+    //   {document=**}                   -> applies recursively to every nested collection:
+    //                                      expenses, trips, settings/gmail_sync,
+    //                                      state/gamification, fcmTokens
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Everything outside /users/{userId} is denied by default — Firestore denies any
+    // path with no matching allow rule, so no explicit catch-all deny is needed.
+  }
+}
