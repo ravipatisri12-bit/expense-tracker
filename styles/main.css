@@ -294,12 +294,11 @@ button.rounded-xl { border-radius: 20px !important; }
   background: var(--md-sys-color-primary) !important;
 }
 
-/* Privacy mode — blur all monetary values */
-body.privacy-mode #big-spending-number,
-body.privacy-mode .font-semibold,
-body.privacy-mode #history-income,
-body.privacy-mode #history-savings,
-body.privacy-mode #monthly-budget-display {
+/* Privacy mode — blur all monetary values.
+   The #history-income / #history-savings / #big-spending-number /
+   #monthly-budget-display selectors were dropped: those ids do not exist in
+   index.html (their renderers were the dead income/fixed consumers). */
+body.privacy-mode .font-semibold {
     filter: blur(8px);
     user-select: none;
     transition: filter 0.2s ease;

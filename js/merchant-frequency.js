@@ -22,6 +22,10 @@
         const map = new Map();
         for (const e of expenses) {
             if (!e.description) continue;
+            // Spending rows only (kind absent means 'variable'). "Top regulars"
+            // ranks by visit count, so a monthly paycheck or rent payment would
+            // otherwise sit at the top of the list as the most-visited merchant.
+            if ((e.kind || 'variable') !== 'variable') continue;
             if (year != null && !String(e.date).startsWith(String(year))) continue;
             const key = normalizeKey(e.description);
             if (!key) continue;

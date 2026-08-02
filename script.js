@@ -360,7 +360,10 @@ class ExpenseTracker {
             date: expenseDate,
             timestamp: Date.now(),
             excludeFromBudget: false,
-            tripId: null
+            tripId: null,
+            // Tag the entry point. Without this the row renders as "unknown origin"
+            // and is indistinguishable from an importer row in the list.
+            source: 'manual'
         };
 
         // Add to local array
@@ -394,6 +397,9 @@ class ExpenseTracker {
 
     addExpenseProgrammatically(expense) {
         if (expense.tripId === undefined) expense.tripId = null;
+        // Every row must declare its entry point so the list icon is meaningful.
+        // Callers that don't set one are the smart-input / quick-add paths, i.e. manual.
+        if (!expense.source) expense.source = 'manual';
         this.expenses.push(expense);
         if (currentUser) {
             this.saveExpenseToFirebase(expense);
@@ -407,6 +413,7 @@ class ExpenseTracker {
     addExpensesBatch(expenses) {
         for (const e of expenses) {
             if (e.tripId === undefined) e.tripId = null;
+            if (!e.source) e.source = 'manual';
         }
         this.expenses.push(...expenses);
         if (currentUser && expenses.length > 0) {
@@ -686,73 +693,6 @@ class ExpenseTracker {
         card.classList.remove('hidden');
     }
 
-    renderDailyPulse() {
-        const card = document.getElementById('daily-pulse-card');
-        if (!card) return;
-
-        const now = new Date();
-        const income = this.getIncomeFor(now.getFullYear(), now.getMonth());
-        if (!income) { card.classList.add('hidden'); return; }
-
-        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-
-        const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
-        // Use category budgets as baseline — far more accurate than income ÷ days.
-        // Falls back to (income − fixed) ÷ days only if no category goals are set.
-        const baselineDaily = totalBudget > 0
-            ? totalBudget / daysInMonth
-            : Math.max(income - fixed, 0) / daysInMonth;
-
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const monthlySpent = this.expenses
-            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.excludeFromBudget; })
-            .reduce((s, e) => s + e.amount, 0);
-
-        const remaining = totalBudget - monthlySpent;
-        const isOverMonthly = totalBudget > 0 && remaining < 0;
-
-        // Always forward-looking: if over monthly budget show daily baseline (what you should aim for),
-        // otherwise spread what's left evenly across days remaining.
-        const dailyTarget = isOverMonthly
-            ? baselineDaily
-            : totalBudget > 0
-                ? Math.min(remaining / daysLeft, baselineDaily * 2)
-                : baselineDaily;
-
-        const todaySpend = this.getTodayStats().total;
-        const pct = dailyTarget > 0 ? todaySpend / dailyTarget : 0;
-        const barWidth = Math.min(pct * 100, 100).toFixed(1);
-        const barColor = pct >= 1 ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
-
-        const sublabel = isOverMonthly
-            ? 'daily average to stay on track'
-            : `$${Math.round(remaining)} left · ${daysLeft} day${daysLeft !== 1 ? 's' : ''} to go`;
-        const headroom = dailyTarget - todaySpend;
-        const statusMsg = pct >= 1
-            ? "You've reached today's target"
-            : `$${headroom.toFixed(0)} left for today`;
-
-        card.classList.remove('hidden');
-        card.innerHTML = `
-            <div class="flex items-center justify-between mb-3">
-                <div>
-                    <p class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today's target</p>
-                    <p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline);opacity:0.6">${sublabel}</p>
-                </div>
-                <p class="text-2xl font-extrabold" style="color:var(--md-sys-color-on-surface)">$${Math.round(dailyTarget)}</p>
-            </div>
-            <div class="w-full h-1.5 rounded-full mb-2" style="background:rgba(255,255,255,0.06)">
-                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-xs" style="color:var(--md-sys-color-outline)">${statusMsg}</span>
-                <span class="text-xs font-semibold" style="color:var(--md-sys-color-on-surface-variant)">$${todaySpend.toFixed(0)} spent today</span>
-            </div>`;
-    }
-
     renderWeeklyQuest() {
         const card = document.getElementById('weekly-quest-card');
         if (!card) return;
@@ -940,96 +880,6 @@ class ExpenseTracker {
         return { total: needsTotal + wantsTotal, needs: needsTotal, wants: wantsTotal, count: todayExpenses.length };
     }
 
-    renderTodayPanel() {
-        const card = document.getElementById('today-panel');
-        if (!card) return;
-
-        const stats = this.getTodayStats();
-        const now = new Date();
-        const dayLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const fmt = v => '$' + v.toFixed(2);
-
-        // Daily target logic (from renderDailyPulse)
-        const income = this.getIncomeFor(now.getFullYear(), now.getMonth());
-        const totalBudget = Object.values(this.settings.goals || {}).reduce((s, v) => s + v, 0);
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-        const fixed = (this.settings.rent || 0) + (this.settings.utilities || 0) + (this.settings.insurance || 0);
-        const baselineDaily = totalBudget > 0
-            ? totalBudget / daysInMonth
-            : income > 0 ? Math.max(income - fixed, 0) / daysInMonth : 0;
-        const showTarget = baselineDaily > 0;
-
-        const currentMonth = now.getMonth(), currentYear = now.getFullYear();
-        const monthlySpent = this.expenses
-            .filter(e => { const d = this.parseLocalDate(e.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.excludeFromBudget; })
-            .reduce((s, e) => s + e.amount, 0);
-        const remaining = totalBudget - monthlySpent;
-        const isOverMonthly = totalBudget > 0 && remaining < 0;
-        const dailyTarget = showTarget
-            ? (isOverMonthly ? baselineDaily : totalBudget > 0 ? Math.min(remaining / daysLeft, baselineDaily * 2) : baselineDaily)
-            : 0;
-
-        // Beat Yesterday
-        const yesterdayStr = this.getLocalDateString(new Date(Date.now() - 86400000));
-        const yesterdayTotal = this.expenses
-            .filter(e => e.date === yesterdayStr && !e.excludeFromBudget)
-            .reduce((s, e) => s + e.amount, 0);
-        const showBeatYesterday = yesterdayTotal > 0;
-        const beating = stats.total < yesterdayTotal;
-        const beatDiff = Math.abs(stats.total - yesterdayTotal);
-
-        const beatRow = showBeatYesterday ? `
-            <div class="flex items-center justify-between mt-3 pt-2.5" style="border-top:1px solid rgba(255,255,255,0.06)">
-                <span class="text-xs" style="color:var(--md-sys-color-outline)">vs yesterday</span>
-                <div class="flex items-center gap-1">
-                    <span class="material-symbols-rounded" style="font-size:14px;color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">${beating ? 'trending_down' : 'trending_flat'}</span>
-                    <span class="text-xs font-semibold" style="color:${beating ? '#43e97b' : 'var(--md-sys-color-outline)'}">
-                        ${beating ? `-$${beatDiff.toFixed(0)} ahead` : stats.total === yesterdayTotal ? 'same pace' : `$${beatDiff.toFixed(0)} more`}
-                    </span>
-                </div>
-            </div>` : '';
-
-        if (stats.count === 0) {
-            card.innerHTML = `
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
-                </div>
-                <p class="text-sm mt-1" style="color:var(--md-sys-color-outline)">Nothing logged yet</p>
-                ${showTarget ? `<p class="text-xs mt-0.5" style="color:var(--md-sys-color-outline);opacity:0.6">Target: $${Math.round(dailyTarget)} today</p>` : ''}
-                ${showBeatYesterday ? `<p class="text-xs mt-1" style="color:var(--md-sys-color-outline)">Yesterday: ${fmt(yesterdayTotal)} — can you beat it?</p>` : ''}`;
-            return;
-        }
-
-        const pct = dailyTarget > 0 ? stats.total / dailyTarget : 0;
-        const barWidth = Math.min(pct * 100, 100).toFixed(1);
-        const barColor = pct >= 1 ? '#f59e0b' : pct >= 0.75 ? '#a8c7fa' : '#43e97b';
-        const headroom = dailyTarget - stats.total;
-
-        const targetSection = showTarget ? `
-            <div class="w-full h-1.5 rounded-full my-3" style="background:rgba(255,255,255,0.06)">
-                <div class="h-1.5 rounded-full transition-all duration-700" style="width:${barWidth}%;background:${barColor}"></div>
-            </div>
-            <div class="flex justify-between text-xs" style="color:var(--md-sys-color-outline)">
-                <span>${pct >= 1 ? 'Target reached' : `$${headroom.toFixed(0)} left today`}</span>
-                <span>of $${Math.round(dailyTarget)} target</span>
-            </div>` : '';
-
-        card.innerHTML = `
-            <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-bold tracking-widest uppercase" style="color:var(--md-sys-color-outline)">Today · ${dayLabel}</span>
-                <span class="text-xs" style="color:var(--md-sys-color-outline)">${stats.count} transaction${stats.count !== 1 ? 's' : ''}</span>
-            </div>
-            <p class="text-3xl font-extrabold" style="color:var(--md-sys-color-on-surface)">${fmt(stats.total)}</p>
-            ${stats.needs > 0 || stats.wants > 0 ? `
-            <div class="flex gap-3 mt-1">
-                ${stats.needs > 0 ? `<span class="text-xs" style="color:var(--md-sys-color-outline)">Needs ${fmt(stats.needs)}</span>` : ''}
-                ${stats.wants > 0 ? `<span class="text-xs" style="color:var(--md-sys-color-outline)">Wants ${fmt(stats.wants)}</span>` : ''}
-            </div>` : ''}
-            ${targetSection}
-            ${beatRow}`;
-    }
-
     renderTodayCard() {
         const card = document.getElementById('today-card');
         if (!card) return;
@@ -1212,7 +1062,7 @@ class ExpenseTracker {
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                            <p class="text-xs" style="color:${c}">${expense.category}${expense.source === 'gmail' ? ' <span class="material-symbols-rounded" style="font-size:12px;color:var(--md-sys-color-outline);vertical-align:middle">mail</span>' : ''}</p>
+                            <p class="text-xs" style="color:${c}">${expense.category}${this._sourceIcon(expense.source)}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -1595,450 +1445,6 @@ class ExpenseTracker {
         localStorage.setItem('expenses', JSON.stringify(this.expenses));
     }
 
-    // ====================================================================
-    // HISTORY PAGE FUNCTIONALITY
-    // ====================================================================
-
-
-
-
-
-
-
-    getHistoricalData(month, year) {
-        // Filter expenses for the selected month and year
-        const historicalExpenses = this.expenses.filter(expense => {
-            const expenseDate = this.parseLocalDate(expense.date);
-            return expenseDate.getMonth() === parseInt(month) && expenseDate.getFullYear() === parseInt(year);
-        });
-
-        // Calculate totals
-        const totalVariableExpenses = historicalExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        const totalFixedExpenses = this.settings.rent + this.settings.utilities + this.settings.insurance;
-        const totalExpenses = totalVariableExpenses + totalFixedExpenses;
-        const monthIncome = this.getIncomeFor(parseInt(year), parseInt(month));
-        const totalSavings = monthIncome - totalExpenses;
-
-        // Group expenses by category
-        const expensesByCategory = {};
-        historicalExpenses.forEach(expense => {
-            if (!expensesByCategory[expense.category]) {
-                expensesByCategory[expense.category] = 0;
-            }
-            expensesByCategory[expense.category] += expense.amount;
-        });
-
-        return {
-            expenses: historicalExpenses,
-            totals: {
-                income: monthIncome,
-                totalExpenses,
-                variableExpenses: totalVariableExpenses,
-                fixedExpenses: totalFixedExpenses,
-                savings: totalSavings
-            },
-            byCategory: expensesByCategory
-        };
-    }
-
-    getCurrentMonthData() {
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        return this.getHistoricalData(currentMonth, currentYear);
-    }
-
-    updateHistoryView() {
-        const selectedMonth = document.getElementById('history-month').value;
-        const selectedYear = document.getElementById('history-year').value;
-        
-        if (!selectedMonth || !selectedYear) return;
-
-        const historicalData = this.getHistoricalData(selectedMonth, selectedYear);
-        const currentData = this.getCurrentMonthData();
-
-        // Update summary cards
-        document.getElementById('history-income').textContent = formatCurrency(historicalData.totals.income);
-        document.getElementById('history-total-expenses').textContent = formatCurrency(historicalData.totals.totalExpenses);
-        document.getElementById('history-variable-only').textContent = formatCurrency(historicalData.totals.variableExpenses);
-        document.getElementById('history-savings').textContent = formatCurrency(historicalData.totals.savings);
-
-        // Update category breakdown
-        this.updateHistoryCategoryBreakdown(historicalData.byCategory);
-
-        // Update comparison
-        this.updateHistoryComparison(historicalData, currentData, selectedMonth, selectedYear);
-
-        // Update historical transactions
-        this.updateHistoryTransactions(historicalData.expenses, selectedMonth, selectedYear);
-    }
-
-    updateHistoryCategoryBreakdown(expensesByCategory) {
-        const container = document.getElementById('history-category-breakdown');
-        
-        if (Object.keys(expensesByCategory).length === 0) {
-            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">No expenses found for selected month</div>';
-            return;
-        }
-
-        container.innerHTML = Object.keys(this.settings.goals).map(category => {
-            const spent = expensesByCategory[category] || 0;
-            const goal = this.settings.goals[category];
-            const percentage = goal > 0 ? Math.min((spent / goal) * 100, 100) : 0;
-
-            return `
-                <div class="flex justify-between items-center py-2">
-                    <div class="flex-1">
-                        <div class="flex justify-between text-sm">
-                            <span style="color:var(--md-sys-color-on-surface-variant)">${category}</span>
-                            <span class="font-medium">${formatCurrency(spent)}/${formatCurrency(goal)}</span>
-                        </div>
-                        <div class="w-full rounded-full h-2 mt-1" style="background:rgba(255,255,255,0.08)">
-                            <div class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    updateHistoryComparison(historicalData, currentData, selectedMonth, selectedYear) {
-        const container = document.getElementById('history-comparison');
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-
-        // Check if selected month is current month
-        const isCurrentMonth = (parseInt(selectedMonth) === currentMonth && parseInt(selectedYear) === currentYear);
-
-        if (isCurrentMonth) {
-            container.innerHTML = '<div class="text-center py-8" style="color:var(--md-sys-color-outline)">This is the current month</div>';
-            return;
-        }
-
-        const selectedMonthName = getMonthName(selectedMonth);
-        const currentMonthName = getMonthName(currentMonth);
-
-        const variableDiff = currentData.totals.variableExpenses - historicalData.totals.variableExpenses;
-        const totalDiff = currentData.totals.totalExpenses - historicalData.totals.totalExpenses;
-        const savingsDiff = currentData.totals.savings - historicalData.totals.savings;
-
-        container.innerHTML = `
-            <div class="space-y-4">
-                <div class="flex justify-between items-center py-2 " style="border-bottom:1px solid rgba(255,255,255,0.06)"">
-                    <span style="color:var(--md-sys-color-on-surface-variant)">Variable Expenses</span>
-                    <div class="text-right">
-                        <div class="font-medium">${formatCurrency(Math.abs(variableDiff))}</div>
-                        <div class="text-sm" style="color:${variableDiff > 0 ? '#cf6679' : 'var(--md-sys-color-primary)'}">
-                            ${variableDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center py-2" style="border-bottom:1px solid rgba(255,255,255,0.06)">
-                    <span style="color:var(--md-sys-color-on-surface-variant)">Total Expenses</span>
-                    <div class="text-right">
-                        <div class="font-medium">${formatCurrency(Math.abs(totalDiff))}</div>
-                        <div class="text-sm" style="color:${totalDiff > 0 ? '#cf6679' : 'var(--md-sys-color-primary)'}">
-                            ${totalDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center py-2">
-                    <span style="color:var(--md-sys-color-on-surface-variant)">Savings</span>
-                    <div class="text-right">
-                        <div class="font-medium">${formatCurrency(Math.abs(savingsDiff))}</div>
-                        <div class="text-sm" style="color:${savingsDiff > 0 ? 'var(--md-sys-color-primary)' : '#cf6679'}">
-                            ${savingsDiff > 0 ? 'More' : 'Less'} than ${selectedMonthName}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    updateHistoryTransactions(expenses, selectedMonth, selectedYear) {
-        const container = document.getElementById('history-transactions');
-        
-        if (expenses.length === 0) {
-            container.innerHTML = '<div class="p-8 text-center" style="color:var(--md-sys-color-outline)">No transactions found for selected month</div>';
-            return;
-        }
-
-        const selectedMonthName = getMonthName(selectedMonth);
-        const sortedExpenses = [...expenses].sort((a, b) => b.timestamp - a.timestamp);
-
-        container.innerHTML = `
-            <div class="p-4" style="border-bottom:1px solid rgba(255,255,255,0.06)">
-                <h4 class="font-medium " style="color:var(--md-sys-color-on-surface)">${selectedMonthName} ${selectedYear} - ${expenses.length} transactions</h4>
-            </div>
-            ${sortedExpenses.map(expense => {
-                const catColors = {Food:'#f5576c',Coffee:'#f093fb',Transportation:'#4facfe',Entertainment:'#667eea',Shopping:'#43e97b',Bills:'#fccb90',Other:'#a18cd1'};
-                const c = catColors[expense.category] || '#a18cd1';
-                return `
-                <div class="flex items-center justify-between p-4">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:${c}30">
-                            <span style="color:${c};font-weight:600" class="text-sm">${expense.category.charAt(0)}</span>
-                        </div>
-                        <div>
-                            <p class="font-medium " style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                            <p class="text-sm " style="color:var(--md-sys-color-outline)">${expense.category} • ${formatDate(expense.date)}</p>
-                        </div>
-                    </div>
-                    <span class="font-semibold " style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(expense.amount)}</span>
-                </div>
-            `}).join('')}
-        `;
-    }
-
-    // ====================================================================
-    // PRIVACY MODE FUNCTIONALITY
-    // ====================================================================
-
-    updateHistoryAnalytics() {
-        console.log('updateHistoryAnalytics called');
-        
-        // Simple implementation for now
-        const today = new Date();
-        const currentMonth = today.getMonth() - this.currentHistoryOffset;
-        const currentYear = today.getFullYear() + Math.floor(currentMonth / 12);
-        const adjustedMonth = ((currentMonth % 12) + 12) % 12;
-
-        console.log('Analyzing month:', adjustedMonth, 'year:', currentYear);
-
-        // Update month navigation header
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                           'July', 'August', 'September', 'October', 'November', 'December'];
-        const currentMonthEl = document.getElementById('history-current-month');
-        if (currentMonthEl) {
-            currentMonthEl.textContent = `${monthNames[adjustedMonth]} ${currentYear}`;
-            console.log('Updated month header to:', monthNames[adjustedMonth], currentYear);
-        }
-
-        // Get current month expenses
-        const monthExpenses = this.expenses.filter(expense => {
-            const d = this.parseLocalDate(expense.date);
-            return d.getMonth() === adjustedMonth && d.getFullYear() === currentYear;
-        });
-
-        console.log('Found expenses for current month:', monthExpenses.length, monthExpenses);
-
-        const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
-        const totalSpent = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
-        const activeDays = new Set(regularExpenses.map(e => e.date)).size;
-        const dailyAvg = activeDays > 0 ? totalSpent / activeDays : 0;
-
-        console.log('Regular expenses:', regularExpenses.length, 'Total:', totalSpent, 'Active days:', activeDays);
-
-        // Update current month display
-        const currentTotalEl = document.getElementById('history-current-total');
-        const activeDaysEl = document.getElementById('history-active-days');
-        const dailyAvgEl = document.getElementById('history-daily-avg');
-
-        if (currentTotalEl) {
-            currentTotalEl.textContent = formatCurrency(totalSpent);
-            console.log('Updated current total to:', formatCurrency(totalSpent));
-        }
-        if (activeDaysEl) {
-            activeDaysEl.textContent = `${activeDays} days`;
-            console.log('Updated active days to:', activeDays);
-        }
-        if (dailyAvgEl) {
-            dailyAvgEl.textContent = `${formatCurrency(dailyAvg)}/day`;
-            console.log('Updated daily avg to:', formatCurrency(dailyAvg));
-        }
-
-        // Get previous month for comparison
-        const prevMonth = adjustedMonth - 1;
-        const prevYear = prevMonth < 0 ? currentYear - 1 : currentYear;
-        const adjustedPrevMonth = prevMonth < 0 ? 11 : prevMonth;
-
-        const prevMonthExpenses = this.expenses.filter(expense => {
-            const d = this.parseLocalDate(expense.date);
-            return d.getMonth() === adjustedPrevMonth && d.getFullYear() === prevYear;
-        });
-
-        console.log('Found expenses for previous month:', prevMonthExpenses.length, prevMonthExpenses);
-
-        const prevRegularExpenses = prevMonthExpenses.filter(e => !e.excludeFromBudget);
-        const prevTotalSpent = prevRegularExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-        // Update previous month display
-        const prevTotalEl = document.getElementById('history-prev-total');
-        const changePercentEl = document.getElementById('history-change-percent');
-
-        if (prevTotalEl) {
-            prevTotalEl.textContent = formatCurrency(prevTotalSpent);
-            console.log('Updated prev total to:', formatCurrency(prevTotalSpent));
-        }
-        
-        if (changePercentEl && prevTotalSpent > 0) {
-            const change = ((totalSpent - prevTotalSpent) / prevTotalSpent) * 100;
-            const isPositive = change >= 0;
-            changePercentEl.textContent = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
-            changePercentEl.style.color = isPositive ? '#cf6679' : '#43e97b'; // Red for increase, green for decrease
-            console.log('Updated change percent to:', change.toFixed(1) + '%');
-        } else if (changePercentEl) {
-            changePercentEl.textContent = '—';
-            changePercentEl.style.color = 'var(--md-sys-color-on-surface)';
-        }
-
-        console.log('History analytics update completed');
-        
-        // Update category grid
-        this.updateCategoryGrid(monthExpenses, adjustedMonth, currentYear);
-        
-        // Update year overview
-        this.updateYearOverview();
-        
-        // Update category distribution
-        this.updateCategoryDistribution();
-    }
-
-    updateCategoryGrid(monthExpenses, month, year) {
-        const container = document.getElementById('history-category-grid');
-        if (!container) return;
-
-        const categoryColors = {
-            Food: '#f5576c', Coffee: '#f093fb', Transportation: '#4facfe',
-            Entertainment: '#667eea', Shopping: '#43e97b', Bills: '#fccb90', Other: '#a18cd1'
-        };
-
-        // Group expenses by category (only regular expenses)
-        const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
-        const categories = {};
-        
-        regularExpenses.forEach(expense => {
-            if (!categories[expense.category]) {
-                categories[expense.category] = { amount: 0, count: 0, merchants: {} };
-            }
-            categories[expense.category].amount += expense.amount;
-            categories[expense.category].count++;
-            
-            if (!categories[expense.category].merchants[expense.description]) {
-                categories[expense.category].merchants[expense.description] = 0;
-            }
-            categories[expense.category].merchants[expense.description]++;
-        });
-
-        const sortedCategories = Object.entries(categories)
-            .sort(([,a], [,b]) => b.amount - a.amount)
-            .slice(0, 6); // Show top 6 categories
-
-        console.log('Categories for month', month, ':', sortedCategories.map(([cat, data]) => `${cat}: ${formatCurrency(data.amount)}`));
-
-        if (sortedCategories.length === 0) {
-            container.innerHTML = '<div class="text-center py-8 text-sm" style="color:var(--md-sys-color-outline)">No expenses this month</div>';
-            return;
-        }
-
-        container.innerHTML = sortedCategories.map(([category, data]) => {
-            const color = categoryColors[category] || '#a18cd1';
-            
-            // Get top 2 merchants for this category
-            const topMerchants = Object.entries(data.merchants)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 2)
-                .map(([merchant]) => merchant);
-            
-            const merchantText = topMerchants.length > 0 ? topMerchants.join(', ') : 'Various merchants';
-
-            return `
-                <div class="card p-3 cursor-pointer transition-all hover:bg-opacity-80" onclick="showCategoryDetail('${category}')" style="border-left: 3px solid ${color}">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center" style="background:${color}30">
-                                <span style="color:${color};font-weight:600" class="text-xs">${category.charAt(0)}</span>
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${category}</h4>
-                                <p class="text-xs" style="color:var(--md-sys-color-outline)">${data.count} transaction${data.count !== 1 ? 's' : ''}</p>
-                            </div>
-                        </div>
-                        <span class="text-lg font-bold" style="color:var(--md-sys-color-on-surface)">${formatCurrency(data.amount)}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    updateYearOverview() {
-        const currentYear = new Date().getFullYear();
-        const yearData = this.getYearData(currentYear);
-
-        // Update 4-pill summary
-        const totalSpentEl = document.getElementById('year-total-spent');
-        const avgMonthEl = document.getElementById('year-avg-month');
-        const savedEl = document.getElementById('year-saved');
-        const activeMonthsEl = document.getElementById('year-active-months');
-
-        if (totalSpentEl) totalSpentEl.textContent = formatCurrency(yearData.totalSpent);
-        if (avgMonthEl) avgMonthEl.textContent = formatCurrency(yearData.avgPerMonth);
-        if (savedEl) savedEl.textContent = formatCurrency(yearData.totalSaved);
-        if (activeMonthsEl) activeMonthsEl.textContent = `${yearData.activeMonths} mos`;
-
-        // Update monthly breakdown - only show months up to current month
-        const container = document.getElementById('year-monthly-breakdown');
-        if (!container) return;
-
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const currentMonth = new Date().getMonth();
-
-        // Only show months from January up to current month
-        const monthsToShow = yearData.months.slice(0, currentMonth + 1);
-
-        container.innerHTML = monthsToShow.map((monthData, index) => {
-            const isCurrentMonth = index === currentMonth;
-            const barWidth = yearData.maxAmount > 0 ? (monthData.amount / yearData.maxAmount) * 100 : 0;
-
-            return `
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-sm font-medium w-8" style="color:var(--md-sys-color-on-surface)">${monthNames[index]}${isCurrentMonth ? '*' : ''}</span>
-                    <div class="flex-1 mx-3">
-                        <div class="w-full h-2 rounded-full" style="background:rgba(255,255,255,0.08)">
-                            <div class="h-2 rounded-full transition-all duration-300" 
-                                 style="width:${barWidth}%;background:var(--md-sys-color-primary)"></div>
-                        </div>
-                    </div>
-                    <span class="text-sm font-medium w-12 text-right" style="color:var(--md-sys-color-on-surface)">
-                        ${formatCurrency(monthData.amount)}
-                    </span>
-                </div>
-            `;
-        }).join('');
-    }
-
-    getYearData(year) {
-        const currentMonth = new Date().getMonth();
-        
-        // Only calculate data for months up to current month
-        const months = Array.from({length: 12}, (_, i) => {
-            const monthExpenses = this.expenses.filter(expense => {
-                const d = this.parseLocalDate(expense.date);
-                return d.getMonth() === i && d.getFullYear() === year;
-            });
-            const regularExpenses = monthExpenses.filter(e => !e.excludeFromBudget);
-            const amount = regularExpenses.reduce((sum, e) => sum + e.amount, 0);
-            return { amount, count: regularExpenses.length };
-        });
-
-        // Only consider reached months for calculations
-        const reachedMonths = months.slice(0, currentMonth + 1);
-        const totalSpent = reachedMonths.reduce((sum, m) => sum + m.amount, 0);
-        const activeMonths = reachedMonths.filter(m => m.amount > 0).length;
-        const avgPerMonth = activeMonths > 0 ? totalSpent / activeMonths : 0;
-        
-        // Max amount only from reached months for proper bar scaling
-        const maxAmount = Math.max(...reachedMonths.map(m => m.amount), 0);
-
-        // Calculate total saved — sum of (per-month income) for reached active months minus total spent
-        const reachedIncome = reachedMonths.reduce((sum, m, i) => {
-            return m.amount > 0 ? sum + this.getIncomeFor(year, i) : sum;
-        }, 0);
-        const totalSaved = Math.max(0, reachedIncome - totalSpent);
-
-        return { months, totalSpent, activeMonths, avgPerMonth, maxAmount, totalSaved };
-    }
-
     updateCategoryDistribution() {
         const container = document.getElementById('category-distribution');
         if (!container) return;
@@ -2314,8 +1720,33 @@ class ExpenseTracker {
         return new Date(s);
     }
 
+    // ====================================================================
+    // LEDGER KIND — variable / fixed / income
+    // ====================================================================
+    //
+    // Every row carries an optional `kind`:
+    //
+    //     kind: 'variable' | 'fixed' | 'income'      // ABSENT means 'variable'
+    //
+    // Absent-means-variable is what makes this additive: every pre-existing row
+    // classifies as variable by omission, so there is no migration and no row is
+    // ever rewritten. Amounts stay POSITIVE for all three kinds — `kind` carries
+    // the sign, not the number. Storing income as -4000 would break the Gmail
+    // parser (rejects amount <= 0), the SVG donut/arc geometry, and CSV
+    // export/reimport round-trips, all silently.
+    //
+    // `category` is untouched: rent is { kind:'fixed', category:'Bills' }, so it
+    // still aggregates into the normal category breakdowns.
+    //
+    // spendingRows() is the ONE gate meaning "counts as spending". While no row
+    // has a `kind` it is the identity function, which is what makes adding it a
+    // provable no-op on existing data.
+    spendingRows(rows) {
+        return (rows || this.expenses).filter(e => (e.kind || 'variable') === 'variable');
+    }
+
     getRegularMonthExpenses(year, month) {
-        return this.expenses.filter(e => {
+        return this.spendingRows().filter(e => {
             if (e.tripId != null) return false;
             if (e.excludeFromBudget) return false;
             const d = this.parseLocalDate(e.date);
@@ -2323,15 +1754,62 @@ class ExpenseTracker {
         });
     }
 
+    // Trip math is spending-only. An income row has tripId:null and
+    // excludeFromBudget:false, so without this gate it would pass straight into
+    // a trip budget and corrupt it.
     getTripExpenses(tripId) {
-        return this.expenses.filter(e => e.tripId === tripId);
+        return this.spendingRows().filter(e => e.tripId === tripId);
     }
 
     getMonthCombinedExpenses(year, month) {
-        return this.expenses.filter(e => {
+        return this.spendingRows().filter(e => {
             const d = this.parseLocalDate(e.date);
             return d.getFullYear() === year && d.getMonth() === month;
         });
+    }
+
+    // Rows of one kind dated inside a given month. Positive amounts throughout.
+    kindRowsForMonth(kind, year, month) {
+        return this.expenses.filter(e => {
+            if ((e.kind || 'variable') !== kind) return false;
+            const d = this.parseLocalDate(e.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+    }
+
+    // Per-month fixed total, computed from rows dated in that month.
+    //
+    // Fallback rule: if the month has NO fixed rows at all, fall back to the
+    // Settings estimate (_monthlyFixedTotal) and flag it `estimated`. Rows
+    // ACCUMULATE — enter rent on the 3rd and utilities on the 18th and the total
+    // goes 1200 -> 1345. There is no "complete set" to wait for, because the app
+    // holds no template of what should exist, so a month is never blank once it
+    // has one row.
+    //
+    // Evaluated independently per month AND per type: Jan and Jul can be
+    // row-based while Feb–Jun stay estimated. No cutoff date, no migration.
+    // `count` is returned so a UI can render "Fixed · $1,345 (2 items)" versus
+    // "Fixed · $1,550 (estimated)" and an in-progress month reads as incomplete
+    // rather than wrong.
+    fixedFor(year, month) {
+        const rows = this.kindRowsForMonth('fixed', year, month);
+        if (rows.length === 0) {
+            return { total: this._monthlyFixedTotal(), count: 0, estimated: true, rows: [] };
+        }
+        const total = rows.reduce((s, e) => s + Number(e.amount || 0), 0);
+        return { total, count: rows.length, estimated: false, rows };
+    }
+
+    // Per-month income total. Same fallback rule as fixedFor(), resolved
+    // independently: a month can have real income rows while its fixed total is
+    // still the Settings estimate.
+    incomeFor(year, month) {
+        const rows = this.kindRowsForMonth('income', year, month);
+        if (rows.length === 0) {
+            return { total: this.getIncomeFor(year, month), count: 0, estimated: true, rows: [] };
+        }
+        const total = rows.reduce((s, e) => s + Number(e.amount || 0), 0);
+        return { total, count: rows.length, estimated: false, rows };
     }
 
     // Walk all expenses with tripId == null and assign them to any trip whose
@@ -2352,6 +1830,11 @@ class ExpenseTracker {
         const updated = [];
         for (const e of this.expenses) {
             if (e.tripId) continue;
+            // Only spending rows get auto-tagged. Without this an income or fixed
+            // row whose date happens to fall inside a trip window would be silently
+            // WRITTEN with that tripId — a mutation of stored data, not just a
+            // wrong display. A paycheck is not a trip expense.
+            if ((e.kind || 'variable') !== 'variable') continue;
             const t = eligibleTrips.find(t => e.date >= t.startDate && e.date <= t.endDate);
             if (t) { e.tripId = t.id; updated.push(e); }
         }
@@ -3196,18 +2679,6 @@ function renderCatSheet() {
 </div>`;
 }
 
-// ====================================================================
-// NEW: FIXED EXPENSES TOGGLE
-// ====================================================================
-
-function toggleFixedExpenses() {
-    const details = document.getElementById('fixed-expenses-details');
-    const chevron = document.getElementById('fixed-chevron');
-    if (!details) return;
-    details.classList.toggle('hidden');
-    if (chevron) chevron.style.transform = details.classList.contains('hidden') ? '' : 'rotate(180deg)';
-}
-
 function toggleMonthlyReport() {
     const details = document.getElementById('monthly-report-details');
     const chevron = document.getElementById('report-chevron');
@@ -3254,10 +2725,6 @@ function exportCSV() {
 
 function saveSettings() {
     expenseTracker.saveSettings();
-}
-
-function updateHistoryView() {
-    expenseTracker.updateHistoryView();
 }
 
 function togglePrivacyMode() {
@@ -3377,17 +2844,6 @@ function navigateTrends(direction) {
         expenseTracker.updateWeeklySpending('recent');
     }
 }
-// History navigation
-function navigateHistoryMonth(direction) {
-    if (direction === 'prev') {
-        expenseTracker.currentHistoryOffset++;
-    } else if (direction === 'next') {
-        expenseTracker.currentHistoryOffset = Math.max(0, expenseTracker.currentHistoryOffset - 1);
-    }
-    
-    expenseTracker.updateHistoryAnalytics();
-}
-
 // Category distribution toggle
 function toggleCategoryView(view) {
     expenseTracker.categoryDistributionView = view;
@@ -3873,6 +3329,34 @@ window.onHabitBackfill = function (key, mood) {
     if (typeof showNotification === 'function') showNotification('Day logged — streak updated', 'success');
 };
 
+// Per-source marker in the transaction list.
+//
+// Previously only source==='gmail' (the in-app importer) rendered an icon, so
+// Apps Script rows (source==='chase-gmail') were visually identical to manual
+// entries. That ambiguity is what made a bulk delete look safe and cost 64
+// single-copy transactions — they had no in-app twin, so removing the
+// chase-gmail copy removed the only copy. Every non-manual source is now visible.
+// The three entry points, each with its own glyph AND colour so they are
+// distinguishable at a glance rather than by hovering:
+//
+//   mail        blue    in-app Gmail sync   (source: 'gmail')
+//   cloud_sync  purple  Gmail Apps Script   (source: 'chase-gmail')
+//   edit        grey    typed by hand       (source: 'manual', or absent on older rows)
+//
+// 'restored' keeps a distinct glyph so rows recovered from a backup stay auditable.
+ExpenseTracker.prototype._sourceIcon = function (source) {
+    const icons = {
+        gmail: { icon: 'mail', color: '#66d9ff', title: 'Auto-synced from Gmail by the app' },
+        'chase-gmail': { icon: 'cloud_sync', color: '#c89eff', title: 'Auto-imported by the Gmail Apps Script' },
+        manual: { icon: 'edit', color: '#8b8fa3', title: 'Added manually' },
+        restored: { icon: 'restore', color: '#ffd166', title: 'Restored from a backup' },
+    };
+    // Rows written before source tracking existed have no source — they were all
+    // hand-entered, so manual is the correct default.
+    const s = icons[source] || icons.manual;
+    return ` <span class="material-symbols-rounded" style="font-size:13px;color:${s.color};vertical-align:middle;opacity:.85" title="${s.title}" aria-label="${s.title}">${s.icon}</span>`;
+};
+
 ExpenseTracker.prototype._categoryColor = function (name) {
     return {
         Food: '#ff9c66', Coffee: '#ffd166', Transit: '#66d9ff', Transportation: '#66d9ff',
@@ -4292,7 +3776,7 @@ window.onManualSubmit = async function () {
     // window attach correctly. Per-page Untag toggle still suppresses tagging.
     const tripId = (!t._addPageState.untag && window.tripsStore)
         ? window.tripsStore.pickTripIdForDate(date) : null;
-    const expense = { id: t.nextExpenseId(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId };
+    const expense = { id: t.nextExpenseId(), amount, description, category, date, timestamp: Date.now(), excludeFromBudget: false, tripId, source: 'manual' };
     t.expenses.push(expense);
     t.saveExpenses();
     if (window.currentUser) await t.saveExpenseToFirebase(expense);
@@ -4349,13 +3833,27 @@ window.onHistoryMonthSelect = function (month) {
     t.renderHistoryYearShape();
 };
 
+// Income for a whole year, summed month by month.
+//
+// BUG FIX: this used to read the flat `settings.income` and multiply it by the
+// elapsed month count, ignoring `settings.incomeOverrides` entirely. A per-month
+// override set in Settings therefore never moved the History year card, and this
+// function silently disagreed with getIncomeFor() about the same month.
+//
+// Now it sums incomeFor(Y, m) across elapsed months, so it also picks up real
+// kind:'income' rows wherever they exist and falls back to the settings value
+// (override first, then flat) only for the months that have none. With no
+// overrides and no income rows this is still monthly × elapsedMonths, so the
+// existing behaviour is unchanged.
 ExpenseTracker.prototype.getYearIncome = function (year) {
-    const monthly = (this.settings && this.settings.income) || 0;
-    if (monthly <= 0) return 0;
     const now = new Date();
-    if (year === now.getFullYear()) return monthly * (now.getMonth() + 1);
-    if (year < now.getFullYear()) return monthly * 12;
-    return 0;
+    let elapsed;
+    if (year < now.getFullYear()) elapsed = 12;
+    else if (year === now.getFullYear()) elapsed = now.getMonth() + 1;
+    else return 0;
+    let sum = 0;
+    for (let m = 0; m < elapsed; m++) sum += this.incomeFor(year, m).total || 0;
+    return sum;
 };
 
 ExpenseTracker.prototype.renderHistoryYearSelector = function () {
@@ -4376,7 +3874,9 @@ ExpenseTracker.prototype.renderHistoryYearStats = function () {
     if (!root) return;
     const Y = this._historyState.year;
     const now = new Date();
-    const all = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
+    // spendingRows() first: an income row folded into "Spent" would inflate the
+    // number AND double-count against the fixed total added below.
+    const all = this.spendingRows().filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
     const loggedSpent = all.reduce((s, e) => s + Number(e.amount || 0), 0);
     const monthsActive = new Set(all.map(e => this.parseLocalDate(e.date).getMonth())).size;
     // Avg/mo uses ELAPSED months-of-year (current year up to current month;
@@ -4422,7 +3922,9 @@ ExpenseTracker.prototype.renderHistoryYearShape = function () {
     const now = new Date();
     const totals = new Array(12).fill(0);
     const tripPart = new Array(12).fill(0);
-    for (const e of this.expenses) {
+    // Spending only: a single income row would spike one bar and `max` would
+    // squash all eleven others flat.
+    for (const e of this.spendingRows()) {
         const d = this.parseLocalDate(e.date);
         if (d.getFullYear() !== Y) continue;
         const m = d.getMonth();
@@ -4483,7 +3985,7 @@ ExpenseTracker.prototype.renderHistoryMonthRail = function () {
     const sel = this._historyState.month;
     const now = new Date();
     const totals = new Array(12).fill(0);
-    for (const e of this.expenses) {
+    for (const e of this.spendingRows()) {
         const d = this.parseLocalDate(e.date);
         if (d.getFullYear() === Y) totals[d.getMonth()] += Number(e.amount || 0);
     }
@@ -4527,24 +4029,34 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
     const now = new Date();
     const monthName = new Date(Y, M, 1).toLocaleDateString('en-US', { month: 'long' });
 
-    const monthAll = this.expenses.filter(e => {
+    // spendingRows() so an income row is never counted under "Regular spending",
+    // and a fixed row is counted ONCE — via fixedFor() below, not here.
+    const monthAll = this.spendingRows().filter(e => {
         const d = this.parseLocalDate(e.date); return d.getFullYear() === Y && d.getMonth() === M;
     });
     const logged = monthAll.reduce((s, e) => s + Number(e.amount || 0), 0);
     const regular = monthAll.filter(e => e.tripId == null).reduce((s, e) => s + Number(e.amount || 0), 0);
     const tripTotal = logged - regular;
     const tripCount = new Set(monthAll.filter(e => e.tripId != null).map(e => e.tripId)).size;
-    // Fixed obligations only count for elapsed months.
-    const fixedThisMonth = this._isMonthElapsed(Y, M) ? this._monthlyFixedTotal() : 0;
+    // Real fixed rows count for whatever month they are dated in. The Settings
+    // ESTIMATE only counts for elapsed months — we don't pre-charge a future
+    // March's rent from a guess, but a prepayment actually logged in March is data.
+    const fixedInfo = this.fixedFor(Y, M);
+    const fixedThisMonth = fixedInfo.estimated
+        ? (this._isMonthElapsed(Y, M) ? fixedInfo.total : 0)
+        : fixedInfo.total;
     const total = logged + fixedThisMonth;
 
     // vs prior month — must use the same total formula (logged + fixed) for both.
     const prevY = M === 0 ? Y - 1 : Y;
     const prevM = M === 0 ? 11 : M - 1;
-    const prevLogged = this.expenses
+    const prevLogged = this.spendingRows()
         .filter(e => { const d = this.parseLocalDate(e.date); return d.getFullYear() === prevY && d.getMonth() === prevM; })
         .reduce((s, e) => s + Number(e.amount || 0), 0);
-    const prevFixed = this._isMonthElapsed(prevY, prevM) ? this._monthlyFixedTotal() : 0;
+    const prevFixedInfo = this.fixedFor(prevY, prevM);
+    const prevFixed = prevFixedInfo.estimated
+        ? (this._isMonthElapsed(prevY, prevM) ? prevFixedInfo.total : 0)
+        : prevFixedInfo.total;
     const prevTotal = prevLogged + prevFixed;
     const prevName = new Date(prevY, prevM, 1).toLocaleDateString('en-US', { month: 'short' });
     let vsLine = '';
@@ -4598,7 +4110,9 @@ ExpenseTracker.prototype.renderHistoryCategories = function () {
     const root = document.getElementById('history-categories');
     if (!root) return;
     const Y = this._historyState.year;
-    const yearAll = this.expenses.filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
+    // spendingRows(): otherwise "Income" becomes a category bucket and every
+    // other category's pct is diluted by the paycheck.
+    const yearAll = this.spendingRows().filter(e => this.parseLocalDate(e.date).getFullYear() === Y);
     const totals = {};
     let grand = 0;
     for (const e of yearAll) {
