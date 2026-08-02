@@ -522,7 +522,7 @@ class ExpenseTracker {
     }
 
     async saveEditedExpense() {
-        const expenseId = parseInt(document.getElementById('edit-expense-id').value);
+        const expenseId = document.getElementById('edit-expense-id').value;
         const amount = parseFloat(document.getElementById('edit-amount').value);
         const description = document.getElementById('edit-description').value;
         const category = document.getElementById('edit-category').value;
@@ -534,7 +534,7 @@ class ExpenseTracker {
         }
 
         // Find the expense in the array
-        const expenseIndex = this.expenses.findIndex(e => e.id === expenseId);
+        const expenseIndex = this.expenses.findIndex(e => e.id == expenseId);
         if (expenseIndex === -1) {
             showNotification('Transaction not found!', 'error');
             return;
