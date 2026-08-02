@@ -491,6 +491,13 @@ window.emailParser = new EmailParser();
     const POLL_MS = 10 * 60 * 1000;        // while the app is open and visible
 
     function shouldSync() {
+        // Kill switch. Survives reloads, so it can hold auto-import off while data is
+        // being repaired or reconciled:
+        //   localStorage.setItem('gmail_autosync_disabled','1')   // off
+        //   localStorage.removeItem('gmail_autosync_disabled')    // back on
+        // The manual "Auto add" button still works — this only stops the background
+        // triggers, so an explicit tap is never blocked by a stale flag.
+        if (localStorage.getItem('gmail_autosync_disabled') === '1') return false;
         if (!window.currentUser) return false;                  // needs auth
         if (!window.emailParser?.isTokenUsable?.()) return false; // would need a popup
         if (document.visibilityState === 'hidden') return false;  // don't burn quota

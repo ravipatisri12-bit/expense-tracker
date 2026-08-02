@@ -3,10 +3,15 @@
 
 const VAPID_KEY = 'BAa26BRj2zy9cHSkOSZDqQB_9Ys4GBUlyUWhnk_A_ErUv_cK355aFNhuaTFANFIWJAdikqQCNkgv4cbpoGQ6BKY';
 
-const PREVIEW_MONTHLY_TOTAL_SOFT = 1000;
-const PREVIEW_MONTHLY_TOTAL_HARD = 2000;
-const PREVIEW_MONTHLY_FOOD = 400;
-const PREVIEW_FOOD_CATEGORIES = new Set(['Food']);
+// MIRROR of the budget model in gmail-import/apps-script.js. This file only
+// PREVIEWS notifications locally ("fire now"); the real sender is the Apps Script.
+// The two must produce byte-identical copy for the same inputs — change one,
+// change both. Spec: docs/superpowers/specs/2026-08-01-event-driven-notifications-design.md
+//
+// Known drift in the two copies neither file owns: script.js:911 defines
+// SOFT/HARD/FOOD inline and script.js:933 `_computeAimToday` duplicates the state
+// machine (same numbers), but script.js:904 computes daysLeft EXCLUDING today while
+// both senders include it. Left alone deliberately — see the note in apps-script.js.
 
 // Save the token, then delete any other tokens registered to the same device
 // (same userAgent), so refresh-token doesn't accumulate duplicates.
@@ -108,6 +113,8 @@ function previewLocalDateString() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Days remaining INCLUDING today, matching daysLeftInMonth_() in apps-script.js.
+// Derived from local calendar parts, never from a UTC string.
 function previewDaysLeft() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate() + 1;
@@ -117,20 +124,27 @@ function previewMonthName() {
     return new Date().toLocaleString('en-US', { month: 'long' });
 }
 
+// The one gate meaning "this row counts against my monthly budget".
+// Mirrors isBudgetRow_() in apps-script.js exactly.
+function previewIsBudgetRow(e) {
+    if (e.tripId) return false;
+    if (e.excludeFromBudget) return false;
+    if ((e.kind || 'variable') !== 'variable') return false;
+    return true;
+}
+
 function previewBuildContext() {
     const today = previewLocalDateString();
     const monthPrefix = today.slice(0, 7);
     const all = (window.expenseTracker?.expenses) || [];
-    const month = all.filter(e => (e.date || '').startsWith(monthPrefix));
+    const month = all.filter(e => (e.date || '').startsWith(monthPrefix)).filter(previewIsBudgetRow);
     const todays = month.filter(e => e.date === today);
-    const sum = (arr, pred = () => true) => arr.reduce((s, e) => s + (pred(e) ? Number(e.amount || 0) : 0), 0);
-    const isFood = e => PREVIEW_FOOD_CATEGORIES.has(e.category);
+    const sum = (arr) => arr.reduce((s, e) => s + Number(e.amount || 0), 0);
     const g = window.gamification?.data;
+    // No food total: with the caps gone there is nothing to compare it against.
     return {
         todayTotal: sum(todays),
-        todayFood: sum(todays, isFood),
         monthTotal: sum(month),
-        monthFood: sum(month, isFood),
         daysLeft: previewDaysLeft(),
         todayCount: todays.length,
         monthName: previewMonthName(),
@@ -140,101 +154,25 @@ function previewBuildContext() {
     };
 }
 
-const MOOD_LABEL = { 'no-spend': 'No Spend', essential: 'Essentials', wants: 'Wants' };
+// Number formatting, mirroring money0_/money2_ in apps-script.js. Whole dollars for
+// month totals, exact cents for transaction amounts.
+const previewMoney0 = n => '$' + Math.round(Number(n) || 0).toLocaleString('en-US');
+const previewMoney2 = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function previewActiveTarget(ctx) {
-    const dl = Math.max(1, ctx.daysLeft);
-    if (ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_HARD) {
-        return { state: 'HARD_OVER', dailyTotal: 0, dailyFood: 0 };
-    }
-    if (ctx.monthTotal > PREVIEW_MONTHLY_TOTAL_SOFT) {
-        return { state: 'SOFT_OVER', dailyTotal: Math.round((PREVIEW_MONTHLY_TOTAL_HARD - ctx.monthTotal) / dl), dailyFood: 0 };
-    }
-    if (ctx.monthFood > PREVIEW_MONTHLY_FOOD) {
-        return { state: 'FOOD_OVER', dailyTotal: Math.round((PREVIEW_MONTHLY_TOTAL_SOFT - ctx.monthTotal) / dl), dailyFood: 0 };
-    }
-    return {
-        state: 'HEALTHY',
-        dailyTotal: Math.round((PREVIEW_MONTHLY_TOTAL_SOFT - ctx.monthTotal) / dl),
-        dailyFood: Math.round((PREVIEW_MONTHLY_FOOD - ctx.monthFood) / dl)
-    };
+// One sync that imported >= 1 transaction. Merchant only when the batch is exactly 1.
+// Mirrors buildSyncBatchMessage_ in apps-script.js.
+function previewSyncBatchMessage(batch, ctx) {
+    let title = `${batch.count} new · ${previewMoney2(batch.total)}`;
+    if (batch.count === 1 && batch.merchant) title += ` · ${batch.merchant}`;
+    return { title, body: `${previewMoney0(ctx.monthTotal)} spent in ${ctx.monthName}` };
 }
 
-function previewMessage(slot, ctx) {
-    const fmt = n => '$' + Math.round(n);
-    const t = previewActiveTarget(ctx);
-
-    if (slot === 'morning') {
-        if (t.state === 'HARD_OVER') {
-            return {
-                title: `! Over ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} cap — reset soon`,
-                body: `What's spent is gone — log the day\n${ctx.daysLeft} days to wrap up ${ctx.monthName}`
-            };
-        }
-        if (t.state === 'SOFT_OVER') {
-            return {
-                title: `! Over ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} — aim ${fmt(t.dailyTotal)}/day`,
-                body: `Stay under ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} hard cap\n${ctx.daysLeft} days left in ${ctx.monthName}`
-            };
-        }
-        if (t.state === 'FOOD_OVER') {
-            return {
-                title: `→ ${fmt(t.dailyTotal)} to spend today`,
-                body: `Food cap blown — needs only\n${ctx.daysLeft} days left in ${ctx.monthName}`
-            };
-        }
-        return {
-            title: `→ ${fmt(t.dailyTotal)} to spend today`,
-            body: `${fmt(t.dailyFood)} of that on food\n${ctx.daysLeft} days left in ${ctx.monthName}`
-        };
-    }
-
-    if (slot === 'afternoon') {
-        const todayLine = ctx.todayCount === 0
-            ? `· ${fmt(0)} today so far`
-            : `· ${fmt(ctx.todayTotal)} today, ${fmt(ctx.todayFood)} on food`;
-        if (t.state === 'HARD_OVER') {
-            return {
-                title: todayLine.replace('·', '!'),
-                body: `${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} hard ceiling\nReset starts ${ctx.daysLeft} days from now`
-            };
-        }
-        if (t.state === 'SOFT_OVER') {
-            return {
-                title: todayLine.replace('·', '!'),
-                body: `${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_HARD)} hard cap\nAim ${fmt(t.dailyTotal)}/day to stay under`
-            };
-        }
-        if (t.state === 'FOOD_OVER') {
-            return {
-                title: todayLine,
-                body: `Food cap blown — needs only\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
-            };
-        }
-        const room = t.dailyTotal * ctx.daysLeft;
-        return {
-            title: todayLine,
-            body: `Month: ${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)}\n${fmt(room)} left, ${ctx.daysLeft} days`
-        };
-    }
-
-    // evening
-    if (!ctx.checkedIn) {
-        return {
-            title: `? ${fmt(ctx.todayTotal)} today — tag it`,
-            body: `Tap: No Spend, Essentials, or Wants\n${ctx.streak ? `${ctx.streak} day streak going` : 'Start a streak tonight'}`
-        };
-    }
-    const moodLabel = MOOD_LABEL[ctx.mood] || 'Logged';
-    const streakBit = ctx.streak ? `${ctx.streak} day streak` : 'first day';
-    let symbol, paceWord;
-    if (t.state === 'HARD_OVER') { symbol = '!'; paceWord = 'over hard cap'; }
-    else if (t.state === 'SOFT_OVER') { symbol = '!'; paceWord = `over ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} target`; }
-    else if (t.state === 'FOOD_OVER') { symbol = '·'; paceWord = 'food cap blown'; }
-    else { symbol = '✓'; paceWord = 'under pace'; }
+// The 22:00 summary, carrying the habit check-in prompt.
+// Mirrors buildEndOfDayMessage_ in apps-script.js.
+function previewEndOfDayMessage(ctx) {
     return {
-        title: `${symbol} ${fmt(ctx.todayTotal)} today — ${paceWord}`,
-        body: `Tagged "${moodLabel}" — ${streakBit}\n${fmt(ctx.monthTotal)} of ${fmt(PREVIEW_MONTHLY_TOTAL_SOFT)} this month`
+        title: `${previewMoney0(ctx.todayTotal)} today · ${ctx.todayCount} ${ctx.todayCount === 1 ? 'transaction' : 'transactions'}`,
+        body: `${previewMoney0(ctx.monthTotal)} spent in ${ctx.monthName} · tap to tag your day`
     };
 }
 
@@ -243,7 +181,10 @@ function _activeTripForPreview() {
     const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
     return window.tripsStore.getActiveTrip(today);
 }
-function _buildTripPreview(slot, trip) {
+
+// Trip-themed variants of the same two templates. Preview-only: the Apps Script
+// sender has no trip branch, so nothing here needs a mirror on that side.
+function _buildTripPreview(kind, trip, batch) {
     if (!window.expenseTracker) return { title: trip.name, body: 'App not ready' };
     const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
     const expenses = window.expenseTracker.getTripExpenses(trip.id);
@@ -252,15 +193,26 @@ function _buildTripPreview(slot, trip) {
     const totalDays = window.expenseTracker._tripTotalDays(trip);
     const dayNum = Math.min(totalDays, window.expenseTracker._tripDayNumber(trip, today));
     const remaining = Math.max(0, trip.budget - tripSpent);
-    const aim = Math.round(remaining / Math.max(1, totalDays - dayNum + 1));
-    if (slot === 'morning') return { title: `→ $${aim} to spend on the trip today`, body: `Day ${dayNum} of ${totalDays} · $${Math.round(remaining)} left of $${trip.budget} budget` };
-    if (slot === 'afternoon') return { title: todayTotal > 0 ? `· $${Math.round(todayTotal)} today` : `· $0 today so far`, body: `${trip.name}: $${Math.round(tripSpent)} of $${trip.budget} · ${Math.max(0, totalDays - dayNum)} days left` };
-    const symbol = tripSpent > trip.budget ? '!' : todayTotal <= aim ? '✓' : '·';
-    const word = tripSpent > trip.budget ? 'over trip budget' : todayTotal <= aim ? 'under trip pace' : 'over trip pace';
-    return { title: `${symbol} $${Math.round(todayTotal)} today — ${word}`, body: `Day ${dayNum} done · $${Math.round(remaining)} left of $${trip.budget} budget` };
+    const daysLeft = Math.max(1, totalDays - dayNum + 1);
+    const aim = Math.round(remaining / daysLeft);
+    const position = `${previewMoney0(tripSpent)} of ${previewMoney0(trip.budget)}`;
+    if (kind === 'sync') {
+        let title = `${batch.count} new · ${previewMoney2(batch.total)}`;
+        if (batch.count === 1 && batch.merchant) title += ` · ${batch.merchant}`;
+        return { title, body: `${trip.name}: ${position} · ${previewMoney0(aim)}/day left` };
+    }
+    return {
+        title: `${previewMoney0(todayTotal)} today · day ${dayNum} of ${totalDays}`,
+        body: `${trip.name}: ${position} · tap to tag your day`
+    };
 }
 
-async function fireNotificationPreview(slot = 'evening') {
+/**
+ * Local "fire now" preview of the real push copy.
+ * @param {'sync'|'end-of-day'} kind
+ * @param {{count:number,total:number,merchant:?string}} [batch] only used for 'sync'
+ */
+async function fireNotificationPreview(kind = 'end-of-day', batch = { count: 1, total: 14.5, merchant: 'Mendocino Farms' }) {
     try {
         if (!('Notification' in window) || !('serviceWorker' in navigator)) {
             showNotification('Notifications not supported here', 'error');
@@ -276,14 +228,20 @@ async function fireNotificationPreview(slot = 'evening') {
         const trip = _activeTripForPreview();
         let title, body;
         if (trip) {
-            ({ title, body } = _buildTripPreview(slot, trip));
+            ({ title, body } = _buildTripPreview(kind, trip, batch));
         } else {
             const ctx = previewBuildContext();
-            ({ title, body } = previewMessage(slot, ctx));
+            ({ title, body } = kind === 'sync'
+                ? previewSyncBatchMessage(batch, ctx)
+                : previewEndOfDayMessage(ctx));
         }
         const reg = await navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js')
             || await navigator.serviceWorker.ready;
-        await reg.showNotification(title, { body, icon: 'icon_192.png', badge: 'icon_128.png', tag: 'ledgr-preview' });
+        // Same per-purpose collapse keys the real sender uses (COLLAPSE_KEY_SYNC /
+        // COLLAPSE_KEY_END_OF_DAY in apps-script.js), so a preview supersedes an
+        // earlier preview of the same kind instead of stacking.
+        const tag = kind === 'sync' ? 'ledgr-sync' : 'ledgr-end-of-day';
+        await reg.showNotification(title, { body, icon: 'icon_192.png', badge: 'icon_128.png', tag });
     } catch (err) {
         console.error('fireNotificationPreview failed:', err);
         showNotification('Preview failed: ' + (err.message || err), 'error');
