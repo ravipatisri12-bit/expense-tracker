@@ -76,24 +76,19 @@ $512 of $1,000 · tap to tag your day
 
 The FCM payload carries a data key so tapping opens the habit card ready to log.
 
-### Quiet hours
+### No quiet hours
 
-Suppress pushes between **22:00 and 08:00** device-local. Anything imported overnight
-is held and folded into the first morning notification, which reports the accumulated
-batch:
+A sync notifies whenever it imported something, at any hour. Deliberately rejected:
+holding overnight imports would need a `pendingNotifyCount` / `pendingNotifySum`
+accumulator on the sync ledger plus a drain step on the first morning run — new
+persistent state, a new failure mode if a drain is missed, and a second definition of
+"what counts as new" alongside `processedIds`.
 
-```
-3 new since last night · $52.10
-$502 of $1,000 this month · $14/day left
-```
-
-Chase already alerts in real time if a 2am charge is fraud, so Ledgr's budget context
-can wait until morning.
-
-Implementation: a `pendingNotifyCount` / `pendingNotifySum` pair on the sync ledger
-doc. An import inside quiet hours increments them and sends nothing; the first import
-after 08:00 drains and reports them. The 10pm end-of-day push is exempt — it *is* the
-22:00 boundary.
+The cost of skipping it is bounded: batching already caps the rate at ~4/hour, and a
+transaction only exists to import because Chase emailed about it — which means the
+phone already buzzed once for that charge anyway. Overnight spending is rare, and the
+OS-level Do Not Disturb / notification schedule is the right layer for silencing it,
+not application logic.
 
 ### What does not notify
 
@@ -190,7 +185,7 @@ income row exists.
 1. `node -c` clean on `gmail-import/apps-script.js` (`test.sh` does not cover it).
 2. Unit-test the message builder against a stubbed Apps Script global set, the way
    `/tmp/pwdrv/test-appsscript-logic.js` already does — assert batch-of-1 vs batch-of-N
-   copy, quiet-hours suppression and drain, and the month-boundary `daysLeft` fix
+   copy, the "imported nothing ⇒ send nothing" case, and the month-boundary `daysLeft` fix
    across Aug 31 / Feb 28.
 3. Assert a failed Firestore read **sends nothing** rather than a HEALTHY message.
 4. Assert a malformed-request FCM error does **not** delete a token.
