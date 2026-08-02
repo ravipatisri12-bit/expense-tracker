@@ -46,3 +46,4 @@ FIXES-*.md
 IMPLEMENTATION-*.md
 FINAL-*.md
 .kiro/temp/
+gmail-import/.clasp.json

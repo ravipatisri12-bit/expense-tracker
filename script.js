@@ -1217,10 +1217,10 @@ class ExpenseTracker {
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-semibold text-sm" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
-                        <button onclick="expenseTracker.editExpense(${expense.id})" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                        <button onclick="expenseTracker.editExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
                             <span class="material-symbols-rounded text-base">edit</span>
                         </button>
-                        <button onclick="expenseTracker.deleteExpense(${expense.id})" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                        <button onclick="expenseTracker.deleteExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
                             <span class="material-symbols-rounded text-base">delete</span>
                         </button>
                     </div>
