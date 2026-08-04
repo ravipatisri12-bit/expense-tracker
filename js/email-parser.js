@@ -295,7 +295,11 @@ class EmailParser {
     }
 
     async saveProcessedIds() {
-        const arr = (this._processedIds || []).slice(-1000);
+        // 2000 to match SYNC_LEDGER_LIMIT in gmail-import/apps-script.js. The two
+        // importers share this doc, so a smaller cap here silently truncated ids the
+        // Apps Script still considered processed — and once an id falls off, that
+        // email looks new again and gets re-imported. Keep the two numbers equal.
+        const arr = (this._processedIds || []).slice(-2000);
         try {
             await window.firebaseDb.collection('users')
                 .doc(window.currentUser.uid)

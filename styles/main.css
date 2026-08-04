@@ -804,6 +804,79 @@ details summary .material-symbols-rounded:last-child { transition: transform 0.2
 .md-cat-row .md-cat-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.04); overflow: hidden; }
 .md-cat-row .md-cat-bar > span { display: block; height: 100%; border-radius: 999px; }
 .md-cat-row .amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--on-surface); white-space: nowrap; }
+
+/* Income / fixed / real-savings block inside the month-detail card.
+   `.md-est` is deliberately dimmer than `.md-count`: an estimated figure is a
+   guess from Settings, and must not read with the same authority as a real
+   row-derived one. */
+.md-ledger { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.md-ledger-row { display: grid; grid-template-columns: 78px auto 1fr; gap: 10px; align-items: baseline; padding: 6px 0; }
+.md-ledger-row .name { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.04em; color: var(--on-surface-mute); }
+.md-ledger-row .amt { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: var(--on-surface); white-space: nowrap; }
+.md-ledger-row .amt.pos { color: var(--m-1); }
+.md-ledger-row .amt.neg { color: #cf6679; }
+.md-ledger-row.total { margin-top: 4px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.07); }
+.md-ledger-row.total .name { color: var(--on-surface); font-weight: 600; }
+.md-ledger-row.total .amt { font-size: 16px; }
+.md-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-mute); }
+.md-est { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-faint); font-style: italic; }
+
+/* Monthly fixed + income entry card (History, under the month detail). */
+.ledger-entry { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px 20px 20px; }
+.le-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.le-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--on-surface-mute); }
+.le-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; margin-top: 4px; color: var(--on-surface); }
+.le-cur-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-1); background: rgba(139,158,255,0.12); border: 1px solid rgba(139,158,255,0.28); padding: 2px 6px; border-radius: 6px; margin-left: 8px; vertical-align: 3px; }
+.le-nav { display: flex; gap: 6px; flex: 0 0 auto; }
+/* 44px minimum touch target. */
+.le-nav-btn { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--on-surface-mute); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.le-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.le-nav-btn .material-symbols-rounded { font-size: 20px; }
+.le-hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--on-surface-faint); margin-top: 10px; line-height: 1.5; }
+.le-note { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--on-surface-mute); margin-top: 12px; line-height: 1.5; }
+.le-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.le-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-surface-mute); margin-bottom: 6px; }
+.le-real { letter-spacing: 0.02em; text-transform: none; color: var(--m-1); }
+.le-est { letter-spacing: 0.02em; text-transform: none; color: var(--on-surface-faint); font-style: italic; }
+.le-row { display: grid; grid-template-columns: 1fr 116px 36px; gap: 8px; align-items: center; min-height: 48px; border-bottom: 1px dashed rgba(255,255,255,0.04); }
+.le-row:last-of-type { border-bottom: 0; }
+.le-name { font-size: 13px; color: var(--on-surface); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.le-day { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--on-surface-faint); margin-left: 6px; }
+.le-amt-wrap { position: relative; display: flex; align-items: center; }
+.le-cur { position: absolute; left: 11px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--on-surface-faint); pointer-events: none; z-index: 1; }
+/* !important is required: the global `input, select, textarea` rule near the top
+   of this file sets background/border/border-radius/padding with !important. */
+.le-row input.le-amt { width: 100%; min-height: 40px; padding: 8px 10px 8px 24px !important; background: rgba(255,255,255,0.03) !important; border: 1px solid var(--line-strong) !important; border-radius: 12px !important; color: var(--on-surface) !important; font-family: 'JetBrains Mono', monospace; font-size: 13px; text-align: right; outline: none; }
+.le-row input.le-amt:focus { border-color: rgba(139,158,255,0.45) !important; box-shadow: 0 0 0 3px rgba(139,158,255,0.08); }
+/* SAVED state. Without this a row holding a real value looked identical to an empty
+   one, so there was no feedback that the amount had been recorded. A saved row gets
+   a tinted field, a solid accent border and a brighter value; the label gains a
+   check. Empty rows stay recessive, so "what still needs entering" reads at a glance. */
+.le-row.is-set input.le-amt { background: rgba(139,158,255,0.10) !important; border-color: rgba(139,158,255,0.38) !important; color: var(--on-surface) !important; font-weight: 500; }
+.le-row.is-set .le-name { color: var(--on-surface); }
+.le-row.is-empty .le-name { color: var(--on-surface-mute); }
+.le-check { font-size: 13px !important; color: var(--m-1); margin-left: 6px; vertical-align: -2px; }
+/* Brief confirmation pulse the moment a value commits. */
+@keyframes le-saved { 0% { box-shadow: 0 0 0 0 rgba(139,158,255,0.42); } 100% { box-shadow: 0 0 0 9px rgba(139,158,255,0); } }
+.le-row.just-saved input.le-amt { animation: le-saved 0.55s ease-out; }
+@media (prefers-reduced-motion: reduce) { .le-row.just-saved input.le-amt { animation: none; } }
+.le-row input.le-amt::placeholder { color: var(--on-surface-faint) !important; }
+/* The native number spinner overlaps a right-aligned value on focus. */
+.le-row input.le-amt::-webkit-outer-spin-button,
+.le-row input.le-amt::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.le-row input.le-amt { -moz-appearance: textfield; appearance: textfield; }
+.le-clear { width: 36px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; color: var(--on-surface-faint); cursor: pointer; }
+.le-clear .material-symbols-rounded { font-size: 18px; }
+.le-clear-spacer { display: block; width: 36px; }
+.le-add { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 16px; border-radius: 999px; background: rgba(255,255,255,0.03); border: 1px solid var(--line-strong); color: var(--on-surface); font-family: 'Inter Tight'; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.le-add .material-symbols-rounded { font-size: 17px; color: var(--m-1); }
+/* Collapsed by default — month-start entry, not something to read every visit.
+   The header doubles as the toggle and carries the month's totals when closed. */
+.le-toggle { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; gap: 12px; background: transparent; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; font-family: inherit; min-height: 44px; }
+.le-collapsed-sum { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--on-surface-mute); }
+.le-chevron { font-size: 22px !important; color: var(--on-surface-mute); flex: none; align-self: center; }
+.le-nav-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+
 .cat-card.history { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px 20px 8px; display: block; }
 .cat-card.history .cat-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
 .cat-card.history .cat-head .title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }

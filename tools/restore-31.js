@@ -1,0 +1,346 @@
+// Restore 31 transactions deleted as collateral during dedupe ($4083.71).
+// Excludes PSE / Progressive / PlayStation per your call.
+// Fixed ids => re-running overwrites instead of duplicating.
+window.expenseTracker.addExpensesBatch([
+ {
+  "id": "rec_20260709_0",
+  "amount": 1519,
+  "description": "BELRED ORAL  MAXILLO",
+  "category": "Other",
+  "date": "2026-07-09",
+  "timestamp": 1785000000000,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260602_1",
+  "amount": 764.3,
+  "description": "baltic-watches.com/f",
+  "category": "Other",
+  "date": "2026-06-02",
+  "timestamp": 1785000000001,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260602_2",
+  "amount": 362.55,
+  "description": "FSP*MOSCOT - ORCHARD",
+  "category": "Other",
+  "date": "2026-06-02",
+  "timestamp": 1785000000002,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260507_3",
+  "amount": 236.17,
+  "description": "ABERCROMBIE & FITCH",
+  "category": "Other",
+  "date": "2026-05-07",
+  "timestamp": 1785000000003,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260509_4",
+  "amount": 141.31,
+  "description": "ABERCROMBIE & FITCH",
+  "category": "Other",
+  "date": "2026-05-09",
+  "timestamp": 1785000000004,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260506_5",
+  "amount": 141.18,
+  "description": "BELLEVUE, WA-ANF",
+  "category": "Other",
+  "date": "2026-05-06",
+  "timestamp": 1785000000005,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260525_6",
+  "amount": 132.48,
+  "description": "Amazon.com",
+  "category": "Groceries",
+  "date": "2026-05-25",
+  "timestamp": 1785000000006,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260524_7",
+  "amount": 115.82,
+  "description": "BANANAREPUBLIC US 80",
+  "category": "Other",
+  "date": "2026-05-24",
+  "timestamp": 1785000000007,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260524_8",
+  "amount": 76.43,
+  "description": "LEVI'S STORE 602",
+  "category": "Other",
+  "date": "2026-05-24",
+  "timestamp": 1785000000008,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260526_9",
+  "amount": 61,
+  "description": "BEL-RED BARBERS",
+  "category": "Bills",
+  "date": "2026-05-26",
+  "timestamp": 1785000000009,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260506_10",
+  "amount": 60,
+  "description": "BEL-RED BARBERS",
+  "category": "Bills",
+  "date": "2026-05-06",
+  "timestamp": 1785000000010,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260506_11",
+  "amount": 55.23,
+  "description": "BELLEVUE, WA-ANF",
+  "category": "Other",
+  "date": "2026-05-06",
+  "timestamp": 1785000000011,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260601_12",
+  "amount": 50,
+  "description": "THE NOLITA EXPRESS",
+  "category": "Other",
+  "date": "2026-06-01",
+  "timestamp": 1785000000012,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260512_13",
+  "amount": 49.68,
+  "description": "Amazon.com",
+  "category": "Groceries",
+  "date": "2026-05-12",
+  "timestamp": 1785000000013,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260430_14",
+  "amount": 30.25,
+  "description": "UBER   * EATS PENDIN",
+  "category": "Transportation",
+  "date": "2026-04-30",
+  "timestamp": 1785000000014,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260516_15",
+  "amount": 29.4,
+  "description": "Babai dosa",
+  "category": "Food",
+  "date": "2026-05-16",
+  "timestamp": 1785000000015,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260516_16",
+  "amount": 25.36,
+  "description": "Hui lan shah food",
+  "category": "Food",
+  "date": "2026-05-16",
+  "timestamp": 1785000000016,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260526_17",
+  "amount": 24.24,
+  "description": "CVS PHARMACY #11665",
+  "category": "Other",
+  "date": "2026-05-26",
+  "timestamp": 1785000000017,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260512_18",
+  "amount": 23.58,
+  "description": "Amazon.com",
+  "category": "Groceries",
+  "date": "2026-05-12",
+  "timestamp": 1785000000018,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260724_19",
+  "amount": 22.54,
+  "description": "UBER   * EATS PENDIN",
+  "category": "Transportation",
+  "date": "2026-07-24",
+  "timestamp": 1785000000019,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260516_20",
+  "amount": 21.56,
+  "description": "UBER   * EATS PENDIN",
+  "category": "Transportation",
+  "date": "2026-05-16",
+  "timestamp": 1785000000020,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260714_21",
+  "amount": 21,
+  "description": "Pacific Science Cent",
+  "category": "Other",
+  "date": "2026-07-14",
+  "timestamp": 1785000000021,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260423_22",
+  "amount": 20,
+  "description": "Uber eats",
+  "category": "Food",
+  "date": "2026-04-23",
+  "timestamp": 1785000000022,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260430_23",
+  "amount": 19.55,
+  "description": "UBER   * EATS PENDIN",
+  "category": "Transportation",
+  "date": "2026-04-30",
+  "timestamp": 1785000000023,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260531_24",
+  "amount": 17.5,
+  "description": "SEPTA 0RE1Q2GN36XR",
+  "category": "Other",
+  "date": "2026-05-31",
+  "timestamp": 1785000000024,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260506_25",
+  "amount": 17.08,
+  "description": "ISIDROS",
+  "category": "Other",
+  "date": "2026-05-06",
+  "timestamp": 1785000000025,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260526_26",
+  "amount": 15.93,
+  "description": "ISIDROS",
+  "category": "Other",
+  "date": "2026-05-26",
+  "timestamp": 1785000000026,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260528_27",
+  "amount": 12,
+  "description": "DOS HERMANOS TAC",
+  "category": "Other",
+  "date": "2026-05-28",
+  "timestamp": 1785000000027,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260529_28",
+  "amount": 11.32,
+  "description": "FAMOUS ORIGINAL RAYS",
+  "category": "Other",
+  "date": "2026-05-29",
+  "timestamp": 1785000000028,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260529_29",
+  "amount": 5.75,
+  "description": "KOKO&S",
+  "category": "Other",
+  "date": "2026-05-29",
+  "timestamp": 1785000000029,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ },
+ {
+  "id": "rec_20260525_30",
+  "amount": 1.5,
+  "description": "CTLP*CANTEEN VENDING",
+  "category": "Food",
+  "date": "2026-05-25",
+  "timestamp": 1785000000030,
+  "excludeFromBudget": false,
+  "source": "restored",
+  "tripId": null
+ }
+]);

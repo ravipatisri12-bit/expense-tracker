@@ -782,6 +782,73 @@ section('js/notifications.js mirrors the same budget model and copy');
     });
 }
 
+// ===========================================================================
+// (h) TRANSACTION DATE PARSING — the repeated bug class in this repo
+// ===========================================================================
+//
+// Chase alert bodies state the transaction time in Eastern Time. The imported
+// row must land on the USER's local calendar day (DISPLAY_TZ), not ET and not
+// the script's own zone. An earlier version formatted in America/New_York, which
+// pushed anything after 9pm Pacific onto the next day.
+//
+// These cases pin both halves: the ET->local conversion, and the DST offset used
+// to build the ET instant in the first place.
+section('(h) transaction date: ET body -> user local day');
+
+    const ctx = makeSandbox({});
+    // Top-level `const`/`function` in a vm context are lexical bindings, not properties
+    // of the context object, so they must be evaluated rather than read off it.
+    const evalIn = (expr) => vm.runInContext(expr, ctx);
+    const extract = evalIn('extractTransactionDate_');
+    const isDst = evalIn('isEasternDaylight_');
+    check('DISPLAY_TZ is the user zone, not ET', evalIn('DISPLAY_TZ'), 'America/Los_Angeles');
+
+    const msg = (body) => ({ getPlainBody: () => body, getDate: () => new Date('2026-04-21T18:00:00Z') });
+    const et = (s) => 'Amount $9.00\nDate  ' + s;
+    const fallback = new Date('2026-04-21T18:00:00Z');
+
+    // Pacific is 3h behind ET, so anything before 3:00 AM ET is still the previous
+    // Pacific day. 3:00 AM ET is exactly midnight PT — the boundary itself.
+    [
+        ['midday, same day everywhere', 'Apr 21, 2026 at 5:43 PM ET', '2026-04-21'],
+        ['11:30 PM ET is still the 21st in PT', 'Apr 21, 2026 at 11:30 PM ET', '2026-04-21'],
+        ['1:15 AM ET -> previous Pacific day', 'Apr 22, 2026 at 1:15 AM ET', '2026-04-21'],
+        ['2:59 AM ET -> previous Pacific day', 'Apr 22, 2026 at 2:59 AM ET', '2026-04-21'],
+        ['3:01 AM ET -> that Pacific day', 'Apr 22, 2026 at 3:01 AM ET', '2026-04-22'],
+        ['winter: 1 AM EST -> previous day', 'Jan 15, 2026 at 1:00 AM EST'.replace('EST', 'ET'), '2026-01-14'],
+        ['year rollover: 2:59 AM ET Jan 1', 'Jan 1, 2027 at 2:59 AM ET', '2026-12-31'],
+        ['year rollover: 3:01 AM ET Jan 1', 'Jan 1, 2027 at 3:01 AM ET', '2027-01-01'],
+    ].forEach(([label, stamp, want]) => {
+        check(label, extract(msg(et(stamp)), fallback), want);
+    });
+
+    // A body with a date but no time has no instant to convert — taken at face value.
+    check('date-only body is not zone-shifted',
+        extract(msg('Amount $12.00\nDate  Apr 21, 2026'), fallback), '2026-04-21');
+
+    // Unparseable body -> email arrival time, still rendered in DISPLAY_TZ.
+    const arrival = new Date('2026-04-22T05:00:00Z');   // 10pm PT Apr 21
+    check('unparseable body falls back to arrival, in local zone',
+        extract({ getPlainBody: () => 'nothing here', getDate: () => arrival }, arrival), '2026-04-21');
+
+    // DST helper vs the IANA database, every day over four years. The offset feeds
+    // the ET instant above, so a wrong answer here silently mis-dates rows.
+    section('(h) isEasternDaylight_ vs IANA, 2025-2028');
+    let mismatches = 0;
+    for (const y of [2025, 2026, 2027, 2028]) {
+        for (let m = 1; m <= 12; m++) {
+            const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            for (let d = 1; d <= last; d++) {
+                // noon UTC is unambiguous for a date's zone name on both sides of a shift
+                const name = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'America/New_York', timeZoneName: 'short'
+                }).format(new Date(Date.UTC(y, m - 1, d, 17)));
+                if (isDst(y, m, d) !== /EDT/.test(name)) mismatches++;
+            }
+        }
+    }
+    check('agrees with IANA on all 1461 days', mismatches, 0);
+
 // ---------------------------------------------------------------------------
 console.log('\n' + (failures.length
     ? failures.length + ' FAILURE(S):\n  ' + failures.join('\n  ')

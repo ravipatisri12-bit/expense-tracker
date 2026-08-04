@@ -67,7 +67,7 @@
             <button id="nav-home" onclick="showPage('dashboard')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">home</span><span class="text-xs">Home</span></button>
             <button id="nav-trips" onclick="showPage('trips')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">flight</span><span class="text-xs">Trips</span></button>
             <button id="nav-txns" onclick="showPage('transactions')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">receipt_long</span><span class="text-xs">Txns</span></button>
-            <button id="nav-history" onclick="showPage('history')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">history</span><span class="text-xs">History</span></button>
+            <button id="nav-history" onclick="showPage('history')" class="nav-btn flex flex-col items-center py-2"><span class="material-symbols-rounded">calendar_month</span><span class="text-xs">Months</span></button>
         </div>
     </nav>
 
@@ -123,12 +123,13 @@
     <!-- HISTORY PAGE -->
     <div id="history-page" class="page-content hidden">
         <div class="history-page max-w-lg mx-auto px-4 pt-2 pb-24 flex flex-col gap-4">
-            <div class="app-header" style="padding:8px 4px 4px"><h1 class="page-title f-serif">History</h1><div id="history-page-meta" class="page-meta f-mono"></div></div>
+            <div class="app-header" style="padding:8px 4px 4px"><h1 class="page-title f-serif">Months</h1><div id="history-page-meta" class="page-meta f-mono"></div></div>
             <div id="history-year-selector"></div>
             <div id="history-year-stats"></div>
             <div id="history-year-shape"></div>
             <div id="history-month-rail"></div>
             <div id="history-month-detail"></div>
+            <div id="history-ledger-entry"></div>
             <div id="history-categories"></div>
             <div id="history-top-regulars"></div>
         </div>

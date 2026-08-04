@@ -260,6 +260,9 @@ class ExpenseTracker {
         this.saveSettingsToFirebase?.();
         localStorage.setItem('settings', JSON.stringify(this.settings));
         this.updateDashboard();
+        // Same reason as saveSettings(): incomeFor() falls back to this value for any
+        // month with no income rows, so Months must re-render or it shows the old one.
+        try { this.renderHistoryPage(); } catch (e) { /* Months not rendered yet */ }
         return this.settings.incomeOverrides;
     }
 
@@ -410,25 +413,66 @@ class ExpenseTracker {
         this.renderTransactions();
     }
 
+    /**
+     * Add rows, but NEVER overwrite one that already exists.
+     *
+     * This used to `batch.set(ref, e)` unconditionally — a full-document replace.
+     * Importers derive a stable id (`gm_<gmailMessageId>`), so a re-import of an
+     * email hit the same doc and replaced every field, silently reverting a
+     * category the user had corrected by hand to whatever categorize() guessed.
+     *
+     * Re-imports are not hypothetical: the processedIds ledger is capped, so an old
+     * message id eventually falls off and that email looks new again. The write path
+     * must therefore be safe on its own, not rely on the ledger being complete.
+     *
+     * An existing row is left alone entirely. A genuinely new row is written as
+     * before.
+     */
     addExpensesBatch(expenses) {
         for (const e of expenses) {
             if (e.tripId === undefined) e.tripId = null;
             if (!e.source) e.source = 'manual';
         }
-        this.expenses.push(...expenses);
-        if (currentUser && expenses.length > 0) {
+
+        // Drop anything we already hold under the same id. Compare as strings: ids
+        // are a mix of numbers (nextExpenseId) and strings (gm_*, rec_*).
+        const have = new Set(this.expenses.map(e => String(e.id)));
+        const fresh = expenses.filter(e => !have.has(String(e.id)));
+        const skipped = expenses.length - fresh.length;
+        if (skipped > 0) {
+            console.log(`addExpensesBatch: kept ${skipped} existing row(s) untouched (edits preserved)`);
+        }
+        if (fresh.length === 0) {
+            this.updateDashboard();
+            this.renderTransactions();
+            return { added: 0, skipped };
+        }
+
+        this.expenses.push(...fresh);
+        if (currentUser) {
             const batch = db.batch();
-            expenses.forEach(e => {
+            fresh.forEach(e => {
                 const ref = db.collection('users').doc(currentUser.uid)
                     .collection('expenses').doc(e.id.toString());
-                batch.set(ref, e);
+                // create-only: if the doc exists (e.g. written by the Apps Script
+                // importer and edited since), this throws rather than clobbering it.
+                batch.create(ref, e);
             });
-            batch.commit().catch(err => console.error('Batch write failed:', err));
-        } else if (expenses.length > 0) {
+            batch.commit().catch(err => {
+                // ALREADY_EXISTS means the cloud already had it — the desired outcome,
+                // not a failure. Anything else is worth surfacing.
+                if (err && /already exists/i.test(err.message || '')) {
+                    console.log('addExpensesBatch: cloud already had one or more rows; nothing overwritten');
+                } else {
+                    console.error('Batch write failed:', err);
+                }
+            });
+        } else {
             this.saveExpenses();
         }
         this.updateDashboard();
         this.renderTransactions();
+        return { added: fresh.length, skipped };
     }
 
     async deleteExpense(expenseId) {
@@ -490,18 +534,24 @@ class ExpenseTracker {
             return;
         }
 
+        // Populate the category <select> BEFORE assigning its value.
+        //
+        // BUG (pre-existing, all kinds): this used to set `.value` first and
+        // populate after. Assigning a value a <select> has no <option> for is
+        // silently ignored — the select stayed on '' — and populating it afterwards
+        // reset it again. saveEditedExpense() then failed its `!category` check, so
+        // EVERY edit died on "Please fill in all fields" and no change ever saved.
+        this.populateEditCategoryDropdown();
+
         // Populate edit form
         document.getElementById('edit-expense-id').value = expense.id;
         document.getElementById('edit-amount').value = expense.amount;
         document.getElementById('edit-description').value = expense.description;
         document.getElementById('edit-category').value = expense.category;
-        
+
         // Format date for input field (convert from ISO to YYYY-MM-DD)
         const expenseDate = this.parseLocalDate(expense.date);
         document.getElementById('edit-date').value = this.getLocalDateString(expenseDate);
-
-        // Populate category dropdown for edit form
-        this.populateEditCategoryDropdown();
 
         // Show modal
         document.getElementById('edit-expense-modal').classList.remove('hidden');
@@ -1007,7 +1057,15 @@ class ExpenseTracker {
             return;
         }
 
-        container.innerHTML = recentExpenses.map(expense => `
+        // Same sign rule as renderTransactions: income is money IN, so it must not
+        // be printed with a leading minus. (#recent-transactions is not in
+        // index.html today, so this path early-returns above — kept correct so the
+        // container can be reintroduced without shipping the bug again.)
+        container.innerHTML = recentExpenses.map(expense => {
+            const isIncome = (expense.kind || 'variable') === 'income';
+            const color = isIncome ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)';
+            const amt = `${isIncome ? '+' : '-'}${formatCurrency(expense.amount)}`;
+            return `
             <div class="flex items-center justify-between p-3 rounded-lg">
                 <div class="flex items-center space-x-3">
                     <div class="w-2 h-2 bg-primary-500 rounded-full"></div>
@@ -1016,9 +1074,9 @@ class ExpenseTracker {
                         <p class="text-sm " style="color:var(--md-sys-color-outline)">${expense.category} • ${formatDate(expense.date)}</p>
                     </div>
                 </div>
-                <span class="font-semibold " style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(expense.amount)}</span>
+                <span class="font-semibold " style="color:${color}">${amt}</span>
             </div>
-        `).join('');
+        `; }).join('');
     }
 
     // ====================================================================
@@ -1040,7 +1098,7 @@ class ExpenseTracker {
 
         // Group transactions by date
         const groupedByDate = this.groupTransactionsByDate(sortedExpenses);
-        
+
         // Render grouped transactions
         const catColors = {Food:'#f5576c',Coffee:'#f093fb',Transportation:'#4facfe',Entertainment:'#667eea',Shopping:'#43e97b',Bills:'#fccb90',Other:'#a18cd1'};
         container.innerHTML = groupedByDate.map(dateGroup => {
@@ -1048,13 +1106,24 @@ class ExpenseTracker {
                 const c = catColors[expense.category] || '#a18cd1';
                 const isExcluded = expense.excludeFromBudget;
                 const transactionStyle = isExcluded ? 'opacity:0.5' : '';
-                
+                // `kind` carries the sign — amounts are POSITIVE in storage for all
+                // three kinds (spec §2). Rendering income with the stored number and
+                // no sign is what produced "-$4,000.00" for a paycheque: money IN
+                // displayed as an expense. Income gets an explicit `+` and the
+                // primary blue; fixed renders exactly like a normal expense and is
+                // told apart by its kind glyph, not by colour.
+                const kind = expense.kind || 'variable';
+                const isIncome = kind === 'income';
+                const amtColor = isIncome ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface)';
+                const amtText = `${isIncome ? '+' : ''}${formatCurrency(expense.amount)}`;
+
                 return `
-                <div class="transaction-row flex items-center justify-between px-4 py-3.5" 
-                     style="border-bottom:1px solid rgba(255,255,255,0.04);${transactionStyle};cursor:pointer" 
+                <div class="transaction-row flex items-center justify-between px-4 py-3.5"
+                     style="border-bottom:1px solid rgba(255,255,255,0.04);${transactionStyle};cursor:pointer"
                      data-expense-id="${expense.id}"
-                     ontouchstart="handleTouchStart(event)" 
-                     ontouchmove="handleTouchMove(event)" 
+                     data-kind="${kind}"
+                     ontouchstart="handleTouchStart(event)"
+                     ontouchmove="handleTouchMove(event)"
                      ontouchend="handleTouchEnd(event)">
                     <div class="flex items-center space-x-3">
                         <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${c}30">
@@ -1062,20 +1131,30 @@ class ExpenseTracker {
                         </div>
                         <div>
                             <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${expense.description}</p>
-                            <p class="text-xs" style="color:${c}">${expense.category}${this._sourceIcon(expense.source)}</p>
+                            <p class="text-xs" style="color:${c}">${expense.category}${this._kindIcon(kind)}${this._sourceIcon(expense.source)}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="font-semibold text-sm" style="color:var(--md-sys-color-on-surface)">${formatCurrency(expense.amount)}</span>
-                        <button onclick="expenseTracker.editExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                        <span class="font-semibold text-sm txn-amount" style="color:${amtColor}">${amtText}</span>
+                        <button onclick="expenseTracker.editExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)" aria-label="Edit transaction">
                             <span class="material-symbols-rounded text-base">edit</span>
                         </button>
-                        <button onclick="expenseTracker.deleteExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)">
+                        <button onclick="expenseTracker.deleteExpense('${expense.id}')" class="p-1 rounded" style="color:var(--md-sys-color-outline)" aria-label="Delete transaction">
                             <span class="material-symbols-rounded text-base">delete</span>
                         </button>
                     </div>
                 </div>
             `}).join('');
+
+            // The day header used to print -total over EVERY row in the group, so a
+            // paycheque made the day look like a $4,000 spend. Spend and income are
+            // now separate figures; a day with only income shows no negative at all.
+            const spendLine = dateGroup.totalAmount > 0
+                ? `<p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(dateGroup.totalAmount)}</p>`
+                : '';
+            const incomeLine = dateGroup.incomeAmount > 0
+                ? `<p class="font-medium text-sm" style="color:var(--md-sys-color-primary)">+${formatCurrency(dateGroup.incomeAmount)}</p>`
+                : '';
 
             return `
                 <div class="mb-2">
@@ -1085,7 +1164,7 @@ class ExpenseTracker {
                                 <h3 class="font-medium text-sm" style="color:var(--md-sys-color-on-surface)">${dateGroup.dateLabel}</h3>
                                 <p class="text-xs" style="color:var(--md-sys-color-outline)">${dateGroup.transactions.length} transaction${dateGroup.transactions.length !== 1 ? 's' : ''}</p>
                             </div>
-                            <p class="font-medium text-sm" style="color:var(--md-sys-color-on-surface-variant)">-${formatCurrency(dateGroup.totalAmount)}</p>
+                            <div class="text-right">${spendLine}${incomeLine}</div>
                         </div>
                     </div>
                     <div>${transactionsHtml}</div>
@@ -1109,12 +1188,17 @@ class ExpenseTracker {
                     date: dateString,
                     dateObj: expenseDate,
                     transactions: [],
-                    totalAmount: 0
+                    totalAmount: 0,
+                    incomeAmount: 0
                 };
             }
-            
+
             groups[dateString].transactions.push(expense);
-            groups[dateString].totalAmount += expense.amount;
+            // Split the day header into money-out and money-in. `totalAmount` keeps
+            // meaning "spent today" (variable + fixed), so an income row no longer
+            // inflates it.
+            if ((expense.kind || 'variable') === 'income') groups[dateString].incomeAmount += Number(expense.amount || 0);
+            else groups[dateString].totalAmount += Number(expense.amount || 0);
         });
 
         // Convert to array and sort by date (newest first)
@@ -1230,6 +1314,12 @@ class ExpenseTracker {
         }
         
         this.updateDashboard();
+        // Months reads these values too: a month with no income/fixed rows falls back
+        // to the Settings estimate (fixedFor/incomeFor), and the entry card shows
+        // "estimated · $X". Without this the Months tab kept showing the OLD estimate
+        // until you navigated away and back. Guarded because Months may never have
+        // been opened, in which case its containers don't exist yet.
+        try { this.renderHistoryPage(); } catch (e) { console.warn('renderHistoryPage after saveSettings:', e); }
         showNotification('Settings saved successfully!', 'success');
     }
 
@@ -2972,6 +3062,18 @@ ExpenseTracker.prototype._escapeHtml = function (s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 };
 
+// A user string safe to embed as a SINGLE-QUOTED JS literal inside an HTML
+// attribute, e.g. onclick="foo('${this._jsAttr(name)}')".
+//
+// Order matters and is the whole point. `_escapeHtml` turns ' into &#39;, which
+// the HTML attribute decoder turns back into a bare ' BEFORE the JS parser sees
+// it — so escaping for HTML alone lets "Sam's rent" terminate the string early.
+// Backslash-escape for JS first, then HTML-escape, and the attribute decodes to
+// a properly escaped \' in the JS source.
+ExpenseTracker.prototype._jsAttr = function (s) {
+    return this._escapeHtml(String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+};
+
 ExpenseTracker.prototype.renderHomeMonthHero = function (ctx) {
     const root = document.getElementById('home-month-hero');
     if (!root) return;
@@ -3355,6 +3457,27 @@ ExpenseTracker.prototype._sourceIcon = function (source) {
     // hand-entered, so manual is the correct default.
     const s = icons[source] || icons.manual;
     return ` <span class="material-symbols-rounded" style="font-size:13px;color:${s.color};vertical-align:middle;opacity:.85" title="${s.title}" aria-label="${s.title}">${s.icon}</span>`;
+};
+
+// Ledger-kind glyph, PARALLEL to _sourceIcon rather than folded into it: `source`
+// answers "how did this row get here" and `kind` answers "what kind of money is
+// it". A row has both (a fixed cost can arrive via Gmail), so overloading one
+// field would lose information.
+//
+//   payments        blue    money in            (kind: 'income')
+//   event_repeat    grey    recurring outflow   (kind: 'fixed')
+//   variable / absent                           -> no glyph, byte-identical markup
+//
+// Variable returning '' is deliberate: the 647 legacy rows must render exactly as
+// they did before this change.
+ExpenseTracker.prototype._kindIcon = function (kind) {
+    const icons = {
+        income: { icon: 'payments', color: '#a8c7fa', title: 'Income — money in' },
+        fixed: { icon: 'event_repeat', color: '#b0b6c8', title: 'Fixed monthly cost' },
+    };
+    const k = icons[kind];
+    if (!k) return '';
+    return ` <span class="material-symbols-rounded kind-glyph" style="font-size:13px;color:${k.color};vertical-align:middle;opacity:.9" title="${k.title}" aria-label="${k.title}">${k.icon}</span>`;
 };
 
 ExpenseTracker.prototype._categoryColor = function (name) {
@@ -3808,6 +3931,8 @@ ExpenseTracker.prototype.renderHistoryPage = function () {
     this.renderHistoryYearShape();
     this.renderHistoryMonthRail();
     this.renderHistoryMonthDetail();
+    // try/catch per the house rule: one broken card must not blank the page.
+    try { this.renderHistoryLedgerEntry(); } catch (e) { console.warn('renderHistoryLedgerEntry:', e); }
     this.renderHistoryCategories();
     this.renderHistoryTopRegulars();
     const meta = document.getElementById('history-page-meta');
@@ -3830,6 +3955,9 @@ window.onHistoryMonthSelect = function (month) {
     t._historyState.month = month;
     t.renderHistoryMonthRail();
     t.renderHistoryMonthDetail();
+    // The entry card is bound to the same selected month, so it must follow the
+    // rail — otherwise a tap on MAR would edit whatever month was last rendered.
+    try { t.renderHistoryLedgerEntry(); } catch (e) { console.warn('renderHistoryLedgerEntry:', e); }
     t.renderHistoryYearShape();
 };
 
@@ -4089,6 +4217,38 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
         return `<div class="md-cat-row" onclick="openCategoryFilter('${safe}', {reset:true, year:${Y}, month:${M}})"><span class="dot" style="background:${color}"></span><span class="name">${this._escapeHtml(name)}</span><div class="md-cat-bar"><span style="width:${pct}%;background:${color}"></span></div><span class="amt">$${Math.round(amt).toLocaleString()}</span></div>`;
     }).join('');
 
+    // ---- Income / fixed / REAL savings, computed from rows (spec §5, §6) -----
+    //
+    // "Real" means: income − fixed − variable, every term read from rows dated in
+    // this month, not re-derived from today's settings. The `estimated` flag is
+    // rendered verbatim so a month that is falling back to the settings guess reads
+    // as INCOMPLETE rather than as a wrong number — `Fixed · $1,345 (2 items)`
+    // versus `Fixed · $1,550 (estimated)`.
+    //
+    // Only for elapsed months: incomeFor() falls back to the settings income for ANY
+    // month including future ones, so an untouched December would otherwise claim
+    // $4,000 income against $0 spend and report a fictional saving.
+    const incomeInfo = this.incomeFor(Y, M);
+    let ledgerSection = '';
+    if (this._isMonthElapsed(Y, M)) {
+        const flag = info => info.estimated
+            ? `<span class="md-est">(estimated)</span>`
+            : `<span class="md-count">(${info.count} item${info.count === 1 ? '' : 's'})</span>`;
+        // `logged` is every spending row in the month — trip-tagged and
+        // excludeFromBudget included, because both are still money that left the
+        // account. Savings is a cash-flow figure, not a budget figure.
+        const savings = incomeInfo.total - fixedThisMonth - logged;
+        const savePct = incomeInfo.total > 0 ? Math.round((savings / incomeInfo.total) * 100) : 0;
+        const anyEstimate = incomeInfo.estimated || fixedInfo.estimated;
+        ledgerSection = `<div class="md-ledger">
+        <div class="md-cats-head">Income &amp; savings ${anyEstimate ? '<span class="md-cats-meta">partly estimated</span>' : '<span class="md-cats-meta">from your rows</span>'}</div>
+        <div class="md-ledger-row"><span class="name">Income</span><span class="amt pos">$${Math.round(incomeInfo.total).toLocaleString()}</span>${flag(incomeInfo)}</div>
+        <div class="md-ledger-row"><span class="name">Fixed</span><span class="amt">$${Math.round(fixedThisMonth).toLocaleString()}</span>${flag(fixedInfo)}</div>
+        <div class="md-ledger-row"><span class="name">Variable</span><span class="amt">$${Math.round(logged).toLocaleString()}</span><span class="md-count">(${monthAll.length} txn${monthAll.length === 1 ? '' : 's'})</span></div>
+        <div class="md-ledger-row total"><span class="name">Real savings</span><span class="amt ${savings >= 0 ? 'pos' : 'neg'}">${savings < 0 ? '−' : ''}$${Math.abs(Math.round(savings)).toLocaleString()}</span>${incomeInfo.total > 0 ? `<span class="md-count">${savePct}% of income</span>` : ''}</div>
+    </div>`;
+    }
+
     root.innerHTML = `
 <div class="month-detail">
     <div class="md-eyebrow">${eyebrow}</div>
@@ -4099,11 +4259,459 @@ ExpenseTracker.prototype.renderHistoryMonthDetail = function () {
         ${tripTotal > 0 ? `<div class="row"><span class="swatch" style="background:var(--trip-2)"></span><span class="name">Trips · ${tripCount}</span><span class="amt">$${Math.round(tripTotal).toLocaleString()}</span></div>` : ''}
         ${fixedThisMonth > 0 ? `<div class="row"><span class="swatch" style="background:#b0b6c8"></span><span class="name">Fixed obligations</span><span class="amt">$${Math.round(fixedThisMonth).toLocaleString()}</span></div>` : ''}
     </div>` : ''}
+    ${ledgerSection}
     ${orderedCats.length > 0 ? `<div class="md-cats">
         <div class="md-cats-head">By category <span class="md-cats-meta">tap for transactions</span></div>
         ${catList}
     </div>` : ''}
 </div>`;
+};
+
+// ====================================================================
+// MONTHLY LEDGER ENTRY CARD — fixed costs and income for one month
+// ====================================================================
+//
+// PLACEMENT: History, directly under the month detail card, driven by the same
+// `_historyState.year/month`. Settings was the other candidate (it holds the old
+// static rent/utilities/insurance fields) and was rejected:
+//
+//   1. The data is per-month, and Settings has no month. Every Settings field is
+//      a single global value; a card that writes to March needs a month in scope,
+//      and History already has one, selected, with a rail and a year stepper
+//      around it. Putting a month picker inside Settings would mean a second,
+//      competing notion of "the selected month" in the app.
+//   2. Spec §6 puts income/fixed/savings in History month detail. Entry sitting
+//      immediately beneath the numbers it changes means the effect is visible in
+//      the same viewport — enter utilities, watch Fixed go $1,200 -> $1,345.
+//   3. The Jan–Jul backfill job is inherently a walk through past months. That is
+//      exactly what the History month rail is for.
+//
+// The old Settings fields stay put, untouched, as the historical fallback
+// (spec §5: "not editable for new data") — this card is where new data goes.
+//
+// NO STORED TEMPLATES. The name suggestions are read from the PREVIOUS month's
+// kind:'fixed' rows with the amounts left BLANK, because utilities vary monthly
+// and insurance bills roughly every six months. A remembered amount would be
+// wrong more often than right, and pre-filling one invites saving a stale number
+// by accident. Blank means "no row written", so skipping insurance for five
+// months and entering it in the sixth needs no special handling at all.
+
+// Suggested fixed-row names for a month: whatever names the PREVIOUS month used,
+// plus whatever this month already has. Never amounts.
+ExpenseTracker.prototype._suggestedFixedNames = function (year, month) {
+    const prevY = month === 0 ? year - 1 : year;
+    const prevM = month === 0 ? 11 : month - 1;
+    const names = [];
+    const seen = new Set();
+    const add = n => {
+        const name = String(n || '').trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        names.push(name);
+    };
+    // This month's own rows first, so an existing row is always editable in place.
+    for (const e of this.kindRowsForMonth('fixed', year, month)) add(e.description);
+    for (const e of this.kindRowsForMonth('fixed', prevY, prevM)) add(e.description);
+    // Cold start: nothing anywhere. Seed from the Settings fields that have a
+    // value, so the very first month is not an empty form.
+    if (names.length === 0) {
+        if (this.settings?.rent) add('Rent');
+        if (this.settings?.utilities) add('Utilities');
+        if (this.settings?.insurance) add('Insurance');
+    }
+    return names;
+};
+
+ExpenseTracker.prototype._suggestedIncomeNames = function (year, month) {
+    const prevY = month === 0 ? year - 1 : year;
+    const prevM = month === 0 ? 11 : month - 1;
+    const names = [];
+    const seen = new Set();
+    const add = n => {
+        const name = String(n || '').trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        names.push(name);
+    };
+    for (const e of this.kindRowsForMonth('income', year, month)) add(e.description);
+    for (const e of this.kindRowsForMonth('income', prevY, prevM)) add(e.description);
+    // A month can hold 1-2 paycheques; give a second blank slot so the common
+    // twice-monthly case needs no extra tap.
+    if (names.length === 0) { add('Paycheck'); add('Paycheck 2'); }
+    return names;
+};
+
+// Extra blank name slots the user added this session, keyed "Y-M". Not persisted:
+// a blank row is not data, and once an amount is entered the row itself is the
+// record and the name comes back from _suggestedFixedNames.
+ExpenseTracker.prototype._ledgerDraftRows = null;
+
+ExpenseTracker.prototype.renderHistoryLedgerEntry = function () {
+    const root = document.getElementById('history-ledger-entry');
+    if (!root) return;
+    this._initHistoryState();
+    const Y = this._historyState.year;
+    const M = this._historyState.month;
+    const monthLabel = new Date(Y, M, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const now = new Date();
+    const isCurrent = Y === now.getFullYear() && M === now.getMonth();
+    const isFuture = Y > now.getFullYear() || (Y === now.getFullYear() && M > now.getMonth());
+
+    if (!this._ledgerDraftRows) this._ledgerDraftRows = {};
+    const draftKey = `${Y}-${M}`;
+    const drafts = this._ledgerDraftRows[draftKey] || { fixed: [], income: [] };
+
+    const fixedInfo = this.fixedFor(Y, M);
+    const incomeInfo = this.incomeFor(Y, M);
+
+    // Existing rows indexed by lowercased name so an edit UPDATES rather than
+    // duplicating. Two rows sharing a name would silently double the month total.
+    const existing = (kind) => {
+        const map = {};
+        for (const e of this.kindRowsForMonth(kind, Y, M)) {
+            map[String(e.description || '').trim().toLowerCase()] = e;
+        }
+        return map;
+    };
+    const fixedExisting = existing('fixed');
+    const incomeExisting = existing('income');
+
+    const section = (kind, names, existingMap, draftSet) => names.map((name, i) => {
+        const row = existingMap[name.toLowerCase()];
+        const isDraft = !row && draftSet && draftSet.has(name.trim().toLowerCase());
+        const id = `ledger-${kind}-${Y}-${M}-${i}`;
+        const val = row ? Number(row.amount) : '';
+        const safeName = this._jsAttr(name);
+        const dayHint = row ? this.parseLocalDate(row.date).getDate() : '';
+        // is-set / is-empty drive the saved-vs-blank styling, so a recorded amount is
+        // visibly different from one still waiting to be entered.
+        return `<div class="le-row ${row ? 'is-set' : 'is-empty'}" data-row-name="${safeName}">
+    <label class="le-name" for="${id}"><span class="le-name-text">${this._escapeHtml(name)}</span>${row
+            // aria-hidden: the tick is decorative — the amount in the field already
+            // conveys "saved", and without this a screen reader (and any text scrape)
+            // reads the glyph name as part of the label, e.g. "Rentcheck_circle".
+            ? `<span class="material-symbols-rounded le-check" aria-hidden="true">check_circle</span><span class="le-day">· ${dayHint}</span>`
+            : ''}</label>
+    <div class="le-amt-wrap">
+        <span class="le-cur">$</span>
+        <input class="le-amt" id="${id}" type="number" inputmode="decimal" step="0.01" min="0" placeholder="—"
+               value="${val === '' ? '' : val}"
+               data-kind="${kind}" data-name="${safeName}"
+               onchange="onLedgerAmountCommit('${kind}', '${safeName}', this)">
+    </div>
+    ${row
+            // A saved row clears its amount (and drops the name from the list).
+            ? `<button class="le-clear" onclick="onLedgerRowClear('${kind}', '${safeName}')" aria-label="Remove ${this._escapeHtml(name)}"><span class="material-symbols-rounded">close</span></button>`
+            // EVERY blank row is removable, not just ones added via "Add item".
+            // Names carried from last month previously had no control at all, on the
+            // reasoning that a blank row writes nothing — but that ignores the point:
+            // a bill you no longer pay should leave the list instead of reappearing
+            // every month. Dismissing a suggestion is remembered for this month.
+            : `<button class="le-clear" onclick="onLedgerDraftRemove('${kind}', '${safeName}')" aria-label="Remove ${this._escapeHtml(name)}"><span class="material-symbols-rounded">close</span></button>`}
+</div>`;
+    }).join('');
+
+    // Drafts are names added via "Add item" that have no row yet. Once an amount is
+    // committed the name becomes a real row, so _suggested*Names() returns it too —
+    // a plain concat then rendered the row TWICE (two inputs, same name, each with a
+    // "· 1" badge). De-dupe case-insensitively, suggestions first so an existing row
+    // keeps its position.
+    const mergeNames = (suggested, draftList) => {
+        const seen = new Set(suggested.map(n => String(n).trim().toLowerCase()));
+        const out = suggested.slice();
+        for (const n of draftList) {
+            const key = String(n || '').trim().toLowerCase();
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            out.push(n);
+        }
+        return out;
+    };
+    // Names the user dismissed for THIS month. A row that still holds a saved amount
+    // is never hidden — clearing the amount is what removes it, and hiding it would
+    // orphan the expense.
+    const dismissed = (this._ledgerDismissed && this._ledgerDismissed[draftKey]) || { fixed: [], income: [] };
+    const notDismissed = (kind, existingMap) => (name) => {
+        const key = String(name).trim().toLowerCase();
+        if (existingMap[key]) return true;
+        return !(dismissed[kind] || []).includes(key);
+    };
+
+    const fixedNames = mergeNames(this._suggestedFixedNames(Y, M), drafts.fixed)
+        .filter(notDismissed('fixed', fixedExisting));
+    const incomeNames = mergeNames(this._suggestedIncomeNames(Y, M), drafts.income)
+        .filter(notDismissed('income', incomeExisting));
+    // Which of the rendered names are user-added drafts, so only those get a remove
+    // control while they are still blank.
+    const lower = (arr) => new Set((arr || []).map(n => String(n).trim().toLowerCase()));
+    const draftSetFixed = lower(drafts.fixed);
+    const draftSetIncome = lower(drafts.income);
+
+    const fixedFlag = fixedInfo.estimated
+        ? `<span class="le-est">estimated · $${Math.round(fixedInfo.total).toLocaleString()}</span>`
+        : `<span class="le-real">$${Math.round(fixedInfo.total).toLocaleString()} · ${fixedInfo.count} item${fixedInfo.count === 1 ? '' : 's'}</span>`;
+    const incomeFlag = incomeInfo.estimated
+        ? `<span class="le-est">estimated · $${Math.round(incomeInfo.total).toLocaleString()}</span>`
+        : `<span class="le-real">$${Math.round(incomeInfo.total).toLocaleString()} · ${incomeInfo.count} item${incomeInfo.count === 1 ? '' : 's'}</span>`;
+
+    // Collapsed by default: this is month-start data entry, not something to read on
+    // every visit. The header still carries the month's fixed + income totals, so the
+    // information is there without the form occupying the page. _ledgerOpen persists
+    // for the session, so it stays open while you work through a month.
+    const open = this._ledgerOpen === true;
+    const summary = `$${Math.round(fixedInfo.total).toLocaleString()} fixed · $${Math.round(incomeInfo.total).toLocaleString()} income`;
+
+    root.innerHTML = `
+<div class="ledger-entry${open ? ' is-open' : ''}">
+    <button class="le-head le-toggle" onclick="onLedgerToggle()" aria-expanded="${open}" aria-controls="le-body">
+        <div>
+            <div class="le-eyebrow">FIXED &amp; INCOME</div>
+            <div class="le-title">${monthLabel}${isCurrent ? '<span class="le-cur-tag">current</span>' : ''}</div>
+            ${open ? '' : `<div class="le-collapsed-sum">${summary}</div>`}
+        </div>
+        <span class="material-symbols-rounded le-chevron">${open ? 'expand_less' : 'expand_more'}</span>
+    </button>
+    ${!open ? '' : `
+    <div class="le-nav-row">
+        <div class="le-nav">
+            <button class="le-nav-btn" onclick="onLedgerMonthStep(-1)" aria-label="Previous month"><span class="material-symbols-rounded">chevron_left</span></button>
+            <button class="le-nav-btn" onclick="onLedgerMonthStep(1)" ${isCurrent ? 'disabled' : ''} aria-label="Next month"><span class="material-symbols-rounded">chevron_right</span></button>
+        </div>
+    </div>
+    <div id="le-body">
+    ${isFuture ? `<div class="le-note">Future month — pick this month or a past one to enter rows.</div>` : `
+    <div class="le-hint">Amounts are per month. Leave one blank and no row is written.</div>
+
+    <div class="le-section">
+        <div class="le-section-head"><span>Fixed costs</span>${fixedFlag}</div>
+        ${section('fixed', fixedNames, fixedExisting, draftSetFixed)}
+        <button class="le-add" onclick="onLedgerAddRow('fixed')"><span class="material-symbols-rounded">add</span>Add item</button>
+    </div>
+
+    <div class="le-section">
+        <div class="le-section-head"><span>Income</span>${incomeFlag}</div>
+        ${section('income', incomeNames, incomeExisting, draftSetIncome)}
+        <button class="le-add" onclick="onLedgerAddRow('income')"><span class="material-symbols-rounded">add</span>Add paycheque</button>
+    </div>`}
+    </div>`}
+</div>`;
+};
+
+/** Expand or collapse the fixed/income entry card. Session-only, not persisted. */
+window.onLedgerToggle = function () {
+    const t = window.expenseTracker; if (!t) return;
+    t._ledgerOpen = !t._ledgerOpen;
+    t.renderHistoryLedgerEntry();
+};
+
+// Write (or update, or delete) ONE fixed/income row for the month currently
+// selected in History.
+//
+// Blank amount = no row. If a row already exists under this name it is UPDATED in
+// place — matched on lowercased description within the month — so re-entering
+// rent does not create a second $1,200 row. Rows therefore ACCUMULATE across
+// names ($1,200 rent + $145 utilities = $1,345) without ever duplicating one.
+ExpenseTracker.prototype.setLedgerRow = async function (kind, name, amount, year, month) {
+    if (kind !== 'fixed' && kind !== 'income') return null;
+    const cleanName = String(name || '').trim();
+    if (!cleanName) return null;
+    const key = cleanName.toLowerCase();
+    const existing = this.kindRowsForMonth(kind, year, month)
+        .filter(e => String(e.description || '').trim().toLowerCase() === key);
+
+    const amt = (amount === '' || amount == null) ? null : Number(amount);
+
+    // Blank or zero clears the row rather than storing a meaningless $0.
+    if (amt == null || !isFinite(amt) || amt <= 0) {
+        if (existing.length === 0) return null;
+        const ids = existing.map(e => e.id);
+        this.expenses = this.expenses.filter(e => !ids.includes(e.id));
+        this.saveExpenses();
+        if (window.currentUser) for (const id of ids) await this.deleteExpenseFromFirebase(id);
+        return { removed: ids.length };
+    }
+
+    if (existing.length > 0) {
+        // Update the first, drop any accidental duplicates so the month total can
+        // never silently double.
+        const keep = existing[0];
+        const dupes = existing.slice(1).map(e => e.id);
+        const idx = this.expenses.findIndex(e => e.id === keep.id);
+        const updated = Object.assign({}, keep, { amount: amt, description: cleanName });
+        if (idx !== -1) this.expenses[idx] = updated;
+        if (dupes.length) this.expenses = this.expenses.filter(e => !dupes.includes(e.id));
+        this.saveExpenses();
+        if (window.currentUser) {
+            await this.saveExpenseToFirebase(updated);
+            for (const id of dupes) await this.deleteExpenseFromFirebase(id);
+        }
+        return { updated: 1, deduped: dupes.length };
+    }
+
+    // New row. Date: keep it inside the target month. For the CURRENT month use
+    // today's local day so the row sits where the user actually is; for a past
+    // month use day 1 — never a UTC-derived date, and never a day that overflows
+    // into the next month.
+    const now = new Date();
+    const isCurrent = year === now.getFullYear() && month === now.getMonth();
+    const dim = new Date(year, month + 1, 0).getDate();
+    const day = isCurrent ? Math.min(now.getDate(), dim) : 1;
+    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const row = {
+        id: this.nextExpenseId(),
+        amount: amt,
+        description: cleanName,
+        // Fixed costs are Bills so they still aggregate into the existing category
+        // breakdowns (spec §1). Income gets its own 'Income' category: it is not a
+        // spending category, and labelling it 'Other' made the Txns list read
+        // "Paycheck · Other", i.e. like a miscategorised expense. Inert either way —
+        // spendingRows() excludes income from every breakdown — but self-documenting.
+        category: kind === 'fixed' ? 'Bills' : 'Income',
+        date,
+        timestamp: Date.now(),
+        excludeFromBudget: false,
+        tripId: null,
+        source: 'manual',
+        kind
+    };
+    this.expenses.push(row);
+    this.saveExpenses();
+    if (window.currentUser) await this.saveExpenseToFirebase(row);
+    return { added: 1, row };
+};
+
+window.onLedgerMonthStep = function (delta) {
+    const t = window.expenseTracker; if (!t) return;
+    t._initHistoryState();
+    const next = new Date(t._historyState.year, t._historyState.month + delta, 1);
+    const now = new Date();
+    // Past is unlimited (Jan–Jul backfill needs it); the future is not enterable.
+    if (next.getFullYear() > now.getFullYear() || (next.getFullYear() === now.getFullYear() && next.getMonth() > now.getMonth())) return;
+    t._historyState.year = next.getFullYear();
+    t._historyState.month = next.getMonth();
+    t.renderHistoryPage();
+};
+
+window.onLedgerAddRow = function (kind) {
+    const t = window.expenseTracker; if (!t) return;
+    const name = prompt(kind === 'income' ? 'Income source name' : 'Fixed cost name');
+    if (name == null) return;
+    const clean = String(name).trim();
+    if (!clean) return;
+    t._initHistoryState();
+    if (!t._ledgerDraftRows) t._ledgerDraftRows = {};
+    const key = `${t._historyState.year}-${t._historyState.month}`;
+    if (!t._ledgerDraftRows[key]) t._ledgerDraftRows[key] = { fixed: [], income: [] };
+    const list = t._ledgerDraftRows[key][kind];
+    const target = clean.toLowerCase();
+
+    // "Already listed" must mean VISIBLE in the card, not merely suggestible.
+    // _suggested*Names() still returns a name carried from last month even after the
+    // user dismissed it — so checking that set rejected "Rent" as taken while no Rent
+    // row was on screen, leaving no way to add it back. Re-adding a dismissed name
+    // simply undoes the dismissal.
+    const dismissedList = (t._ledgerDismissed && t._ledgerDismissed[key] && t._ledgerDismissed[key][kind]) || [];
+    if (dismissedList.includes(target)) {
+        t._ledgerDismissed[key][kind] = dismissedList.filter(n => n !== target);
+        t.renderHistoryLedgerEntry();
+        return;
+    }
+
+    const suggested = kind === 'fixed'
+        ? t._suggestedFixedNames(t._historyState.year, t._historyState.month)
+        : t._suggestedIncomeNames(t._historyState.year, t._historyState.month);
+    const visible = new Set(
+        suggested.concat(list)
+            .map(n => String(n).trim().toLowerCase())
+            .filter(n => !dismissedList.includes(n))
+    );
+    if (visible.has(target)) {
+        if (typeof showNotification === 'function') showNotification(`"${clean}" is already listed`, 'error');
+        return;
+    }
+    list.push(clean);
+    t.renderHistoryLedgerEntry();
+};
+
+window.onLedgerAmountCommit = function (kind, name, inputEl) {
+    const t = window.expenseTracker; if (!t || !inputEl) return;
+    t._initHistoryState();
+    const Y = t._historyState.year, M = t._historyState.month;
+    const raw = inputEl.value;
+    Promise.resolve(t.setLedgerRow(kind, name, raw, Y, M)).then(res => {
+        if (res && typeof showNotification === 'function') {
+            if (res.removed) showNotification(`${name} cleared`, 'success');
+            else if (res.updated) showNotification(`${name} updated`, 'success');
+            else if (res.added) showNotification(`${name} saved`, 'success');
+        }
+        // Re-render the whole History page: the month rail, year shape, year stats
+        // and month detail all read these rows, so a partial refresh would leave
+        // two cards disagreeing about the same month.
+        t.updateDashboard();
+        t.renderTransactions();
+        t.renderHistoryPage();
+        // The re-render replaced the DOM, so re-find the row and pulse it. Confirms
+        // the value landed — a toast alone leaves the field looking untouched.
+        if (res && (res.added || res.updated)) {
+            const el = document.querySelector(`.le-row[data-row-name="${CSS.escape(name)}"]`);
+            if (el) {
+                el.classList.add('just-saved');
+                setTimeout(() => el.classList.remove('just-saved'), 600);
+            }
+        }
+    }).catch(e => console.warn('setLedgerRow:', e));
+};
+
+/**
+ * Drop a name added via "Add item" that has no saved amount. Draft-only, so there is
+ * no expense to delete — it just leaves the list.
+ */
+window.onLedgerDraftRemove = function (kind, name) {
+    const t = window.expenseTracker; if (!t) return;
+    t._initHistoryState();
+    const key = `${t._historyState.year}-${t._historyState.month}`;
+    const target = String(name).trim().toLowerCase();
+
+    // Drop it from the draft list if it came from "Add item".
+    if (t._ledgerDraftRows && t._ledgerDraftRows[key] && t._ledgerDraftRows[key][kind]) {
+        t._ledgerDraftRows[key][kind] =
+            t._ledgerDraftRows[key][kind].filter(n => String(n).trim().toLowerCase() !== target);
+    }
+
+    // A SUGGESTED name isn't in that list — it's derived from last month's rows, so
+    // filtering the drafts would not remove it and it would reappear on next render.
+    // Record the dismissal per month instead. Session-only: next month suggests from
+    // ITS previous month, so a genuinely recurring bill comes back on its own.
+    if (!t._ledgerDismissed) t._ledgerDismissed = {};
+    if (!t._ledgerDismissed[key]) t._ledgerDismissed[key] = { fixed: [], income: [] };
+    if (!t._ledgerDismissed[key][kind].includes(target)) t._ledgerDismissed[key][kind].push(target);
+
+    t.renderHistoryLedgerEntry();
+};
+
+window.onLedgerRowClear = function (kind, name) {
+    const t = window.expenseTracker; if (!t) return;
+    t._initHistoryState();
+    const Y = t._historyState.year, M = t._historyState.month;
+    Promise.resolve(t.setLedgerRow(kind, name, '', Y, M)).then(() => {
+        // Also forget the draft name. Otherwise clearing the amount deleted the row
+        // but left the name stranded in the list with no way to remove it.
+        const key = `${Y}-${M}`;
+        const bucket = t._ledgerDraftRows && t._ledgerDraftRows[key];
+        if (bucket && bucket[kind]) {
+            const target = String(name).trim().toLowerCase();
+            bucket[kind] = bucket[kind].filter(n => String(n).trim().toLowerCase() !== target);
+        }
+        if (typeof showNotification === 'function') showNotification(`${name} removed`, 'success');
+        t.updateDashboard();
+        t.renderTransactions();
+        t.renderHistoryPage();
+    }).catch(e => console.warn('setLedgerRow clear:', e));
 };
 
 ExpenseTracker.prototype.renderHistoryCategories = function () {
